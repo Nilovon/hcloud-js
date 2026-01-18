@@ -87,4 +87,4 @@ See [CHANGELOG.md](./CHANGELOG.md) for a list of changes.
 
 ## License
 
-MIT © [Nilovon](https://github.com/nilovonjs)
+MIT © [Nilovon](https://github.com/Nilovon)

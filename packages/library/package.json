@@ -37,10 +37,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/nilovonjs/hcloud-js.git"
+    "url": "https://github.com/Nilovon/hcloud-js.git"
   },
   "bugs": {
-    "url": "https://github.com/nilovonjs/hcloud-js/issues"
+    "url": "https://github.com/Nilovon/hcloud-js/issues"
   },
   "homepage": "https://hcloud-js.nilovon.com",
   "engines": {
