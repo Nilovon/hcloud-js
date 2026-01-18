@@ -72,6 +72,19 @@ const newServer = await client.servers.create({
 
 Full documentation is available at: [https://hcloud-js.nilovon.app](https://hcloud-js.nilovon.app)
 
+## Requirements
+
+- Node.js >= 18.0.0
+- TypeScript >= 5.0.0
+
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a list of changes.
+
 ## License
 
-MIT
+MIT © [Nilovon](https://github.com/nilovonjs)

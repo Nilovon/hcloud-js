@@ -8,7 +8,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#floating-ips
  */
 
-import { HCloudClient } from "@hcloud-js/library";
+import { HCloudClient } from "@nilovonjs/hcloud-js";
 import { config } from "../config.js";
 
 /**

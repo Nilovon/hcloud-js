@@ -10,7 +10,7 @@
     "noEmit": true,
     "verbatimModuleSyntax": false,
     "paths": {
-      "@hcloud-js/library": ["../../packages/library/src/index.ts"],
+      "@nilovonjs/hcloud-js": ["../../packages/library/src/index.ts"],
       "@hcloud-js/client/index": ["../../packages/library/src/client/index.ts"],
       "@hcloud-js/client/index.js": ["../../packages/library/src/client/index.ts"],
       "@hcloud-js/config/index": ["../../packages/config/src/index.ts"],

@@ -13,7 +13,7 @@
     "locations": "bun run src/examples/locations.ts"
   },
   "dependencies": {
-    "@hcloud-js/library": "workspace:*"
+    "@nilovonjs/hcloud-js": "workspace:*"
   },
   "devDependencies": {
     "@hcloud-js/config": "workspace:*",

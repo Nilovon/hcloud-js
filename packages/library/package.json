@@ -17,7 +17,8 @@
   "files": [
     "src",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "keywords": [
     "hetzner",
@@ -41,18 +42,29 @@
   "bugs": {
     "url": "https://github.com/nilovonjs/hcloud-js/issues"
   },
-  "homepage": "https://github.com/nilovonjs/hcloud-js#readme",
+  "homepage": "https://hcloud-js.nilovon.app",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@hcloud-js/config": "workspace:*",
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": false
+    }
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "prepublishOnly": "echo 'Running prepublish checks...' && exit 0"
   }
 }

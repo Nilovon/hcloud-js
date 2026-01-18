@@ -4,8 +4,8 @@
  * @see https://docs.hetzner.cloud/reference/cloud#images
  */
 
-import { HCloudClient } from "@hcloud-js/library";
-import type { Image } from "@hcloud-js/library";
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+import type { Image } from "@nilovonjs/hcloud-js";
 import { config } from "../config.js";
 
 /**

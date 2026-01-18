@@ -10,7 +10,7 @@
  * @see https://docs.hetzner.cloud/changelog#2025-01-30-listing-arbitrary-actions-in-the-actions-list-endpoint-is-removed
  */
 
-import { HCloudClient, HCloudError } from "@hcloud-js/library";
+import { HCloudClient, HCloudError } from "@nilovonjs/hcloud-js";
 import { config } from "../config.js";
 
 /**

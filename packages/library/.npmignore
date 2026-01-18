@@ -1,9 +1,0 @@
-node_modules
-*.log
-.DS_Store
-.vscode
-.idea
-*.tsbuildinfo
-dist
-.turbo
-coverage

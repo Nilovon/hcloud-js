@@ -12,7 +12,9 @@
     "check-types": "turbo check-types",
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
-    "check": "oxlint && oxfmt --write"
+    "check": "oxlint && oxfmt --write",
+    "publish:library": "cd packages/library && bun publish",
+    "publish:library:dry-run": "cd packages/library && bun pack --dry-run"
   },
   "dependencies": {
     "dotenv": "^17.2.2",

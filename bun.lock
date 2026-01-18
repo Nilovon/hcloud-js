@@ -45,7 +45,7 @@
       "name": "@hcloud-js/example",
       "version": "0.0.0",
       "dependencies": {
-        "@hcloud-js/library": "workspace:*",
+        "@nilovonjs/hcloud-js": "workspace:*",
       },
       "devDependencies": {
         "@hcloud-js/config": "workspace:*",
@@ -58,7 +58,7 @@
       "version": "0.0.0",
     },
     "packages/library": {
-      "name": "@hcloud-js/library",
+      "name": "@nilovonjs/hcloud-js",
       "version": "0.0.0",
       "dependencies": {
         "@types/react-syntax-highlighter": "^15.5.13",
@@ -153,7 +153,7 @@
 
     "@hcloud-js/example": ["@hcloud-js/example@workspace:apps/example"],
 
-    "@hcloud-js/library": ["@hcloud-js/library@workspace:packages/library"],
+    "@nilovonjs/hcloud-js": ["@hcloud-js/library@workspace:packages/library"],
 
     "@img/colour": ["@img/colour@1.0.0", "", {}, "sha512-A5P/LfWGFSl6nsckYtjw9da+19jB8hkJ6ACTGcDfEJ0aE+l2n2El7dsVM7UVHZQ9s2lmYMWlrS21YLy2IR1LUw=="],
 
