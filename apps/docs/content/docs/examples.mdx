@@ -9,6 +9,8 @@ This page contains code examples for common use cases.
 
 ## Creating a Server
 
+### Basic Example
+
 ```typescript
 import { HCloudClient } from '@nilovonjs/hcloud-js';
 
@@ -30,13 +32,56 @@ const server = await client.servers.create({
 });
 
 console.log(`Server created: ${server.server.name}`);
-console.log(`Waiting for server to be ready...`);
+```
 
-// Wait for server to be running
-let currentServer = await client.servers.get(server.server.id);
-while (currentServer.server.status !== 'running') {
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  currentServer = await client.servers.get(server.server.id);
+### Using Helper Function
+
+For convenience, use the `createAndWaitForServer` helper to automatically wait for the server to be running:
+
+```typescript
+import { HCloudClient, createAndWaitForServer } from '@nilovonjs/hcloud-js';
+
+const client = new HCloudClient({
+  token: process.env.HCLOUD_TOKEN!
+});
+
+// Create server and wait for it to be ready
+const server = await createAndWaitForServer(client, {
+  name: 'my-server',
+  server_type: 'cpx11',
+  image: 'ubuntu-22.04',
+  location: 'nbg1',
+  ssh_keys: [123]
+});
+
+// Server is now guaranteed to be running
+console.log(`Server ${server.name} is ready!`);
+console.log(`IP: ${server.public_net.ipv4?.ip}`);
+```
+
+### Manual Waiting with Action Polling
+
+If you need more control, use action polling:
+
+```typescript
+import { HCloudClient, pollAction } from '@nilovonjs/hcloud-js';
+
+const client = new HCloudClient({
+  token: process.env.HCLOUD_TOKEN!
+});
+
+const server = await client.servers.create({
+  name: 'my-server',
+  server_type: 'cpx11',
+  image: 'ubuntu-22.04'
+});
+
+// Wait for creation action to complete
+if (server.action) {
+  await pollAction(client, server.action.id, {
+    interval: 1000,  // Check every second
+    timeout: 300000  // Wait up to 5 minutes
+  });
 }
 
 console.log(`Server is now running!`);
@@ -73,6 +118,104 @@ await client.firewalls.applyToResources(firewall.firewall.id, {
   resources: [
     { type: 'server', server: { id: 12345 } }
   ]
+});
+```
+
+## Working with Pagination
+
+### Using `getAllPages()`
+
+Fetch all items from a paginated endpoint:
+
+```typescript
+import { getAllPages } from '@nilovonjs/hcloud-js';
+
+// Get all servers
+const allServers = await getAllPages(
+  (params) => client.servers.list(params),
+  'servers'
+);
+console.log(`Total: ${allServers.length} servers`);
+```
+
+### Using `paginate()`
+
+Iterate through pages using an async generator:
+
+```typescript
+import { paginate } from '@nilovonjs/hcloud-js';
+
+// Process servers page by page (memory efficient for large datasets)
+for await (const servers of paginate(
+  (params) => client.servers.list(params),
+  'servers',
+  { maxPages: 10, delay: 100 }
+)) {
+  console.log(`Processing ${servers.length} servers...`);
+  for (const server of servers) {
+    // Process each server
+  }
+}
+```
+
+## Server Actions
+
+### Power Management
+
+```typescript
+// Power on server and wait for completion
+import { pollAction } from '@nilovonjs/hcloud-js';
+
+const action = await client.servers.powerOn(12345);
+await pollAction(client, action.action.id);
+console.log('Server is now running!');
+```
+
+### Multiple Actions
+
+```typescript
+import { pollActions } from '@nilovonjs/hcloud-js';
+
+// Start multiple servers in parallel
+const actions = await Promise.all([
+  client.servers.powerOn(1),
+  client.servers.powerOn(2),
+  client.servers.powerOn(3),
+]);
+
+// Wait for all to complete
+const actionIds = actions.map(a => a.action.id);
+await pollActions(client, actionIds);
+console.log('All servers are running!');
+```
+
+### Image Management
+
+```typescript
+// Create a snapshot
+const image = await client.servers.createImage(12345, {
+  type: 'snapshot',
+  description: 'Production backup',
+  labels: { environment: 'production' }
+});
+
+console.log(`Snapshot created: ${image.image.name}`);
+```
+
+### Network Management
+
+```typescript
+// Attach server to network
+await client.servers.attachToNetwork(12345, {
+  network: 67890,
+  ip: '10.0.0.2',
+  alias_ips: ['10.0.0.3']
+});
+
+// Change reverse DNS
+await client.servers.changeReverseDNS(12345, {
+  ip: '1.2.3.4',
+  dns_ptr: 'server.example.com'
 });
 ```
 
@@ -216,38 +359,62 @@ try {
 }
 ```
 
-## Waiting for Actions
+## Using Type Guards
+
+Type guards help you narrow types at runtime:
 
 ```typescript
-async function waitForAction(
-  resourceType: 'server' | 'network' | 'load-balancer',
-  resourceId: number,
-  actionId: number,
-  timeout: number = 300000
-): Promise<void> {
-  const startTime = Date.now();
-  
-  while (true) {
-    const action = await client[resourceType].getAction(resourceId, actionId);
-    
-    if (action.action.status === 'success') {
-      console.log('Action completed successfully');
-      return;
-    }
-    
-    if (action.action.status === 'error') {
-      throw new Error(`Action failed: ${action.action.error?.message}`);
-    }
-    
-    if (Date.now() - startTime > timeout) {
-      throw new Error('Action timeout');
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
-  }
+import {
+  isServerRunning,
+  isActionSuccessful,
+  isImageAvailable
+} from '@nilovonjs/hcloud-js';
+
+// Check server status
+const server = await client.servers.get(12345);
+if (isServerRunning(server.server)) {
+  console.log('Server is running and ready!');
 }
 
-// Usage
-const server = await client.servers.create({...});
-await waitForAction('server', server.server.id, server.action.id);
+// Check action status
+const action = await client.actions.get(actionId);
+if (isActionSuccessful(action.action)) {
+  console.log('Action completed successfully');
+}
+
+// Check image availability
+const image = await client.images.get(12345);
+if (isImageAvailable(image.image)) {
+  console.log('Image is available for use');
+}
+```
+
+## Finding Resources
+
+Use helper functions to find resources by name or IP:
+
+```typescript
+import {
+  findServerByName,
+  findImageByName,
+  findFloatingIPByIP
+} from '@nilovonjs/hcloud-js';
+
+// Find server by name
+const server = await findServerByName(client, 'my-server');
+if (server) {
+  console.log(`Found server: ${server.name} (ID: ${server.id})`);
+}
+
+// Find image by name
+const image = await findImageByName(client, 'ubuntu-22.04');
+if (image) {
+  console.log(`Found image: ${image.name}`);
+}
+
+// Find floating IP by IP address
+const floatingIP = await findFloatingIPByIP(client, '1.2.3.4');
+if (floatingIP) {
+  console.log(`Found floating IP: ${floatingIP.ip}`);
+}
 ```

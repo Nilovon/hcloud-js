@@ -3,9 +3,9 @@
  * @see https://docs.hetzner.cloud/reference/cloud#images
  */
 
-import type { HCloudClient } from "@/client/index";
-import { validate } from "@/validation/index";
-import { deleteImageResponseSchema, getImageResponseSchema, listImagesResponseSchema, updateImageRequestSchema, updateImageResponseSchema } from "@/apis/images/schemas";
+import type { HCloudClient } from "../../client/index";
+import { validate } from "../../validation/index";
+import { deleteImageResponseSchema, getImageResponseSchema, listImagesResponseSchema, updateImageRequestSchema, updateImageResponseSchema } from "../../apis/images/schemas";
 import type {
   ListImagesParams,
   ListImagesResponse,
@@ -13,7 +13,7 @@ import type {
   UpdateImageParams,
   UpdateImageResponse,
   DeleteImageResponse,
-} from "@/apis/images/types";
+} from "./types";
 
 /**
  * Images API client

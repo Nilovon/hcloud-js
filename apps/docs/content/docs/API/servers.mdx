@@ -132,133 +132,181 @@ console.log(`Delete action ID: ${result.action.id}`);
 
 ## Server Actions
 
-### Power Management
+Server Actions allow you to control and manage your servers. All actions return an `Action` object that you can poll to track progress.
+
+### List Server Actions
+
+Get all actions for a specific server:
 
 ```typescript
-// Power on
-await client.servers.powerOn(12345);
+const actions = await client.servers.listActions(12345, {
+  status: ['running', 'success'],  // Filter by status
+  sort: ['started:desc'],          // Sort by start time
+  page: 1,
+  per_page: 50
+});
+```
 
-// Power off
-await client.servers.powerOff(12345);
+### Get Server Action
 
-// Reboot
-await client.servers.reboot(12345);
+Get details of a specific action:
 
-// Reset (hard reboot)
-await client.servers.reset(12345);
+```typescript
+const action = await client.servers.getAction(12345, 67890);
+console.log(`Command: ${action.action.command}`);
+console.log(`Status: ${action.action.status}`);
+console.log(`Progress: ${action.action.progress}%`);
+```
 
-// Shutdown
-await client.servers.shutdown(12345);
+### Power Management
+
+Control server power state:
+
+```typescript
+// Power on - Starts a Server by turning its power on
+const powerOnAction = await client.servers.powerOn(12345);
+console.log(`Power on action ID: ${powerOnAction.action.id}`);
+
+// Power off - Cuts power to a Server (forceful stop)
+const powerOffAction = await client.servers.powerOff(12345);
+
+// Reboot - Reboots a Server gracefully (ACPI request)
+const rebootAction = await client.servers.reboot(12345);
+
+// Reset - Cuts power and starts again (hard reboot)
+const resetAction = await client.servers.reset(12345);
+
+// Shutdown - Shuts down a Server gracefully (ACPI shutdown)
+const shutdownAction = await client.servers.shutdown(12345);
 ```
 
 ### ISO Management
 
+Manage ISO attachments for servers:
+
 ```typescript
-// Attach ISO
-await client.servers.attachISO(12345, {
-  iso: 'debian-12'
+// Attach ISO - Attaches an ISO to a Server
+const attachAction = await client.servers.attachISO(12345, {
+  iso: 'debian-12'  // ISO name or ID
 });
 
-// Detach ISO
-await client.servers.detachISO(12345);
+// Detach ISO - Detaches an ISO from a Server
+const detachAction = await client.servers.detachISO(12345);
 ```
 
 ### Rescue Mode
 
-```typescript
-// Enable rescue mode
-const rescue = await client.servers.enableRescueMode(12345, {
-  type: 'linux64',
-  ssh_keys: [123]
-});
-console.log(`Root password: ${rescue.root_password}`);
+Enable and disable the Hetzner Rescue System:
 
-// Disable rescue mode
-await client.servers.disableRescueMode(12345);
+```typescript
+// Enable rescue mode - Enables the Hetzner Rescue System
+const rescue = await client.servers.enableRescueMode(12345, {
+  type: 'linux64',              // Optional: Rescue system type (default: 'linux64')
+  ssh_keys: [123, 456]          // Optional: SSH key IDs to use
+});
+if (rescue.root_password) {
+  console.log(`Root password: ${rescue.root_password}`);
+}
+
+// Disable rescue mode - Disables the Hetzner Rescue System
+const disableAction = await client.servers.disableRescueMode(12345);
 ```
 
 ### Image Management
 
-```typescript
-// Create image/snapshot
-const image = await client.servers.createImage(12345, {
-  type: 'snapshot',
-  description: 'My server snapshot',
-  labels: { environment: 'production' }
-});
+Create images and rebuild servers:
 
-// Rebuild from image
-await client.servers.rebuild(12345, {
-  image: 'ubuntu-22.04'
+```typescript
+// Create image/snapshot - Creates an Image (snapshot) from a Server
+const image = await client.servers.createImage(12345, {
+  type: 'snapshot',                              // Optional: 'snapshot' or 'backup' (default: 'snapshot')
+  description: 'My server snapshot',             // Optional: Description
+  labels: { environment: 'production' }          // Optional: Labels
+});
+console.log(`Created image: ${image.image.name} (ID: ${image.image.id})`);
+
+// Rebuild from image - Rebuilds a Server overwriting its disk with the content of an Image
+const rebuildAction = await client.servers.rebuild(12345, {
+  image: 'ubuntu-22.04'  // Image name or ID
 });
 ```
 
 ### Protection
 
+Control server protection settings:
+
 ```typescript
-// Change protection
-await client.servers.changeProtection(12345, {
-  delete: true,
-  rebuild: true
+// Change protection - Changes the Protection configuration of a Server
+const protectionAction = await client.servers.changeProtection(12345, {
+  delete: true,   // Optional: Prevent deletion
+  rebuild: true   // Optional: Prevent rebuild
 });
 ```
 
 ### Type Changes
 
+Change server resources (CPU, RAM, Disk):
+
 ```typescript
-// Change server type
-await client.servers.changeType(12345, {
-  server_type: 'cpx21',
-  upgrade_disk: true
+// Change server type - Changes the type (Cores, RAM and Disk) of a Server
+const changeTypeAction = await client.servers.changeType(12345, {
+  server_type: 'cpx21',    // Required: New server type name or ID
+  upgrade_disk: true        // Optional: Upgrade disk when changing type (default: false)
 });
 ```
 
 ### Backups
 
+Enable and configure automatic backups:
+
 ```typescript
-// Enable backups
-await client.servers.enableBackups(12345, {
-  backup_window: '22-02'
+// Enable backups - Enables and configures automatic Backups for a Server
+const enableBackupsAction = await client.servers.enableBackups(12345, {
+  backup_window: '22-02'  // Optional: Backup window (HH:mm format, e.g., '22-02' for 10pm-2am)
 });
 
-// Disable backups
-await client.servers.disableBackups(12345);
+// Disable backups - Disables automatic Backups for a Server
+const disableBackupsAction = await client.servers.disableBackups(12345);
 ```
 
 ### Network Management
 
+Manage server network connections:
+
 ```typescript
-// Attach to network
-await client.servers.attachToNetwork(12345, {
-  network: 67890,
-  ip: '10.0.0.2',
-  alias_ips: ['10.0.0.3']
+// Attach to network - Attaches a Server to a Network
+const attachNetworkAction = await client.servers.attachToNetwork(12345, {
+  network: 67890,                    // Required: Network ID
+  ip: '10.0.0.2',                    // Optional: IP address to assign
+  alias_ips: ['10.0.0.3', '10.0.0.4'] // Optional: Alias IPs to assign
 });
 
-// Detach from network
-await client.servers.detachFromNetwork(12345, {
-  network: 67890
+// Detach from network - Detaches a Server from a Network
+const detachNetworkAction = await client.servers.detachFromNetwork(12345, {
+  network: 67890  // Required: Network ID
 });
 
-// Change alias IPs
-await client.servers.changeAliasIPs(12345, {
-  network: 67890,
-  alias_ips: ['10.0.0.5', '10.0.0.6']
+// Change alias IPs - Changes the alias IPs of a Network the Server is attached to
+const changeAliasIPsAction = await client.servers.changeAliasIPs(12345, {
+  network: 67890,                    // Required: Network ID
+  alias_ips: ['10.0.0.5', '10.0.0.6'] // Required: New alias IPs array
 });
 
-// Change reverse DNS
-await client.servers.changeReverseDNS(12345, {
-  ip: '1.2.3.4',
-  dns_ptr: 'server.example.com'
+// Change reverse DNS - Changes the hostname for the primary IPs (IPv4 and IPv6)
+const changeDNSAction = await client.servers.changeReverseDNS(12345, {
+  ip: '1.2.3.4',                     // Required: IP address
+  dns_ptr: 'server.example.com'      // Required: Hostname (null to remove)
 });
 ```
 
 ### Console Access
 
+Request remote console access:
+
 ```typescript
-// Request console
+// Request console - Requests credentials for remote access via VNC/SPICE over websocket
 const console = await client.servers.requestConsole(12345, {
-  type: 'vnc'
+  type: 'vnc'  // Optional: 'vnc' or 'spice' (default: 'vnc')
 });
 console.log(`Password: ${console.password}`);
 console.log(`WebSocket URL: ${console.wss_url}`);
@@ -266,57 +314,96 @@ console.log(`WebSocket URL: ${console.wss_url}`);
 
 ### Password Reset
 
+Reset the root password for Linux systems:
+
 ```typescript
-// Reset root password
+// Reset root password - Resets the root password (requires qemu guest agent, server must be powered on)
 const reset = await client.servers.resetRootPassword(12345);
 if (reset.root_password) {
-  console.log(`New password: ${reset.root_password}`);
+  console.log(`New root password: ${reset.root_password}`);
+} else {
+  console.log('Password reset initiated (check server logs)');
 }
 ```
 
 ### Placement Groups
 
+Manage server placement groups:
+
 ```typescript
-// Add to placement group
-await client.servers.addToPlacementGroup(12345, {
-  placement_group: 67890
+// Add to placement group - Adds a Server to a Placement Group
+const addGroupAction = await client.servers.addToPlacementGroup(12345, {
+  placement_group: 67890  // Required: Placement Group ID
 });
 
-// Remove from placement group
-await client.servers.removeFromPlacementGroup(12345);
+// Remove from placement group - Removes a Server from a Placement Group
+const removeGroupAction = await client.servers.removeFromPlacementGroup(12345);
 ```
 
-## List Server Actions
-
-Returns all Action objects for a Server.
-
-```typescript
-const actions = await client.servers.listActions(12345, {
-  status: ['running'],
-  sort: ['started:desc']
-});
-```
-
-## Get Server Action
-
-Returns a specific Action object for a Server.
-
-```typescript
-const action = await client.servers.getAction(12345, 67890);
-console.log(action.action.command);
-console.log(action.action.status);
-```
 
 ## Get Server Metrics
 
-Returns Metrics for a Server.
+Returns Metrics for a Server. The Server must have a public network interface attached.
 
 ```typescript
+const now = new Date();
+const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+// Get CPU and network metrics
 const metrics = await client.servers.getMetrics(12345, {
-  type: 'cpu',
-  start: '2024-01-01T00:00:00Z',
-  end: '2024-01-01T23:59:59Z'
+  type: ['cpu', 'network'],  // Required: Metric type(s) - can be single string or array
+  start: oneHourAgo.toISOString(),  // Required: Start time (ISO 8601)
+  end: now.toISOString(),           // Required: End time (ISO 8601)
+  step: 60                          // Optional: Resolution in seconds
 });
+
+// Access time series data
+metrics.metrics.time_series.forEach(series => {
+  console.log(`Metric: ${series.name}`);
+  console.log(`Values: ${series.values.length} data points`);
+  if (series.values.length > 0) {
+    console.log(`Latest value: ${series.values[series.values.length - 1]}`);
+  }
+});
+```
+
+### Parameters
+
+```typescript
+interface GetServerMetricsParams {
+  type: string | string[];  // Required: Metric type - 'cpu', 'disk', 'network'
+  start: string;            // Required: Start time (ISO 8601 format)
+  end: string;              // Required: End time (ISO 8601 format)
+  step?: number;            // Optional: Resolution in seconds
+}
+```
+
+### Available Metric Types
+
+- `'cpu'` - CPU usage metrics
+- `'disk'` - Disk I/O metrics
+- `'network'` - Network traffic metrics
+
+### Example: Monitoring Server Performance
+
+```typescript
+// Get metrics for the last hour
+const now = new Date();
+const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+const metrics = await client.servers.getMetrics(12345, {
+  type: ['cpu', 'disk', 'network'],
+  start: oneHourAgo.toISOString(),
+  end: now.toISOString(),
+  step: 300  // 5-minute intervals
+});
+
+// Analyze CPU usage
+const cpuSeries = metrics.metrics.time_series.find(s => s.name === 'cpu');
+if (cpuSeries && cpuSeries.values.length > 0) {
+  const avgCpu = cpuSeries.values.reduce((a, b) => a + b, 0) / cpuSeries.values.length;
+  console.log(`Average CPU usage: ${avgCpu.toFixed(2)}%`);
+}
 ```
 
 ## Types

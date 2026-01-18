@@ -1,6 +1,6 @@
 {
   "name": "@nilovonjs/hcloud-js",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "TypeScript SDK for the Hetzner Cloud API - Fully typed, validated, and easy to use",
   "author": "Nilovon",
   "license": "MIT",

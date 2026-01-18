@@ -4,8 +4,8 @@
  */
 
 import { z } from "zod";
-import { actionSchema } from "@/apis/actions/schemas";
-import { paginationMetaSchema } from "@/apis/common/schemas";
+import { actionSchema } from "../../apis/actions/schemas";
+import { paginationMetaSchema } from "../../apis/common/schemas";
 
 /**
  * Placement Group type schema

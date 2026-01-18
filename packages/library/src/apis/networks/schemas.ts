@@ -4,9 +4,9 @@
  */
 
 import { z } from "zod";
-import { actionSchema, actionResourceSchema } from "@/apis/actions/schemas";
-import { paginationMetaSchema } from "@/apis/common/schemas";
-import { locationSchema } from "@/apis/servers/schemas";
+import { actionSchema, actionResourceSchema } from "../../apis/actions/schemas";
+import { paginationMetaSchema } from "../../apis/common/schemas";
+import { locationSchema } from "../../apis/servers/schemas";
 
 /**
  * Network route destination schema
@@ -98,7 +98,7 @@ export const createNetworkRequestSchema = z.object({
       z.object({
         type: networkSubnetTypeSchema,
         network_zone: z.string(),
-        ip_range: z.string().optional(),
+        ip_range: z.string(),
         vswitch_id: z.number().optional(),
       }),
     )

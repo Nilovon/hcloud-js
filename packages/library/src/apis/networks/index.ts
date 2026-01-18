@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#networks
  */
 
-import type { HCloudClient } from "@/client/index";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListNetworksParams,
   ListNetworksResponse,
@@ -28,8 +28,8 @@ import type {
   ChangeNetworkIpRangeResponse,
   ChangeNetworkProtectionParams,
   ChangeNetworkProtectionResponse,
-} from "@/apis/networks/types";
-import { validate } from "@/validation/index";
+} from "./types.js";
+import { validate } from "../../validation/index";
 import {
   listNetworksResponseSchema,
   createNetworkRequestSchema,
@@ -52,7 +52,7 @@ import {
   changeNetworkIpRangeResponseSchema,
   changeNetworkProtectionRequestSchema,
   changeNetworkProtectionResponseSchema,
-} from "@/apis/networks/schemas";
+} from "./schemas.js";
 
 /**
  * Networks API client

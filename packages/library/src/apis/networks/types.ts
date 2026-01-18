@@ -32,7 +32,7 @@ import {
   networkRouteSchema,
   networkSubnetSchema,
   networkProtectionSchema,
-} from "@/apis/networks/schemas";
+} from "./schemas.js";
 import type { z } from "zod";
 
 /**

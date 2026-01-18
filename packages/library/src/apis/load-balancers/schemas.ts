@@ -4,9 +4,9 @@
  */
 
 import { z } from "zod";
-import { actionSchema, actionResourceSchema } from "@/apis/actions/schemas";
-import { paginationMetaSchema } from "@/apis/common/schemas";
-import { locationSchema } from "@/apis/servers/schemas";
+import { actionSchema, actionResourceSchema } from "../../apis/actions/schemas";
+import { paginationMetaSchema } from "../../apis/common/schemas";
+import { locationSchema } from "../../apis/servers/schemas";
 
 /**
  * Load Balancer algorithm type schema

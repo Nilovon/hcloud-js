@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#placement-groups
  */
 
-import type { HCloudClient } from "@/client/index";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListPlacementGroupsParams,
   ListPlacementGroupsResponse,
@@ -13,8 +13,8 @@ import type {
   UpdatePlacementGroupParams,
   UpdatePlacementGroupResponse,
   DeletePlacementGroupResponse,
-} from "@/apis/placement-groups/types";
-import { validate } from "@/validation/index";
+} from "../../apis/placement-groups/types";
+import { validate } from "../../validation/index";
 import {
   listPlacementGroupsResponseSchema,
   createPlacementGroupRequestSchema,
@@ -23,7 +23,7 @@ import {
   updatePlacementGroupRequestSchema,
   updatePlacementGroupResponseSchema,
   deletePlacementGroupResponseSchema,
-} from "@/apis/placement-groups/schemas";
+} from "../../apis/placement-groups/schemas";
 
 /**
  * Placement Groups API client

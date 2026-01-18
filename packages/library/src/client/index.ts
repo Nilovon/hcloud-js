@@ -235,7 +235,9 @@ export class HCloudClient {
 
     // Add body for non-GET requests
     if (body !== undefined && method !== "GET") {
-      fetchOptions.body = JSON.stringify(body);
+      // Remove undefined values to ensure clean JSON serialization
+      const cleanBody = this.removeUndefinedValues(body);
+      fetchOptions.body = JSON.stringify(cleanBody);
     }
 
     try {
@@ -284,6 +286,32 @@ export class HCloudClient {
     }
 
     throw new HCloudError(errorMessage, errorCode, response.status, errorDetails);
+  }
+
+  /**
+   * Recursively remove undefined values from an object
+   * This ensures clean JSON serialization
+   */
+  private removeUndefinedValues(obj: unknown): unknown {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.removeUndefinedValues(item));
+    }
+
+    if (typeof obj === "object") {
+      const cleaned: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined) {
+          cleaned[key] = this.removeUndefinedValues(value);
+        }
+      }
+      return cleaned;
+    }
+
+    return obj;
   }
 
   /**

@@ -27,6 +27,36 @@ export type { ValidateOptions } from "./validation/index";
 // Common Zod Schemas
 export { paginationMetaSchema } from "./apis/common/schemas";
 
+// Utility functions
+export {
+  paginate,
+  getAllPages,
+  type PaginationIteratorOptions,
+  type PaginatedResult,
+} from "./utils/pagination";
+export {
+  pollAction,
+  pollActions,
+  type PollActionOptions,
+} from "./utils/actions";
+export {
+  isActionCompleted,
+  isActionSuccessful,
+  isActionFailed,
+  isServerRunning,
+  isServerStopped,
+  isImageAvailable,
+  isSnapshot,
+  isBackup,
+  isSystemImage,
+} from "./utils/type-guards";
+export {
+  createAndWaitForServer,
+  findServerByName,
+  findImageByName,
+  findFloatingIPByIP,
+} from "./utils/helpers";
+
 // Servers API
 export { ServersClient } from "./apis/servers/index";
 export type {

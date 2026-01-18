@@ -1,0 +1,317 @@
+---
+title: Utilities
+description: Helper functions and utilities for common operations
+---
+
+# Utilities
+
+hcloud-js provides several utility functions to simplify common operations like pagination, action polling, and type checking.
+
+## Pagination
+
+Working with paginated API responses can be tedious. The pagination utilities help you iterate through all pages automatically.
+
+### `paginate()`
+
+Iterate through paginated results using an async generator:
+
+```typescript
+import { paginate } from '@nilovonjs/hcloud-js';
+
+// Iterate through all servers
+for await (const servers of paginate(
+  (params) => client.servers.list(params),
+  'servers'
+)) {
+  for (const server of servers) {
+    console.log(server.name);
+  }
+}
+```
+
+### `getAllPages()`
+
+Fetch all items from a paginated endpoint at once:
+
+```typescript
+import { getAllPages } from '@nilovonjs/hcloud-js';
+
+// Get all servers
+const allServers = await getAllPages(
+  (params) => client.servers.list(params),
+  'servers'
+);
+console.log(`Total: ${allServers.length} servers`);
+
+// Get all images with options
+const allImages = await getAllPages(
+  (params) => client.images.list(params),
+  'images',
+  {
+    maxPages: 10,      // Limit to 10 pages
+    delay: 100,        // 100ms delay between pages
+    perPage: 50        // 50 items per page
+  }
+);
+```
+
+### Pagination Options
+
+```typescript
+interface PaginationIteratorOptions {
+  maxPages?: number;   // Maximum number of pages to fetch (default: Infinity)
+  delay?: number;      // Delay between page requests in ms (default: 0)
+  perPage?: number;    // Items per page (default: 50)
+}
+```
+
+## Action Polling
+
+When performing actions like creating a server or powering it on, you often need to wait for the action to complete before proceeding.
+
+### `pollAction()`
+
+Wait for a single action to complete:
+
+```typescript
+import { pollAction } from '@nilovonjs/hcloud-js';
+
+// Start a server and wait for it to be running
+const action = await client.servers.powerOn(12345);
+const completed = await pollAction(client, action.action.id);
+
+console.log(`Action completed: ${completed.command}`);
+```
+
+### `pollActions()`
+
+Wait for multiple actions to complete in parallel:
+
+```typescript
+import { pollActions } from '@nilovonjs/hcloud-js';
+
+// Start multiple servers
+const actions = await Promise.all([
+  client.servers.powerOn(1),
+  client.servers.powerOn(2),
+  client.servers.powerOn(3),
+]);
+
+// Wait for all to complete
+const actionIds = actions.map(a => a.action.id);
+const completed = await pollActions(client, actionIds);
+
+console.log(`All ${completed.length} servers are now running!`);
+```
+
+### Polling Options
+
+```typescript
+interface PollActionOptions {
+  interval?: number;     // Interval between polls in ms (default: 1000)
+  timeout?: number;      // Maximum time to wait in ms (default: 300000 = 5 minutes)
+  throwOnError?: boolean; // Whether to throw on error (default: true)
+}
+```
+
+### Example with Custom Options
+
+```typescript
+// Poll with faster interval and longer timeout
+const action = await pollAction(client, actionId, {
+  interval: 500,        // Check every 500ms
+  timeout: 600000,      // Wait up to 10 minutes
+  throwOnError: false   // Don't throw, just return the failed action
+});
+```
+
+## Type Guards
+
+Type guards help you narrow types at runtime for better type safety.
+
+### Action Type Guards
+
+```typescript
+import {
+  isActionCompleted,
+  isActionSuccessful,
+  isActionFailed
+} from '@nilovonjs/hcloud-js';
+
+const action = await client.actions.get(actionId);
+
+if (isActionCompleted(action.action)) {
+  // TypeScript knows: action.status is 'success' | 'error'
+  console.log(`Action finished at: ${action.action.finished}`);
+}
+
+if (isActionSuccessful(action.action)) {
+  // TypeScript knows: action.status is 'success'
+  console.log('Action succeeded!');
+}
+
+if (isActionFailed(action.action)) {
+  // TypeScript knows: action.status is 'error' and error is defined
+  console.error('Action failed:', action.action.error?.message);
+}
+```
+
+### Server Type Guards
+
+```typescript
+import {
+  isServerRunning,
+  isServerStopped
+} from '@nilovonjs/hcloud-js';
+
+const server = await client.servers.get(12345);
+
+if (isServerRunning(server.server)) {
+  // TypeScript knows: server.status is 'running'
+  console.log('Server is running!');
+}
+
+if (isServerStopped(server.server)) {
+  // TypeScript knows: server.status is 'off'
+  console.log('Server is stopped');
+}
+```
+
+### Image Type Guards
+
+```typescript
+import {
+  isImageAvailable,
+  isSnapshot,
+  isBackup,
+  isSystemImage
+} from '@nilovonjs/hcloud-js';
+
+const image = await client.images.get(12345);
+
+if (isImageAvailable(image.image)) {
+  // TypeScript knows: image.status is 'available'
+  console.log('Image is available for use');
+}
+
+if (isSnapshot(image.image)) {
+  // TypeScript knows: image.type is 'snapshot'
+  console.log('This is a snapshot');
+}
+
+if (isBackup(image.image)) {
+  // TypeScript knows: image.type is 'backup'
+  console.log('This is a backup');
+}
+
+if (isSystemImage(image.image)) {
+  // TypeScript knows: image.type is 'system'
+  console.log('This is a system image');
+}
+```
+
+## Helper Functions
+
+Helper functions simplify common operations that would otherwise require multiple API calls.
+
+### `createAndWaitForServer()`
+
+Create a server and automatically wait for it to be running:
+
+```typescript
+import { createAndWaitForServer } from '@nilovonjs/hcloud-js';
+
+// Create server and wait for it to be ready
+const server = await createAndWaitForServer(client, {
+  name: 'my-server',
+  server_type: 'cpx11',
+  image: 'ubuntu-22.04',
+  location: 'nbg1'
+});
+
+// Server is now guaranteed to be running
+console.log(`Server ${server.name} is ready!`);
+console.log(`IP: ${server.public_net.ipv4?.ip}`);
+```
+
+### `findServerByName()`
+
+Find a server by its name:
+
+```typescript
+import { findServerByName } from '@nilovonjs/hcloud-js';
+
+const server = await findServerByName(client, 'my-server');
+if (server) {
+  console.log(`Found server: ${server.name} (ID: ${server.id})`);
+} else {
+  console.log('Server not found');
+}
+```
+
+### `findImageByName()`
+
+Find an image by its name:
+
+```typescript
+import { findImageByName } from '@nilovonjs/hcloud-js';
+
+const image = await findImageByName(client, 'ubuntu-22.04');
+if (image) {
+  console.log(`Found image: ${image.name}`);
+}
+```
+
+### `findFloatingIPByIP()`
+
+Find a floating IP by its IP address:
+
+```typescript
+import { findFloatingIPByIP } from '@nilovonjs/hcloud-js';
+
+const floatingIP = await findFloatingIPByIP(client, '1.2.3.4');
+if (floatingIP) {
+  console.log(`Found floating IP: ${floatingIP.ip}`);
+}
+```
+
+## Complete Example
+
+Here's a complete example combining multiple utilities:
+
+```typescript
+import {
+  HCloudClient,
+  createAndWaitForServer,
+  pollAction,
+  getAllPages,
+  isServerRunning
+} from '@nilovonjs/hcloud-js';
+
+const client = new HCloudClient({
+  token: process.env.HCLOUD_TOKEN!
+});
+
+async function deploy() {
+  // Create and wait for server
+  const server = await createAndWaitForServer(client, {
+    name: 'web-server',
+    server_type: 'cpx11',
+    image: 'ubuntu-22.04',
+    location: 'nbg1'
+  });
+
+  // Verify server is running
+  if (isServerRunning(server)) {
+    console.log('✅ Server is running!');
+  }
+
+  // Get all servers using pagination
+  const allServers = await getAllPages(
+    (params) => client.servers.list(params),
+    'servers'
+  );
+  
+  console.log(`Total servers: ${allServers.length}`);
+}
+```

@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#locations
  */
 
-import type { HCloudClient } from "@/client/index";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListLocationsParams,
   ListLocationsResponse,
@@ -11,14 +11,14 @@ import type {
   ListDataCentersParams,
   ListDataCentersResponse,
   GetDataCenterResponse,
-} from "@/apis/locations/types";
-import { validate } from "@/validation/index";
+} from "../../apis/locations/types";
+import { validate } from "../../validation/index";
 import {
   listLocationsResponseSchema,
   getLocationResponseSchema,
   listDataCentersResponseSchema,
   getDataCenterResponseSchema,
-} from "@/apis/locations/schemas";
+} from "../../apis/locations/schemas";
 
 /**
  * Locations API client

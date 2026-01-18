@@ -13,8 +13,8 @@ import {
   getImageResponseSchema,
   updateImageResponseSchema,
   deleteImageResponseSchema,
-} from "@/apis/images/schemas";
-import { imageSchema } from "@/apis/images/schemas";
+} from "./schemas";
+import { imageSchema } from "./schemas";
 import type { z } from "zod";
 
 /**
@@ -38,7 +38,7 @@ export type Image = z.infer<typeof imageSchema>;
  * @see https://docs.hetzner.cloud/reference/cloud#pagination
  * Re-exported from servers module for consistency
  */
-export type { PaginationMeta } from "@/apis/servers/types";
+export type { PaginationMeta } from "../servers/types";
 
 /**
  * List Images query parameters

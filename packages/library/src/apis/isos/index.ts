@@ -3,10 +3,10 @@
  * @see https://docs.hetzner.cloud/reference/cloud#isos
  */
 
-import type { HCloudClient } from "@/client/index";
-import type { ListISOsParams, ListISOsResponse, GetISOResponse } from "@/apis/isos/types";
-import { validate } from "@/validation/index";
-import { listISOsResponseSchema, getISOResponseSchema } from "@/apis/isos/schemas";
+import type { HCloudClient } from "../../client/index";
+import type { ListISOsParams, ListISOsResponse, GetISOResponse } from "../../apis/isos/types";
+import { validate } from "../../validation/index";
+import { listISOsResponseSchema, getISOResponseSchema } from "../../apis/isos/schemas";
 
 /**
  * ISOs API client

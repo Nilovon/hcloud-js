@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { paginationMetaSchema } from "@/apis/common/schemas";
+import { paginationMetaSchema } from "../../apis/common/schemas";
 
 /**
  * ISO type schema
