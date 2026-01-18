@@ -70,7 +70,7 @@ const newServer = await client.servers.create({
 
 ## Documentation
 
-Full documentation is available at: [https://hcloud-js.nilovon.app](https://hcloud-js.nilovon.app)
+Full documentation is available at: [https://hcloud-js.nilovon.com](https://hcloud-js.nilovon.com)
 
 ## Requirements
 

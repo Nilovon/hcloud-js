@@ -42,7 +42,7 @@
   "bugs": {
     "url": "https://github.com/nilovonjs/hcloud-js/issues"
   },
-  "homepage": "https://hcloud-js.nilovon.app",
+  "homepage": "https://hcloud-js.nilovon.com",
   "engines": {
     "node": ">=18.0.0"
   },
