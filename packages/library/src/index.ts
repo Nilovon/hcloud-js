@@ -4,24 +4,31 @@
  */
 
 // Main client
-export { HCloudClient } from "./client/index.js";
+export { HCloudClient } from "@hcloud-js/client/index";
 
 // Error handling
-export { HCloudError } from "./errors/index.js";
+export { HCloudError } from "@hcloud-js/errors/index";
 
 // Types
-export type { RequestOptions, ApiErrorResponse, ErrorDetailsField } from "./types/index.js";
+export type { RequestOptions, ApiErrorResponse, ErrorDetailsField } from "@hcloud-js/types/index";
 
-export type { ClientOptions } from "./config/index.js";
+export type { ClientOptions } from "@hcloud-js/config/index";
 
 // Configuration
-export { HCLOUD_API_BASE_URL, DEFAULT_TIMEOUT_MS } from "./config/index.js";
+export { HCLOUD_API_BASE_URL, DEFAULT_TIMEOUT_MS } from "@hcloud-js/config/index";
 
 // Auth utilities
-export { createAuthHeader } from "./auth/index.js";
+export { createAuthHeader } from "@hcloud-js/auth/index";
+
+// Validation utilities
+export { validate, safeValidate } from "@hcloud-js/validation/index";
+export type { ValidateOptions } from "@hcloud-js/validation/index";
+
+// Common Zod Schemas
+export { paginationMetaSchema } from "@hcloud-js/apis/common/schemas";
 
 // Servers API
-export { ServersClient } from "./servers/index.js";
+export { ServersClient } from "@hcloud-js/apis/servers/index";
 export type {
   Server,
   ServerStatus,
@@ -39,33 +46,66 @@ export type {
   ServerMetricsTimeSeriesValue,
   PaginationMeta,
   ServerType,
-  Image,
   Location,
   Datacenter,
-  Network,
   PublicNet,
   PrivateNet,
-  ISO,
+  ServerAction,
   BackupWindow,
   ServerProtection,
-  Action,
-} from "./servers/types.js";
+  ServerImage,
+  ListServerActionsParams,
+  ListServerActionsResponse,
+  GetServerActionResponse,
+  PowerOnServerResponse,
+  PowerOffServerResponse,
+  RebootServerResponse,
+  ResetServerResponse,
+  ShutdownServerResponse,
+  AttachISOToServerParams,
+  AttachISOToServerResponse,
+  DetachISOFromServerResponse,
+  EnableRescueModeParams,
+  EnableRescueModeResponse,
+  DisableRescueModeResponse,
+  CreateImageFromServerParams,
+  CreateImageFromServerResponse,
+  RebuildServerFromImageParams,
+  RebuildServerFromImageResponse,
+  ChangeServerProtectionParams,
+  ChangeServerProtectionResponse,
+  ChangeServerTypeParams,
+  ChangeServerTypeResponse,
+  EnableBackupsParams,
+  EnableBackupsResponse,
+  DisableBackupsResponse,
+  AttachServerToNetworkParams,
+  AttachServerToNetworkResponse,
+  DetachServerFromNetworkParams,
+  DetachServerFromNetworkResponse,
+  ChangeAliasIPsOfNetworkParams,
+  ChangeAliasIPsOfNetworkResponse,
+  ChangeServerReverseDNSParams,
+  ChangeServerReverseDNSResponse,
+  RequestConsoleForServerParams,
+  RequestConsoleForServerResponse,
+  ResetRootPasswordResponse,
+  AddServerToPlacementGroupParams,
+  AddServerToPlacementGroupResponse,
+  RemoveServerFromPlacementGroupResponse,
+} from "@hcloud-js/apis/servers/types";
 
 // Servers Zod Schemas
 export {
   serverStatusSchema,
   serverSchema,
   serverTypeSchema,
-  imageSchema,
   locationSchema,
-  datacenterSchema,
-  networkSchema,
+  datacenterSchema, 
   publicNetSchema,
   privateNetSchema,
-  isoSchema,
   backupWindowSchema,
   serverProtectionSchema,
-  paginationMetaSchema,
   listServersResponseSchema,
   createServerRequestSchema,
   createServerResponseSchema,
@@ -76,13 +116,684 @@ export {
   getServerMetricsResponseSchema,
   serverMetricsSchema,
   serverMetricsTimeSeriesValueSchema,
-  actionSchema,
-} from "./servers/schemas.js";
+  serverActionSchema,
+  listServerActionsResponseSchema,
+  getServerActionResponseSchema,
+  powerOnServerResponseSchema,
+  powerOffServerResponseSchema,
+  rebootServerResponseSchema,
+  resetServerResponseSchema,
+  shutdownServerResponseSchema,
+  attachISOToServerRequestSchema,
+  attachISOToServerResponseSchema,
+  detachISOFromServerResponseSchema,
+  enableRescueModeRequestSchema,
+  enableRescueModeResponseSchema,
+  disableRescueModeResponseSchema,
+  createImageFromServerRequestSchema,
+  createImageFromServerResponseSchema,
+  rebuildServerFromImageRequestSchema,
+  rebuildServerFromImageResponseSchema,
+  changeServerProtectionRequestSchema,
+  changeServerProtectionResponseSchema,
+  changeServerTypeRequestSchema,
+  changeServerTypeResponseSchema,
+  enableBackupsRequestSchema,
+  enableBackupsResponseSchema,
+  disableBackupsResponseSchema,
+  attachServerToNetworkRequestSchema,
+  attachServerToNetworkResponseSchema,
+  detachServerFromNetworkRequestSchema,
+  detachServerFromNetworkResponseSchema,
+  changeAliasIPsOfNetworkRequestSchema,
+  changeAliasIPsOfNetworkResponseSchema,
+  changeServerReverseDNSRequestSchema,
+  changeServerReverseDNSResponseSchema,
+  requestConsoleForServerRequestSchema,
+  requestConsoleForServerResponseSchema,
+  resetRootPasswordResponseSchema,
+  addServerToPlacementGroupRequestSchema,
+  addServerToPlacementGroupResponseSchema,
+  removeServerFromPlacementGroupRequestSchema,
+  removeServerFromPlacementGroupResponseSchema,
+} from "@hcloud-js/apis/servers/schemas";
 
-// Servers Validation utilities
+// Images API
+export { ImagesClient } from "@hcloud-js/apis/images/index";
+export type {
+  ImageStatus,
+  ImageType,
+  Image,
+  ListImagesParams,
+  ListImagesResponse,
+  GetImageResponse,
+  UpdateImageParams,
+  UpdateImageResponse,
+  DeleteImageResponse,
+} from "@hcloud-js/apis/images/types";
+
+// Images Zod Schemas
 export {
-  validateServer,
-  validateListServersResponse,
-  safeValidateServer,
-  safeValidateListServersResponse,
-} from "./servers/validation.js";
+  imageStatusSchema,
+  imageTypeSchema,
+  imageSchema,
+  imageCreatedFromSchema,
+  imageProtectionSchema,
+  imageDeprecationSchema,
+  listImagesResponseSchema,
+  updateImageRequestSchema,
+  getImageResponseSchema,
+  updateImageResponseSchema,
+  deleteImageResponseSchema,
+} from "@hcloud-js/apis/images/schemas";
+
+// Actions API
+export { ActionsClient } from "@hcloud-js/apis/actions/index";
+export type {
+  Action,
+  ActionStatus,
+  ActionResource,
+  ListActionsParams,
+  ListActionsResponse,
+  GetActionResponse,
+} from "@hcloud-js/apis/actions/types";
+
+// Actions Zod Schemas
+export {
+  actionSchema,
+  actionResourceSchema,
+  listActionsResponseSchema,
+  getActionResponseSchema,
+} from "@hcloud-js/apis/actions/schemas";
+
+// Certificates API
+export { CertificatesClient } from "@hcloud-js/apis/certificates/index";
+export type {
+  Certificate,
+  CertificateStatus,
+  CertificateType,
+  ListCertificatesParams,
+  ListCertificatesResponse,
+  CreateCertificateParams,
+  CreateCertificateResponse,
+  GetCertificateResponse,
+  UpdateCertificateParams,
+  UpdateCertificateResponse,
+  DeleteCertificateResponse,
+  ListCertificateActionsParams,
+  ListCertificateActionsResponse,
+  GetCertificateActionResponse,
+  RetryCertificateIssuanceResponse,
+} from "@hcloud-js/apis/certificates/types";
+
+// Certificates Zod Schemas
+export {
+  certificateStatusSchema,
+  certificateTypeSchema,
+  certificateSchema,
+  listCertificatesResponseSchema,
+  createCertificateRequestSchema,
+  createCertificateResponseSchema,
+  getCertificateResponseSchema,
+  updateCertificateRequestSchema,
+  updateCertificateResponseSchema,
+  deleteCertificateResponseSchema,
+  listCertificateActionsResponseSchema,
+  getCertificateActionResponseSchema,
+  retryCertificateIssuanceResponseSchema,
+} from "@hcloud-js/apis/certificates/schemas";
+
+// SSH Keys API
+export { SSHKeysClient } from "@hcloud-js/apis/ssh-keys/index";
+export type {
+  SSHKey,
+  ListSSHKeysParams,
+  ListSSHKeysResponse,
+  CreateSSHKeyParams,
+  CreateSSHKeyResponse,
+  GetSSHKeyResponse,
+  UpdateSSHKeyParams,
+  UpdateSSHKeyResponse,
+  DeleteSSHKeyResponse,
+} from "@hcloud-js/apis/ssh-keys/types";
+
+// SSH Keys Zod Schemas
+export {
+  sshKeySchema,
+  listSSHKeysResponseSchema,
+  createSSHKeyRequestSchema,
+  createSSHKeyResponseSchema,
+  getSSHKeyResponseSchema,
+  updateSSHKeyRequestSchema,
+  updateSSHKeyResponseSchema,
+  deleteSSHKeyResponseSchema,
+} from "@hcloud-js/apis/ssh-keys/schemas";
+
+// Firewalls API
+export { FirewallsClient } from "@hcloud-js/apis/firewalls/index";
+export type {
+  Firewall,
+  FirewallRule,
+  FirewallRuleDirection,
+  FirewallRuleProtocol,
+  FirewallAppliedToResource,
+  ListFirewallsParams,
+  ListFirewallsResponse,
+  CreateFirewallParams,
+  CreateFirewallResponse,
+  GetFirewallResponse,
+  UpdateFirewallParams,
+  UpdateFirewallResponse,
+  DeleteFirewallResponse,
+  ListFirewallActionsParams,
+  ListFirewallActionsResponse,
+  GetFirewallActionResponse,
+  ApplyFirewallToResourcesParams,
+  ApplyFirewallToResourcesResponse,
+  RemoveFirewallFromResourcesParams,
+  RemoveFirewallFromResourcesResponse,
+  SetFirewallRulesParams,
+  SetFirewallRulesResponse,
+} from "@hcloud-js/apis/firewalls/types";
+
+// Firewalls Zod Schemas
+export {
+  firewallSchema,
+  firewallRuleSchema,
+  firewallRuleDirectionSchema,
+  firewallRuleProtocolSchema,
+  firewallAppliedToResourceSchema,
+  listFirewallsResponseSchema,
+  createFirewallRequestSchema,
+  createFirewallResponseSchema,
+  getFirewallResponseSchema,
+  updateFirewallRequestSchema,
+  updateFirewallResponseSchema,
+  deleteFirewallResponseSchema,
+  listFirewallActionsResponseSchema,
+  getFirewallActionResponseSchema,
+  applyFirewallToResourcesRequestSchema,
+  applyFirewallToResourcesResponseSchema,
+  removeFirewallFromResourcesRequestSchema,
+  removeFirewallFromResourcesResponseSchema,
+  setFirewallRulesRequestSchema,
+  setFirewallRulesResponseSchema,
+} from "@hcloud-js/apis/firewalls/schemas";
+
+// Floating IPs API
+export { FloatingIPsClient } from "@hcloud-js/apis/floating-ips/index";
+export type {
+  FloatingIP,
+  FloatingIPType,
+  FloatingIPDnsPointer,
+  FloatingIPProtection,
+  ListFloatingIPsParams,
+  ListFloatingIPsResponse,
+  CreateFloatingIPParams,
+  CreateFloatingIPResponse,
+  GetFloatingIPResponse,
+  UpdateFloatingIPParams,
+  UpdateFloatingIPResponse,
+  DeleteFloatingIPResponse,
+  ListFloatingIPActionsParams,
+  ListFloatingIPActionsResponse,
+  GetFloatingIPActionResponse,
+  AssignFloatingIPToServerParams,
+  AssignFloatingIPToServerResponse,
+  ChangeFloatingIPReverseDNSParams,
+  ChangeFloatingIPReverseDNSResponse,
+  ChangeFloatingIPProtectionParams,
+  ChangeFloatingIPProtectionResponse,
+  UnassignFloatingIPResponse,
+} from "@hcloud-js/apis/floating-ips/types";
+
+// Floating IPs Zod Schemas
+export {
+  floatingIpSchema,
+  floatingIpTypeSchema,
+  floatingIpDnsPointerSchema,
+  floatingIpProtectionSchema,
+  listFloatingIPsResponseSchema,
+  createFloatingIPRequestSchema,
+  createFloatingIPResponseSchema,
+  getFloatingIPResponseSchema,
+  updateFloatingIPRequestSchema,
+  updateFloatingIPResponseSchema,
+  deleteFloatingIPResponseSchema,
+  listFloatingIPActionsResponseSchema,
+  getFloatingIPActionResponseSchema,
+  assignFloatingIPToServerRequestSchema,
+  assignFloatingIPToServerResponseSchema,
+  changeFloatingIPReverseDNSRequestSchema,
+  changeFloatingIPReverseDNSResponseSchema,
+  changeFloatingIPProtectionRequestSchema,
+  changeFloatingIPProtectionResponseSchema,
+  unassignFloatingIPRequestSchema,
+  unassignFloatingIPResponseSchema,
+} from "@hcloud-js/apis/floating-ips/schemas";
+
+// ISOs API
+export { ISOsClient } from "@hcloud-js/apis/isos/index";
+export type {
+  ISO,
+  ISOType,
+  ListISOsParams,
+  ListISOsResponse,
+  GetISOResponse,
+} from "@hcloud-js/apis/isos/types";
+export {
+  isoSchema,
+  isoTypeSchema,
+  listISOsResponseSchema,
+  getISOResponseSchema,
+} from "@hcloud-js/apis/isos/schemas";
+
+// Placement Groups API
+export { PlacementGroupsClient } from "@hcloud-js/apis/placement-groups/index";
+export type {
+  PlacementGroup,
+  PlacementGroupType,
+  ListPlacementGroupsParams,
+  ListPlacementGroupsResponse,
+  CreatePlacementGroupParams,
+  CreatePlacementGroupResponse,
+  GetPlacementGroupResponse,
+  UpdatePlacementGroupParams,
+  UpdatePlacementGroupResponse,
+  DeletePlacementGroupResponse,
+} from "@hcloud-js/apis/placement-groups/types";
+export {
+  placementGroupSchema,
+  placementGroupTypeSchema,
+  listPlacementGroupsResponseSchema,
+  createPlacementGroupRequestSchema,
+  createPlacementGroupResponseSchema,
+  getPlacementGroupResponseSchema,
+  updatePlacementGroupRequestSchema,
+  updatePlacementGroupResponseSchema,
+  deletePlacementGroupResponseSchema,
+} from "@hcloud-js/apis/placement-groups/schemas";
+
+// Primary IPs API
+export { PrimaryIPsClient } from "@hcloud-js/apis/primary-ips/index";
+export type {
+  PrimaryIP,
+  PrimaryIPType,
+  PrimaryIPDnsPointer,
+  PrimaryIPProtection,
+  PrimaryIPAssigneeType,
+  ListPrimaryIPsParams,
+  ListPrimaryIPsResponse,
+  CreatePrimaryIPParams,
+  CreatePrimaryIPResponse,
+  GetPrimaryIPResponse,
+  UpdatePrimaryIPParams,
+  UpdatePrimaryIPResponse,
+  DeletePrimaryIPResponse,
+  ListPrimaryIPActionsParams,
+  ListPrimaryIPActionsResponse,
+  GetPrimaryIPActionResponse,
+  AssignPrimaryIPToResourceParams,
+  AssignPrimaryIPToResourceResponse,
+  ChangePrimaryIPReverseDNSParams,
+  ChangePrimaryIPReverseDNSResponse,
+  ChangePrimaryIPProtectionParams,
+  ChangePrimaryIPProtectionResponse,
+  UnassignPrimaryIPResponse,
+} from "@hcloud-js/apis/primary-ips/types";
+export {
+  primaryIpSchema,
+  primaryIpTypeSchema,
+  primaryIpDnsPointerSchema,
+  primaryIpProtectionSchema,
+  primaryIpAssigneeTypeSchema,
+  listPrimaryIPsResponseSchema,
+  createPrimaryIPRequestSchema,
+  createPrimaryIPResponseSchema,
+  getPrimaryIPResponseSchema,
+  updatePrimaryIPRequestSchema,
+  updatePrimaryIPResponseSchema,
+  deletePrimaryIPResponseSchema,
+  listPrimaryIPActionsResponseSchema,
+  getPrimaryIPActionResponseSchema,
+  assignPrimaryIPToResourceRequestSchema,
+  assignPrimaryIPToResourceResponseSchema,
+  changePrimaryIPReverseDNSRequestSchema,
+  changePrimaryIPReverseDNSResponseSchema,
+  changePrimaryIPProtectionRequestSchema,
+  changePrimaryIPProtectionResponseSchema,
+  unassignPrimaryIPRequestSchema,
+  unassignPrimaryIPResponseSchema,
+} from "@hcloud-js/apis/primary-ips/schemas";
+
+// Server Types API
+export { ServerTypesClient } from "@hcloud-js/apis/server-types/index";
+export type {
+  ListServerTypesParams,
+  ListServerTypesResponse,
+  GetServerTypeResponse,
+} from "@hcloud-js/apis/server-types/types";
+export {
+  listServerTypesResponseSchema,
+  getServerTypeResponseSchema,
+} from "@hcloud-js/apis/server-types/schemas";
+
+// Load Balancers API
+export { LoadBalancersClient } from "@hcloud-js/apis/load-balancers/index";
+export type {
+  LoadBalancer,
+  LoadBalancerAlgorithmType,
+  LoadBalancerServiceProtocol,
+  LoadBalancerTargetType,
+  LoadBalancerServiceHealthCheckProtocol,
+  ListLoadBalancersParams,
+  ListLoadBalancersResponse,
+  CreateLoadBalancerParams,
+  CreateLoadBalancerResponse,
+  GetLoadBalancerResponse,
+  UpdateLoadBalancerParams,
+  UpdateLoadBalancerResponse,
+  DeleteLoadBalancerResponse,
+  ListLoadBalancerActionsParams,
+  ListLoadBalancerActionsResponse,
+  GetLoadBalancerActionResponse,
+  AddLoadBalancerServiceParams,
+  AddLoadBalancerServiceResponse,
+  UpdateLoadBalancerServiceParams,
+  UpdateLoadBalancerServiceResponse,
+  DeleteLoadBalancerServiceResponse,
+  AddLoadBalancerTargetParams,
+  AddLoadBalancerTargetResponse,
+  RemoveLoadBalancerTargetParams,
+  RemoveLoadBalancerTargetResponse,
+  ChangeLoadBalancerAlgorithmParams,
+  ChangeLoadBalancerAlgorithmResponse,
+  ChangeLoadBalancerReverseDNSParams,
+  ChangeLoadBalancerReverseDNSResponse,
+  ChangeLoadBalancerProtectionParams,
+  ChangeLoadBalancerProtectionResponse,
+  ChangeLoadBalancerTypeParams,
+  ChangeLoadBalancerTypeResponse,
+  AttachLoadBalancerToNetworkParams,
+  AttachLoadBalancerToNetworkResponse,
+  DetachLoadBalancerFromNetworkResponse,
+  EnableLoadBalancerPublicInterfaceResponse,
+  DisableLoadBalancerPublicInterfaceResponse,
+  GetLoadBalancerMetricsParams,
+  GetLoadBalancerMetricsResponse,
+} from "@hcloud-js/apis/load-balancers/types";
+export {
+  loadBalancerSchema,
+  loadBalancerAlgorithmTypeSchema,
+  loadBalancerServiceProtocolSchema,
+  loadBalancerTargetTypeSchema,
+  listLoadBalancersResponseSchema,
+  createLoadBalancerRequestSchema,
+  createLoadBalancerResponseSchema,
+  getLoadBalancerResponseSchema,
+  updateLoadBalancerRequestSchema,
+  updateLoadBalancerResponseSchema,
+  deleteLoadBalancerResponseSchema,
+  listLoadBalancerActionsResponseSchema,
+  getLoadBalancerActionResponseSchema,
+  addLoadBalancerServiceRequestSchema,
+  addLoadBalancerServiceResponseSchema,
+  updateLoadBalancerServiceRequestSchema,
+  updateLoadBalancerServiceResponseSchema,
+  deleteLoadBalancerServiceRequestSchema,
+  deleteLoadBalancerServiceResponseSchema,
+  addLoadBalancerTargetRequestSchema,
+  addLoadBalancerTargetResponseSchema,
+  removeLoadBalancerTargetRequestSchema,
+  removeLoadBalancerTargetResponseSchema,
+  changeLoadBalancerAlgorithmRequestSchema,
+  changeLoadBalancerAlgorithmResponseSchema,
+  changeLoadBalancerReverseDNSRequestSchema,
+  changeLoadBalancerReverseDNSResponseSchema,
+  changeLoadBalancerProtectionRequestSchema,
+  changeLoadBalancerProtectionResponseSchema,
+  changeLoadBalancerTypeRequestSchema,
+  changeLoadBalancerTypeResponseSchema,
+  attachLoadBalancerToNetworkRequestSchema,
+  attachLoadBalancerToNetworkResponseSchema,
+  detachLoadBalancerFromNetworkRequestSchema,
+  detachLoadBalancerFromNetworkResponseSchema,
+  enableLoadBalancerPublicInterfaceRequestSchema,
+  enableLoadBalancerPublicInterfaceResponseSchema,
+  disableLoadBalancerPublicInterfaceRequestSchema,
+  disableLoadBalancerPublicInterfaceResponseSchema,
+  getLoadBalancerMetricsRequestSchema,
+  getLoadBalancerMetricsResponseSchema,
+} from "@hcloud-js/apis/load-balancers/schemas";
+
+// Networks API
+export { NetworksClient } from "@hcloud-js/apis/networks/index";
+export type {
+  Network,
+  NetworkSubnetType,
+  NetworkRoute,
+  NetworkSubnet,
+  NetworkProtection,
+  ListNetworksParams,
+  ListNetworksResponse,
+  CreateNetworkParams,
+  CreateNetworkResponse,
+  GetNetworkResponse,
+  UpdateNetworkParams,
+  UpdateNetworkResponse,
+  DeleteNetworkResponse,
+  ListNetworkActionsParams,
+  ListNetworkActionsResponse,
+  GetNetworkActionResponse,
+  AddNetworkRouteParams,
+  AddNetworkRouteResponse,
+  DeleteNetworkRouteParams,
+  DeleteNetworkRouteResponse,
+  AddNetworkSubnetParams,
+  AddNetworkSubnetResponse,
+  DeleteNetworkSubnetParams,
+  DeleteNetworkSubnetResponse,
+  ChangeNetworkIpRangeParams,
+  ChangeNetworkIpRangeResponse,
+  ChangeNetworkProtectionParams,
+  ChangeNetworkProtectionResponse,
+} from "@hcloud-js/apis/networks/types";
+export {
+  networkSchema,
+  networkSubnetTypeSchema,
+  networkRouteSchema,
+  networkSubnetSchema,
+  networkProtectionSchema,
+  listNetworksResponseSchema,
+  createNetworkRequestSchema,
+  createNetworkResponseSchema,
+  getNetworkResponseSchema,
+  updateNetworkRequestSchema,
+  updateNetworkResponseSchema,
+  deleteNetworkResponseSchema,
+  listNetworkActionsResponseSchema,
+  getNetworkActionResponseSchema,
+  addNetworkRouteRequestSchema,
+  addNetworkRouteResponseSchema,
+  deleteNetworkRouteRequestSchema,
+  deleteNetworkRouteResponseSchema,
+  addNetworkSubnetRequestSchema,
+  addNetworkSubnetResponseSchema,
+  deleteNetworkSubnetRequestSchema,
+  deleteNetworkSubnetResponseSchema,
+  changeNetworkIpRangeRequestSchema,
+  changeNetworkIpRangeResponseSchema,
+  changeNetworkProtectionRequestSchema,
+  changeNetworkProtectionResponseSchema,
+} from "@hcloud-js/apis/networks/schemas";
+
+// Pricing API
+export { PricingClient } from "@hcloud-js/apis/pricing/index";
+export type {
+  Price,
+  PricingLocation,
+  ServerTypePricing,
+  LoadBalancerTypePricing,
+  VolumePricing,
+  FloatingIpPricing,
+  PrimaryIpPricing,
+  TrafficPricing,
+  ImagePricing,
+  GetPricingResponse,
+} from "@hcloud-js/apis/pricing/types";
+export {
+  priceSchema,
+  pricingLocationSchema,
+  serverTypePricingSchema,
+  loadBalancerTypePricingSchema,
+  volumePricingSchema,
+  floatingIpPricingSchema,
+  primaryIpPricingSchema,
+  trafficPricingSchema,
+  imagePricingSchema,
+  getPricingResponseSchema,
+} from "@hcloud-js/apis/pricing/schemas";
+
+// Volumes API
+export { VolumesClient } from "@hcloud-js/apis/volumes/index";
+export type {
+  Volume,
+  VolumeStatus,
+  VolumeProtection,
+  ListVolumesParams,
+  ListVolumesResponse,
+  CreateVolumeParams,
+  CreateVolumeResponse,
+  GetVolumeResponse,
+  UpdateVolumeParams,
+  UpdateVolumeResponse,
+  DeleteVolumeResponse,
+  ListVolumeActionsParams,
+  ListVolumeActionsResponse,
+  GetVolumeActionResponse,
+  AttachVolumeToServerParams,
+  AttachVolumeToServerResponse,
+  DetachVolumeResponse,
+  ResizeVolumeParams,
+  ResizeVolumeResponse,
+  ChangeVolumeProtectionParams,
+  ChangeVolumeProtectionResponse,
+} from "@hcloud-js/apis/volumes/types";
+export {
+  volumeSchema,
+  volumeStatusSchema,
+  volumeProtectionSchema,
+  listVolumesResponseSchema,
+  createVolumeRequestSchema,
+  createVolumeResponseSchema,
+  getVolumeResponseSchema,
+  updateVolumeRequestSchema,
+  updateVolumeResponseSchema,
+  deleteVolumeResponseSchema,
+  listVolumeActionsResponseSchema,
+  getVolumeActionResponseSchema,
+  attachVolumeToServerRequestSchema,
+  attachVolumeToServerResponseSchema,
+  detachVolumeRequestSchema,
+  detachVolumeResponseSchema,
+  resizeVolumeRequestSchema,
+  resizeVolumeResponseSchema,
+  changeVolumeProtectionRequestSchema,
+  changeVolumeProtectionResponseSchema,
+} from "@hcloud-js/apis/volumes/schemas";
+
+// DNS (Zones) API
+export { DNSClient } from "@hcloud-js/apis/dns/index";
+export type {
+  Zone,
+  ZoneStatus,
+  ZoneProtection,
+  RRSet,
+  RRSetRecord,
+  RRSetProtection,
+  ListZonesParams,
+  ListZonesResponse,
+  CreateZoneParams,
+  CreateZoneResponse,
+  GetZoneResponse,
+  UpdateZoneParams,
+  UpdateZoneResponse,
+  DeleteZoneResponse,
+  ExportZoneResponse,
+  ListZoneActionsParams,
+  ListZoneActionsResponse,
+  GetZoneActionResponse,
+  ChangeZonePrimaryNameserversParams,
+  ChangeZonePrimaryNameserversResponse,
+  ChangeZoneProtectionParams,
+  ChangeZoneProtectionResponse,
+  ChangeZoneDefaultTTLParams,
+  ChangeZoneDefaultTTLResponse,
+  ImportZoneFileParams,
+  ImportZoneFileResponse,
+  ListRRSetsParams,
+  ListRRSetsResponse,
+  GetRRSetResponse,
+  CreateRRSetParams,
+  CreateRRSetResponse,
+  UpdateRRSetParams,
+  UpdateRRSetResponse,
+  DeleteRRSetResponse,
+  ChangeRRSetProtectionParams,
+  ChangeRRSetProtectionResponse,
+  ChangeRRSetTTLParams,
+  ChangeRRSetTTLResponse,
+  SetRRSetRecordsParams,
+  SetRRSetRecordsResponse,
+  AddRRSetRecordsParams,
+  AddRRSetRecordsResponse,
+  RemoveRRSetRecordsParams,
+  RemoveRRSetRecordsResponse,
+  UpdateRRSetRecordsParams,
+  UpdateRRSetRecordsResponse,
+} from "@hcloud-js/apis/dns/types";
+export {
+  zoneSchema,
+  zoneStatusSchema,
+  zoneProtectionSchema,
+  rrsetSchema,
+  rrsetRecordSchema,
+  rrsetProtectionSchema,
+  listZonesResponseSchema,
+  createZoneRequestSchema,
+  createZoneResponseSchema,
+  getZoneResponseSchema,
+  updateZoneRequestSchema,
+  updateZoneResponseSchema,
+  deleteZoneResponseSchema,
+  exportZoneResponseSchema,
+  listZoneActionsResponseSchema,
+  getZoneActionResponseSchema,
+  changeZonePrimaryNameserversRequestSchema,
+  changeZonePrimaryNameserversResponseSchema,
+  changeZoneProtectionRequestSchema,
+  changeZoneProtectionResponseSchema,
+  changeZoneDefaultTTLRequestSchema,
+  changeZoneDefaultTTLResponseSchema,
+  importZoneFileRequestSchema,
+  importZoneFileResponseSchema,
+  listRRSetsResponseSchema,
+  getRRSetResponseSchema,
+  createRRSetRequestSchema,
+  createRRSetResponseSchema,
+  updateRRSetRequestSchema,
+  updateRRSetResponseSchema,
+  deleteRRSetResponseSchema,
+  changeRRSetProtectionRequestSchema,
+  changeRRSetProtectionResponseSchema,
+  changeRRSetTTLRequestSchema,
+  changeRRSetTTLResponseSchema,
+  setRRSetRecordsRequestSchema,
+  setRRSetRecordsResponseSchema,
+  addRRSetRecordsRequestSchema,
+  addRRSetRecordsResponseSchema,
+  removeRRSetRecordsRequestSchema,
+  removeRRSetRecordsResponseSchema,
+  updateRRSetRecordsRequestSchema,
+  updateRRSetRecordsResponseSchema,
+} from "@hcloud-js/apis/dns/schemas";

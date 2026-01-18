@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#servers
  */
 
-import type { HCloudClient } from "../client/index.js";
+import type { HCloudClient } from "@hcloud-js/client/index.js";
 import type {
   ListServersParams,
   ListServersResponse,
@@ -15,17 +15,96 @@ import type {
   DeleteServerResponse,
   GetServerMetricsParams,
   GetServerMetricsResponse,
-} from "./types.js";
+  ListServerActionsParams,
+  ListServerActionsResponse,
+  GetServerActionResponse,
+  PowerOnServerResponse,
+  PowerOffServerResponse,
+  RebootServerResponse,
+  ResetServerResponse,
+  ShutdownServerResponse,
+  AttachISOToServerParams,
+  AttachISOToServerResponse,
+  DetachISOFromServerResponse,
+  EnableRescueModeParams,
+  EnableRescueModeResponse,
+  DisableRescueModeResponse,
+  CreateImageFromServerParams,
+  CreateImageFromServerResponse,
+  RebuildServerFromImageParams,
+  RebuildServerFromImageResponse,
+  ChangeServerProtectionParams,
+  ChangeServerProtectionResponse,
+  ChangeServerTypeParams,
+  ChangeServerTypeResponse,
+  EnableBackupsParams,
+  EnableBackupsResponse,
+  DisableBackupsResponse,
+  AttachServerToNetworkParams,
+  AttachServerToNetworkResponse,
+  DetachServerFromNetworkParams,
+  DetachServerFromNetworkResponse,
+  ChangeAliasIPsOfNetworkParams,
+  ChangeAliasIPsOfNetworkResponse,
+  ChangeServerReverseDNSParams,
+  ChangeServerReverseDNSResponse,
+  RequestConsoleForServerParams,
+  RequestConsoleForServerResponse,
+  ResetRootPasswordResponse,
+  AddServerToPlacementGroupParams,
+  AddServerToPlacementGroupResponse,
+  RemoveServerFromPlacementGroupResponse,
+} from "@hcloud-js/apis/servers/types.js";
+import { validate } from "@hcloud-js/validation/index.js";
 import {
-  validateListServersResponse,
-  validateCreateServerRequest,
-  validateCreateServerResponse,
-  validateGetServerResponse,
-  validateUpdateServerRequest,
-  validateUpdateServerResponse,
-  validateDeleteServerResponse,
-  validateGetServerMetricsResponse,
-} from "./validation.js";
+  listServersResponseSchema,
+  createServerRequestSchema,
+  createServerResponseSchema,
+  getServerResponseSchema,
+  updateServerRequestSchema,
+  updateServerResponseSchema,
+  deleteServerResponseSchema,
+  getServerMetricsResponseSchema,
+  listServerActionsResponseSchema,
+  getServerActionResponseSchema,
+  powerOnServerResponseSchema,
+  powerOffServerResponseSchema,
+  rebootServerResponseSchema,
+  resetServerResponseSchema,
+  shutdownServerResponseSchema,
+  attachISOToServerRequestSchema,
+  attachISOToServerResponseSchema,
+  detachISOFromServerResponseSchema,
+  enableRescueModeRequestSchema,
+  enableRescueModeResponseSchema,
+  disableRescueModeResponseSchema,
+  createImageFromServerRequestSchema,
+  createImageFromServerResponseSchema,
+  rebuildServerFromImageRequestSchema,
+  rebuildServerFromImageResponseSchema,
+  changeServerProtectionRequestSchema,
+  changeServerProtectionResponseSchema,
+  changeServerTypeRequestSchema,
+  changeServerTypeResponseSchema,
+  enableBackupsRequestSchema,
+  enableBackupsResponseSchema,
+  disableBackupsResponseSchema,
+  attachServerToNetworkRequestSchema,
+  attachServerToNetworkResponseSchema,
+  detachServerFromNetworkRequestSchema,
+  detachServerFromNetworkResponseSchema,
+  changeAliasIPsOfNetworkRequestSchema,
+  changeAliasIPsOfNetworkResponseSchema,
+  changeServerReverseDNSRequestSchema,
+  changeServerReverseDNSResponseSchema,
+  requestConsoleForServerRequestSchema,
+  requestConsoleForServerResponseSchema,
+  resetRootPasswordResponseSchema,
+  addServerToPlacementGroupRequestSchema,
+  addServerToPlacementGroupResponseSchema,
+  removeServerFromPlacementGroupRequestSchema,
+  removeServerFromPlacementGroupResponseSchema,
+} from "@hcloud-js/apis/servers/schemas.js";
 
 /**
  * Servers API client
@@ -94,7 +173,10 @@ export class ServersClient {
     const response = await this.client.get<unknown>("/servers", queryParams);
 
     // Validate response with Zod
-    return validateListServersResponse(response);
+    return validate(listServersResponseSchema, response, {
+      context: "List servers response",
+      detailed: true,
+    });
   }
 
   /**
@@ -131,13 +213,19 @@ export class ServersClient {
    */
   async create(params: CreateServerParams): Promise<CreateServerResponse> {
     // Validate request parameters
-    const validatedParams = validateCreateServerRequest(params);
+    const validatedParams = validate(createServerRequestSchema, params, {
+      context: "Create server request",
+      detailed: true,
+    });
 
     // Make API request
     const response = await this.client.post<unknown>("/servers", validatedParams);
 
     // Validate response with Zod
-    return validateCreateServerResponse(response);
+    return validate(createServerResponseSchema, response, {
+      context: "Create server response",
+      detailed: true,
+    });
   }
 
   /**
@@ -160,7 +248,10 @@ export class ServersClient {
     const response = await this.client.get<unknown>(`/servers/${id}`);
 
     // Validate response with Zod
-    return validateGetServerResponse(response);
+    return validate(getServerResponseSchema, response, {
+      context: "Get server response",
+      detailed: true,
+    });
   }
 
   /**
@@ -190,13 +281,19 @@ export class ServersClient {
    */
   async update(id: number, params: UpdateServerParams): Promise<UpdateServerResponse> {
     // Validate request parameters
-    const validatedParams = validateUpdateServerRequest(params);
+    const validatedParams = validate(updateServerRequestSchema, params, {
+      context: "Update server request",
+      detailed: true,
+    });
 
     // Make API request
     const response = await this.client.put<unknown>(`/servers/${id}`, validatedParams);
 
     // Validate response with Zod
-    return validateUpdateServerResponse(response);
+    return validate(updateServerResponseSchema, response, {
+      context: "Update server response",
+      detailed: true,
+    });
   }
 
   /**
@@ -221,7 +318,10 @@ export class ServersClient {
     const response = await this.client.delete<unknown>(`/servers/${id}`);
 
     // Validate response with Zod
-    return validateDeleteServerResponse(response);
+    return validate(deleteServerResponseSchema, response, {
+      context: "Delete server response",
+      detailed: true,
+    });
   }
 
   /**
@@ -270,6 +370,9 @@ export class ServersClient {
     const response = await this.client.get<unknown>(`/servers/${id}/metrics`, queryParams);
 
     // Validate response with Zod
-    return validateGetServerMetricsResponse(response);
+    return validate(getServerMetricsResponseSchema, response, {
+      context: "Get server metrics response",
+      detailed: true,
+    });
   }
 }

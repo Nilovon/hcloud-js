@@ -3,13 +3,29 @@
  * @see https://docs.hetzner.cloud/reference/cloud
  */
 
-import type { RequestOptions } from "../types/index.js";
-import type { ClientOptions } from "../config/index.js";
-import { HCLOUD_API_BASE_URL, DEFAULT_TIMEOUT_MS } from "../config/index.js";
-import { createAuthHeader } from "../auth/index.js";
-import { HCloudError } from "../errors/index.js";
-import type { ApiErrorResponse } from "../types/index.js";
-import { ServersClient } from "../servers/index.js";
+import type { RequestOptions } from "@hcloud-js/types/index.js";
+import type { ClientOptions } from "@hcloud-js/config/index.js";
+import { HCLOUD_API_BASE_URL, DEFAULT_TIMEOUT_MS } from "@hcloud-js/config/index.js";
+import { createAuthHeader } from "@hcloud-js/auth/index.js";
+import { HCloudError } from "@hcloud-js/errors/index.js";
+import type { ApiErrorResponse } from "@hcloud-js/types/index.js";
+import { ServersClient } from "@hcloud-js/apis/servers/index.js";
+import { ImagesClient } from "@hcloud-js/apis/images/index.js";
+import { ActionsClient } from "@hcloud-js/apis/actions/index.js";
+import { CertificatesClient } from "@hcloud-js/apis/certificates/index.js";
+import { SSHKeysClient } from "@hcloud-js/apis/ssh-keys/index.js";
+import { LocationsClient } from "@hcloud-js/apis/locations/index.js";
+import { FirewallsClient } from "@hcloud-js/apis/firewalls/index.js";
+import { FloatingIPsClient } from "@hcloud-js/apis/floating-ips/index.js";
+import { ISOsClient } from "@hcloud-js/apis/isos/index.js";
+import { PlacementGroupsClient } from "@hcloud-js/apis/placement-groups/index.js";
+import { PrimaryIPsClient } from "@hcloud-js/apis/primary-ips/index.js";
+import { ServerTypesClient } from "@hcloud-js/apis/server-types/index.js";
+import { LoadBalancersClient } from "@hcloud-js/apis/load-balancers/index.js";
+import { NetworksClient } from "@hcloud-js/apis/networks/index.js";
+import { PricingClient } from "@hcloud-js/apis/pricing/index.js";
+import { VolumesClient } from "@hcloud-js/apis/volumes/index.js";
+import { DNSClient } from "@hcloud-js/apis/dns/index.js";
 import type { HeadersInit } from "bun";
 
 /**
@@ -20,7 +36,7 @@ import type { HeadersInit } from "bun";
  *
  * @example
  * ```typescript
- * import { HCloudClient } from '@hcloud-ts/library';
+ * import { HCloudClient } from '@hcloud-js/library';
  *
  * const client = new HCloudClient({
  *   token: 'your-api-token'
@@ -41,6 +57,102 @@ export class HCloudClient {
   public readonly servers: ServersClient;
 
   /**
+   * Images API client
+   * @see https://docs.hetzner.cloud/reference/cloud#images
+   */
+  public readonly images: ImagesClient;
+
+  /**
+   * Actions API client
+   * @see https://docs.hetzner.cloud/reference/cloud#actions
+   */
+  public readonly actions: ActionsClient;
+
+  /**
+   * Certificates API client
+   * @see https://docs.hetzner.cloud/reference/cloud#certificates
+   */
+  public readonly certificates: CertificatesClient;
+
+  /**
+   * SSH Keys API client
+   * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys
+   */
+  public readonly sshKeys: SSHKeysClient;
+
+  /**
+   * Locations API client
+   * @see https://docs.hetzner.cloud/reference/cloud#locations
+   */
+  public readonly locations: LocationsClient;
+
+  /**
+   * Firewalls API client
+   * @see https://docs.hetzner.cloud/reference/cloud#firewalls
+   */
+  public readonly firewalls: FirewallsClient;
+
+  /**
+   * Floating IPs API client
+   * @see https://docs.hetzner.cloud/reference/cloud#floating-ips
+   */
+  public readonly floatingIPs: FloatingIPsClient;
+
+  /**
+   * ISOs API client
+   * @see https://docs.hetzner.cloud/reference/cloud#isos
+   */
+  public readonly isos: ISOsClient;
+
+  /**
+   * Placement Groups API client
+   * @see https://docs.hetzner.cloud/reference/cloud#placement-groups
+   */
+  public readonly placementGroups: PlacementGroupsClient;
+
+  /**
+   * Primary IPs API client
+   * @see https://docs.hetzner.cloud/reference/cloud#primary-ips
+   */
+  public readonly primaryIPs: PrimaryIPsClient;
+
+  /**
+   * Server Types API client
+   * @see https://docs.hetzner.cloud/reference/cloud#server-types
+   */
+  public readonly serverTypes: ServerTypesClient;
+
+  /**
+   * Load Balancers API client
+   * @see https://docs.hetzner.cloud/reference/cloud#load-balancers
+   */
+  public readonly loadBalancers: LoadBalancersClient;
+
+  /**
+   * Networks API client
+   * @see https://docs.hetzner.cloud/reference/cloud#networks
+   */
+  public readonly networks: NetworksClient;
+
+  /**
+   * Pricing API client
+   * @see https://docs.hetzner.cloud/reference/cloud#pricing
+   */
+  public readonly pricing: PricingClient;
+
+  /**
+   * Volumes API client
+   * @see https://docs.hetzner.cloud/reference/cloud#volumes
+   */
+  public readonly volumes: VolumesClient;
+
+  /**
+   * DNS (Zones) API client
+   * @see https://docs.hetzner.cloud/reference/cloud#dns
+   */
+  public readonly dns: DNSClient;
+
+  /**
    * Creates a new Hetzner Cloud API client
    *
    * @param options - Client configuration options
@@ -57,6 +169,22 @@ export class HCloudClient {
 
     // Initialize API clients
     this.servers = new ServersClient(this);
+    this.images = new ImagesClient(this);
+    this.actions = new ActionsClient(this);
+    this.certificates = new CertificatesClient(this);
+    this.sshKeys = new SSHKeysClient(this);
+    this.locations = new LocationsClient(this);
+    this.firewalls = new FirewallsClient(this);
+    this.floatingIPs = new FloatingIPsClient(this);
+    this.isos = new ISOsClient(this);
+    this.placementGroups = new PlacementGroupsClient(this);
+    this.primaryIPs = new PrimaryIPsClient(this);
+    this.serverTypes = new ServerTypesClient(this);
+    this.loadBalancers = new LoadBalancersClient(this);
+    this.networks = new NetworksClient(this);
+    this.pricing = new PricingClient(this);
+    this.volumes = new VolumesClient(this);
+    this.dns = new DNSClient(this);
   }
 
   /**

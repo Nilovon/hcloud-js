@@ -1,0 +1,23 @@
+{
+  "name": "@hcloud-js/example",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "servers": "bun run src/examples/servers.ts",
+    "images": "bun run src/examples/images.ts",
+    "actions": "bun run src/examples/actions.ts",
+    "certificates": "bun run src/examples/certificates.ts",
+    "ssh-keys": "bun run src/examples/ssh-keys.ts",
+    "locations": "bun run src/examples/locations.ts"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "@hcloud-js/library": "workspace:*",
+    "@hcloud-js/config": "workspace:*",
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}
