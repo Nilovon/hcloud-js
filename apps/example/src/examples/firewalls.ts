@@ -5,7 +5,7 @@
  */
 
 import { HCloudClient } from "@nilovonjs/hcloud-js";
-import { config } from "../config.js";
+import { config } from "../config";
 
 /**
  * Run all firewall API examples

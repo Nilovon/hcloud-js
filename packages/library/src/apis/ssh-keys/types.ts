@@ -14,7 +14,7 @@ import {
   updateSSHKeyResponseSchema,
   deleteSSHKeyResponseSchema,
   sshKeySchema,
-} from "@hcloud-js/apis/ssh-keys/schemas.js";
+} from "../../apis/ssh-keys/schemas";
 import type { z } from "zod";
 
 /**
@@ -28,7 +28,7 @@ export type SSHKey = z.infer<typeof sshKeySchema>;
  * @see https://docs.hetzner.cloud/reference/cloud#pagination
  * Re-exported from servers module for consistency
  */
-export type { PaginationMeta } from "@hcloud-js/apis/servers/types.js";
+export type { PaginationMeta } from "../../apis/servers/types";
 
 /**
  * List SSH Keys query parameters

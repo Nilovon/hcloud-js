@@ -4,8 +4,8 @@
  */
 
 import { z } from "zod";
-import { actionSchema, actionResourceSchema } from "@hcloud-js/apis/actions/schemas.js";
-import { paginationMetaSchema } from "@hcloud-js/apis/common/schemas.js";
+import { actionSchema, actionResourceSchema } from "../../apis/actions/schemas";
+import { paginationMetaSchema } from "../../apis/common/schemas";
 
 /**
  * Firewall rule direction schema

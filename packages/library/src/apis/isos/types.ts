@@ -10,7 +10,7 @@ import {
   getISOResponseSchema,
   isoSchema,
   isoTypeSchema,
-} from "@hcloud-js/apis/isos/schemas.js";
+} from "@/apis/isos/schemas";
 import type { z } from "zod";
 
 /**

@@ -16,7 +16,7 @@ import {
   primaryIpPricingSchema,
   trafficPricingSchema,
   imagePricingSchema,
-} from "@hcloud-js/apis/pricing/schemas.js";
+} from "@/apis/pricing/schemas";
 import type { z } from "zod";
 
 /**

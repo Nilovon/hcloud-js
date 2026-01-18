@@ -8,8 +8,8 @@
 import {
   listActionsResponseSchema,
   getActionResponseSchema,
-} from "@hcloud-js/apis/actions/schemas.js";
-import { actionSchema, actionResourceSchema } from "@hcloud-js/apis/actions/schemas.js";
+} from "../../apis/actions/schemas";
+import { actionSchema, actionResourceSchema } from "../../apis/actions/schemas";
 import type { z } from "zod";
 
 /**
@@ -33,7 +33,7 @@ export type ActionStatus = "running" | "success" | "error";
  * @see https://docs.hetzner.cloud/reference/cloud#pagination
  * Re-exported from servers module for consistency
  */
-export type { PaginationMeta } from "@hcloud-js/apis/servers/types.js";
+export type { PaginationMeta } from "../../apis/servers/types";
 
 /**
  * List Actions query parameters

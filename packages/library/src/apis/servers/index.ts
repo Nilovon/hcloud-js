@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#servers
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListServersParams,
   ListServersResponse,
@@ -54,8 +54,8 @@ import type {
   AddServerToPlacementGroupParams,
   AddServerToPlacementGroupResponse,
   RemoveServerFromPlacementGroupResponse,
-} from "@hcloud-js/apis/servers/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+} from "../../apis/servers/types";
+import { validate } from "../../validation/index";
 import {
   listServersResponseSchema,
   createServerRequestSchema,
@@ -104,7 +104,7 @@ import {
   addServerToPlacementGroupResponseSchema,
   removeServerFromPlacementGroupRequestSchema,
   removeServerFromPlacementGroupResponseSchema,
-} from "@hcloud-js/apis/servers/schemas.js";
+} from "../../apis/servers/schemas";
 
 /**
  * Servers API client

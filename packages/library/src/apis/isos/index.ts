@@ -3,10 +3,10 @@
  * @see https://docs.hetzner.cloud/reference/cloud#isos
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
-import type { ListISOsParams, ListISOsResponse, GetISOResponse } from "@hcloud-js/apis/isos/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
-import { listISOsResponseSchema, getISOResponseSchema } from "@hcloud-js/apis/isos/schemas.js";
+import type { HCloudClient } from "@/client/index";
+import type { ListISOsParams, ListISOsResponse, GetISOResponse } from "@/apis/isos/types";
+import { validate } from "@/validation/index";
+import { listISOsResponseSchema, getISOResponseSchema } from "@/apis/isos/schemas";
 
 /**
  * ISOs API client

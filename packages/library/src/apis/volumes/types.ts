@@ -26,7 +26,7 @@ import {
   volumeSchema,
   volumeStatusSchema,
   volumeProtectionSchema,
-} from "@hcloud-js/apis/volumes/schemas.js";
+} from "../../apis/volumes/schemas";
 import type { z } from "zod";
 
 /**

@@ -13,7 +13,7 @@ import {
   locationSchema,
   datacenterSchema,
   datacenterServerTypesSchema,
-} from "@hcloud-js/apis/locations/schemas.js";
+} from "@/apis/locations/schemas";
 import type { z } from "zod";
 
 /**
@@ -38,7 +38,7 @@ export type Datacenter = z.infer<typeof datacenterSchema>;
  * @see https://docs.hetzner.cloud/reference/cloud#pagination
  * Re-exported from servers module for consistency
  */
-export type { PaginationMeta } from "@hcloud-js/apis/servers/types.js";
+export type { PaginationMeta } from "@/apis/servers/types";
 
 /**
  * List Locations query parameters

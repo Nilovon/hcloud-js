@@ -24,12 +24,6 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false,
-
-    // Paths
-    "baseUrl": ".",
-    "paths": {
-      "@hcloud-js/*": ["./src/*"]
-    }
+    "noPropertyAccessFromIndexSignature": false
   }
 }

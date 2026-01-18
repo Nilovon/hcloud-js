@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { paginationMetaSchema } from "@hcloud-js/apis/common/schemas.js";
+import { paginationMetaSchema } from "@/apis/common/schemas";
 
 /**
  * Location schema

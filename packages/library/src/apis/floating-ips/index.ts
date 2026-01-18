@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#floating-ips
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListFloatingIPsParams,
   ListFloatingIPsResponse,
@@ -23,8 +23,8 @@ import type {
   ChangeFloatingIPProtectionParams,
   ChangeFloatingIPProtectionResponse,
   UnassignFloatingIPResponse,
-} from "@hcloud-js/apis/floating-ips/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+} from "../../apis/floating-ips/types";
+import { validate } from "../../validation/index";
 import {
   listFloatingIPsResponseSchema,
   createFloatingIPRequestSchema,
@@ -43,7 +43,7 @@ import {
   changeFloatingIPProtectionResponseSchema,
   unassignFloatingIPRequestSchema,
   unassignFloatingIPResponseSchema,
-} from "@hcloud-js/apis/floating-ips/schemas.js";
+} from "../../apis/floating-ips/schemas";
 
 /**
  * Floating IPs API client

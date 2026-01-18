@@ -28,7 +28,7 @@ import {
   primaryIpDnsPointerSchema,
   primaryIpProtectionSchema,
   primaryIpAssigneeTypeSchema,
-} from "@hcloud-js/apis/primary-ips/schemas.js";
+} from "../../apis/primary-ips/schemas";
 import type { z } from "zod";
 
 /**

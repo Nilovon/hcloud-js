@@ -6,7 +6,7 @@
 
 import { HCloudClient } from "@nilovonjs/hcloud-js";
 import type { Image } from "@nilovonjs/hcloud-js";
-import { config } from "../config.js";
+import { config } from "../config";
 
 /**
  * Run all image API examples

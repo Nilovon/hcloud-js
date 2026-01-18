@@ -4,8 +4,8 @@
  */
 
 import { z } from "zod";
-import { actionSchema } from "@hcloud-js/apis/actions/schemas.js";
-import { paginationMetaSchema } from "@hcloud-js/apis/common/schemas.js";
+import { actionSchema } from "../../apis/actions/schemas";
+import { paginationMetaSchema } from "../../apis/common/schemas";
 
 /**
  * Server status schema
@@ -347,20 +347,20 @@ export const createServerRequestSchema = z.object({
  * Re-exported from actions module for consistency
  * @deprecated Use actionResourceSchema from '../actions/schemas' instead
  */
-export { actionResourceSchema } from "@hcloud-js/apis/actions/schemas.js";
+export { actionResourceSchema } from "../../apis/actions/schemas";
 
 /**
  * Action schema (common)
  * Re-exported from actions module for consistency
  */
-export { actionSchema } from "@hcloud-js/apis/actions/schemas.js";
+export { actionSchema } from "../../apis/actions/schemas";
 
 /**
  * Server Action schema (alias for actionSchema)
  * Re-exported from actions module for consistency
  * @deprecated Use actionSchema from '../actions/schemas' instead
  */
-export { actionSchema as serverActionSchema } from "@hcloud-js/apis/actions/schemas.js";
+export { actionSchema as serverActionSchema } from "../../apis/actions/schemas";
 
 /**
  * Create Server response schema

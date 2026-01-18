@@ -27,7 +27,7 @@ import {
   getServerMetricsResponseSchema,
   serverMetricsSchema,
   serverMetricsTimeSeriesValueSchema,
-  serverActionSchema,
+  serverActionSchema, 
   serverImageSchema,
   listServerActionsResponseSchema,
   getServerActionResponseSchema,
@@ -68,9 +68,9 @@ import {
   addServerToPlacementGroupResponseSchema,
   removeServerFromPlacementGroupRequestSchema,
   removeServerFromPlacementGroupResponseSchema,
-} from "@hcloud-js/apis/servers/schemas.js";
+} from "../../apis/servers/schemas";
 import type { z } from "zod";
-import type { paginationMetaSchema } from "@hcloud-js/apis/common/schemas.js";
+import type { paginationMetaSchema } from "../../apis/common/schemas";
 
 /**
  * Server status values

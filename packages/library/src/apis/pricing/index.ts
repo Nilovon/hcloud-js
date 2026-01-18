@@ -3,10 +3,10 @@
  * @see https://docs.hetzner.cloud/reference/cloud#pricing
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
-import type { GetPricingResponse } from "@hcloud-js/apis/pricing/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
-import { getPricingResponseSchema } from "@hcloud-js/apis/pricing/schemas.js";
+import type { HCloudClient } from "@/client/index";
+import type { GetPricingResponse } from "@/apis/pricing/types";
+import { validate } from "@/validation/index";
+import { getPricingResponseSchema } from "@/apis/pricing/schemas";
 
 /**
  * Pricing API client

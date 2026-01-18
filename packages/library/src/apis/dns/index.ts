@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#dns
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListZonesParams,
   ListZonesResponse,
@@ -45,8 +45,8 @@ import type {
   RemoveRRSetRecordsResponse,
   UpdateRRSetRecordsParams,
   UpdateRRSetRecordsResponse,
-} from "@hcloud-js/apis/dns/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+} from "../../apis/dns/types";
+import { validate } from "../../validation/index";
 import {
   listZonesResponseSchema,
   createZoneRequestSchema,
@@ -85,7 +85,7 @@ import {
   removeRRSetRecordsResponseSchema,
   updateRRSetRecordsRequestSchema,
   updateRRSetRecordsResponseSchema,
-} from "@hcloud-js/apis/dns/schemas.js";
+} from "../../apis/dns/schemas";
 
 /**
  * DNS (Zones) API client

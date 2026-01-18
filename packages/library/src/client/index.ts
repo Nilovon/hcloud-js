@@ -3,29 +3,29 @@
  * @see https://docs.hetzner.cloud/reference/cloud
  */
 
-import type { RequestOptions } from "@hcloud-js/types/index.js";
-import type { ClientOptions } from "@hcloud-js/config/index.js";
-import { HCLOUD_API_BASE_URL, DEFAULT_TIMEOUT_MS } from "@hcloud-js/config/index.js";
-import { createAuthHeader } from "@hcloud-js/auth/index.js";
-import { HCloudError } from "@hcloud-js/errors/index.js";
-import type { ApiErrorResponse } from "@hcloud-js/types/index.js";
-import { ServersClient } from "@hcloud-js/apis/servers/index.js";
-import { ImagesClient } from "@hcloud-js/apis/images/index.js";
-import { ActionsClient } from "@hcloud-js/apis/actions/index.js";
-import { CertificatesClient } from "@hcloud-js/apis/certificates/index.js";
-import { SSHKeysClient } from "@hcloud-js/apis/ssh-keys/index.js";
-import { LocationsClient } from "@hcloud-js/apis/locations/index.js";
-import { FirewallsClient } from "@hcloud-js/apis/firewalls/index.js";
-import { FloatingIPsClient } from "@hcloud-js/apis/floating-ips/index.js";
-import { ISOsClient } from "@hcloud-js/apis/isos/index.js";
-import { PlacementGroupsClient } from "@hcloud-js/apis/placement-groups/index.js";
-import { PrimaryIPsClient } from "@hcloud-js/apis/primary-ips/index.js";
-import { ServerTypesClient } from "@hcloud-js/apis/server-types/index.js";
-import { LoadBalancersClient } from "@hcloud-js/apis/load-balancers/index.js";
-import { NetworksClient } from "@hcloud-js/apis/networks/index.js";
-import { PricingClient } from "@hcloud-js/apis/pricing/index.js";
-import { VolumesClient } from "@hcloud-js/apis/volumes/index.js";
-import { DNSClient } from "@hcloud-js/apis/dns/index.js";
+import type { RequestOptions } from "../types/index";  
+import type { ClientOptions } from "../config/index";
+import { HCLOUD_API_BASE_URL, DEFAULT_TIMEOUT_MS } from "../config/index";
+import { createAuthHeader } from "../auth/index";
+import { HCloudError } from "../errors/index";
+import type { ApiErrorResponse } from "../types/index";
+import { ServersClient } from "../apis/servers/index";
+import { ImagesClient } from "../apis/images/index";
+import { ActionsClient } from "../apis/actions/index";
+import { CertificatesClient } from "../apis/certificates/index";
+  import { SSHKeysClient } from "../apis/ssh-keys/index";
+import { LocationsClient } from "../apis/locations/index";
+import { FirewallsClient } from "../apis/firewalls/index";
+import { FloatingIPsClient } from "../apis/floating-ips/index";
+import { ISOsClient } from "../apis/isos/index";
+import { PlacementGroupsClient } from "../apis/placement-groups/index";
+import { PrimaryIPsClient } from "../apis/primary-ips/index";
+import { ServerTypesClient } from "../apis/server-types/index";
+import { LoadBalancersClient } from "../apis/load-balancers/index";
+import { NetworksClient } from "../apis/networks/index";
+import { PricingClient } from "../apis/pricing/index";
+import { VolumesClient } from "../apis/volumes/index";
+import { DNSClient } from "../apis/dns/index";
 import type { HeadersInit } from "bun";
 
 /**

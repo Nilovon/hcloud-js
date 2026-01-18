@@ -48,7 +48,7 @@ import {
   loadBalancerServiceProtocolSchema,
   loadBalancerTargetTypeSchema,
   loadBalancerServiceHealthCheckProtocolSchema,
-} from "@hcloud-js/apis/load-balancers/schemas.js";
+} from "@/apis/load-balancers/schemas";
 import type { z } from "zod";
 
 /**

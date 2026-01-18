@@ -11,7 +11,7 @@
  */
 
 import { HCloudClient, HCloudError } from "@nilovonjs/hcloud-js";
-import { config } from "../config.js";
+import { config } from "../config";
 
 /**
  * Run all action API examples
@@ -91,7 +91,9 @@ export async function runActionExamples() {
       const serversList = await client.servers.list({ per_page: 1 });
       if (serversList.servers.length > 0) {
         const server = serversList.servers[0];
-        console.log(`   Found server: ${server.name} (ID: ${server.id})`);
+        if (server) {
+          console.log(`   Found server: ${server.name} (ID: ${server.id})`);
+        }
         console.log("   Note: To get an action, you would need to perform an operation");
         console.log("   (e.g., delete the server) which returns an action ID.");
       } else {

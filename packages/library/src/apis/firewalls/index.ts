@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListFirewallsParams,
   ListFirewallsResponse,
@@ -22,8 +22,8 @@ import type {
   RemoveFirewallFromResourcesResponse,
   SetFirewallRulesParams,
   SetFirewallRulesResponse,
-} from "@hcloud-js/apis/firewalls/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+} from "../../apis/firewalls/types";
+import { validate } from "../../validation/index";
 import {
   listFirewallsResponseSchema,
   createFirewallRequestSchema,
@@ -40,7 +40,7 @@ import {
   removeFirewallFromResourcesResponseSchema,
   setFirewallRulesRequestSchema,
   setFirewallRulesResponseSchema,
-} from "@hcloud-js/apis/firewalls/schemas.js";
+} from "../../apis/firewalls/schemas";
 
 /**
  * Firewalls API client

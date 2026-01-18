@@ -3,17 +3,17 @@
  * @see https://docs.hetzner.cloud/reference/cloud#server-types
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListServerTypesParams,
   ListServerTypesResponse,
   GetServerTypeResponse,
-} from "@hcloud-js/apis/server-types/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+} from "../../apis/server-types/types";
+import { validate } from "../../validation/index";
 import {
   listServerTypesResponseSchema,
   getServerTypeResponseSchema,
-} from "@hcloud-js/apis/server-types/schemas.js";
+} from "../../apis/server-types/schemas";
 
 /**
  * Server Types API client

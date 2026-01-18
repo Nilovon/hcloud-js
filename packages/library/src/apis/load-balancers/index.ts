@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "@/client/index";
 import type {
   ListLoadBalancersParams,
   ListLoadBalancersResponse,
@@ -40,8 +40,8 @@ import type {
   DisableLoadBalancerPublicInterfaceResponse,
   GetLoadBalancerMetricsParams,
   GetLoadBalancerMetricsResponse,
-} from "@hcloud-js/apis/load-balancers/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+} from "@/apis/load-balancers/types";
+import { validate } from "@/validation/index";
 import {
   listLoadBalancersResponseSchema,
   createLoadBalancerRequestSchema,
@@ -80,7 +80,7 @@ import {
   disableLoadBalancerPublicInterfaceResponseSchema,
   getLoadBalancerMetricsRequestSchema,
   getLoadBalancerMetricsResponseSchema,
-} from "@hcloud-js/apis/load-balancers/schemas.js";
+} from "@/apis/load-balancers/schemas";
 
 /**
  * Load Balancers API client

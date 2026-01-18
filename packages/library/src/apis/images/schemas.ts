@@ -4,8 +4,8 @@
  */
 
 import { z } from "zod";
-import { paginationMetaSchema } from "@hcloud-js/apis/common/schemas.js";
-import { actionSchema } from "@hcloud-js/apis/actions/schemas.js";
+import { paginationMetaSchema } from "@/apis/common/schemas";
+import { actionSchema } from "@/apis/actions/schemas";
 
 /**
  * Image status schema

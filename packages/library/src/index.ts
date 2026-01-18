@@ -4,31 +4,31 @@
  */
 
 // Main client
-export { HCloudClient } from "@hcloud-js/client/index";
+export { HCloudClient } from "./client/index";
 
 // Error handling
-export { HCloudError } from "@hcloud-js/errors/index";
+export { HCloudError } from "./errors/index";
 
 // Types
-export type { RequestOptions, ApiErrorResponse, ErrorDetailsField } from "@hcloud-js/types/index";
+export type { RequestOptions, ApiErrorResponse, ErrorDetailsField } from "./types/index";
 
-export type { ClientOptions } from "@hcloud-js/config/index";
+export type { ClientOptions } from "./config/index";
 
 // Configuration
-export { HCLOUD_API_BASE_URL, DEFAULT_TIMEOUT_MS } from "@hcloud-js/config/index";
+export { HCLOUD_API_BASE_URL, DEFAULT_TIMEOUT_MS } from "./config/index";
 
 // Auth utilities
-export { createAuthHeader } from "@hcloud-js/auth/index";
+export { createAuthHeader } from "./auth/index";
 
 // Validation utilities
-export { validate, safeValidate } from "@hcloud-js/validation/index";
-export type { ValidateOptions } from "@hcloud-js/validation/index";
+export { validate, safeValidate } from "./validation/index";
+export type { ValidateOptions } from "./validation/index";
 
 // Common Zod Schemas
-export { paginationMetaSchema } from "@hcloud-js/apis/common/schemas";
+export { paginationMetaSchema } from "./apis/common/schemas";
 
 // Servers API
-export { ServersClient } from "@hcloud-js/apis/servers/index";
+export { ServersClient } from "./apis/servers/index";
 export type {
   Server,
   ServerStatus,
@@ -93,7 +93,7 @@ export type {
   AddServerToPlacementGroupParams,
   AddServerToPlacementGroupResponse,
   RemoveServerFromPlacementGroupResponse,
-} from "@hcloud-js/apis/servers/types";
+} from "./apis/servers/types";
 
 // Servers Zod Schemas
 export {
@@ -156,10 +156,10 @@ export {
   addServerToPlacementGroupResponseSchema,
   removeServerFromPlacementGroupRequestSchema,
   removeServerFromPlacementGroupResponseSchema,
-} from "@hcloud-js/apis/servers/schemas";
+} from "./apis/servers/schemas";
 
 // Images API
-export { ImagesClient } from "@hcloud-js/apis/images/index";
+export { ImagesClient } from "./apis/images/index";
 export type {
   ImageStatus,
   ImageType,
@@ -170,7 +170,7 @@ export type {
   UpdateImageParams,
   UpdateImageResponse,
   DeleteImageResponse,
-} from "@hcloud-js/apis/images/types";
+} from "./apis/images/types";
 
 // Images Zod Schemas
 export {
@@ -185,10 +185,10 @@ export {
   getImageResponseSchema,
   updateImageResponseSchema,
   deleteImageResponseSchema,
-} from "@hcloud-js/apis/images/schemas";
+} from "./apis/images/schemas";
 
 // Actions API
-export { ActionsClient } from "@hcloud-js/apis/actions/index";
+export { ActionsClient } from "./apis/actions/index";
 export type {
   Action,
   ActionStatus,
@@ -196,7 +196,7 @@ export type {
   ListActionsParams,
   ListActionsResponse,
   GetActionResponse,
-} from "@hcloud-js/apis/actions/types";
+} from "./apis/actions/types";
 
 // Actions Zod Schemas
 export {
@@ -204,10 +204,10 @@ export {
   actionResourceSchema,
   listActionsResponseSchema,
   getActionResponseSchema,
-} from "@hcloud-js/apis/actions/schemas";
+} from "./apis/actions/schemas";
 
 // Certificates API
-export { CertificatesClient } from "@hcloud-js/apis/certificates/index";
+export { CertificatesClient } from "./apis/certificates/index";
 export type {
   Certificate,
   CertificateStatus,
@@ -224,7 +224,7 @@ export type {
   ListCertificateActionsResponse,
   GetCertificateActionResponse,
   RetryCertificateIssuanceResponse,
-} from "@hcloud-js/apis/certificates/types";
+} from "./apis/certificates/types";
 
 // Certificates Zod Schemas
 export {
@@ -241,10 +241,10 @@ export {
   listCertificateActionsResponseSchema,
   getCertificateActionResponseSchema,
   retryCertificateIssuanceResponseSchema,
-} from "@hcloud-js/apis/certificates/schemas";
+} from "./apis/certificates/schemas";
 
 // SSH Keys API
-export { SSHKeysClient } from "@hcloud-js/apis/ssh-keys/index";
+export { SSHKeysClient } from "./apis/ssh-keys/index";
 export type {
   SSHKey,
   ListSSHKeysParams,
@@ -255,7 +255,7 @@ export type {
   UpdateSSHKeyParams,
   UpdateSSHKeyResponse,
   DeleteSSHKeyResponse,
-} from "@hcloud-js/apis/ssh-keys/types";
+} from "./apis/ssh-keys/types";
 
 // SSH Keys Zod Schemas
 export {
@@ -267,10 +267,10 @@ export {
   updateSSHKeyRequestSchema,
   updateSSHKeyResponseSchema,
   deleteSSHKeyResponseSchema,
-} from "@hcloud-js/apis/ssh-keys/schemas";
+} from "./apis/ssh-keys/schemas";
 
 // Firewalls API
-export { FirewallsClient } from "@hcloud-js/apis/firewalls/index";
+export { FirewallsClient } from "./apis/firewalls/index";
 export type {
   Firewall,
   FirewallRule,
@@ -294,7 +294,7 @@ export type {
   RemoveFirewallFromResourcesResponse,
   SetFirewallRulesParams,
   SetFirewallRulesResponse,
-} from "@hcloud-js/apis/firewalls/types";
+} from "./apis/firewalls/types";
 
 // Firewalls Zod Schemas
 export {
@@ -318,10 +318,10 @@ export {
   removeFirewallFromResourcesResponseSchema,
   setFirewallRulesRequestSchema,
   setFirewallRulesResponseSchema,
-} from "@hcloud-js/apis/firewalls/schemas";
+} from "./apis/firewalls/schemas";
 
 // Floating IPs API
-export { FloatingIPsClient } from "@hcloud-js/apis/floating-ips/index";
+export { FloatingIPsClient } from "./apis/floating-ips/index";
 export type {
   FloatingIP,
   FloatingIPType,
@@ -345,7 +345,7 @@ export type {
   ChangeFloatingIPProtectionParams,
   ChangeFloatingIPProtectionResponse,
   UnassignFloatingIPResponse,
-} from "@hcloud-js/apis/floating-ips/types";
+} from "./apis/floating-ips/types";
 
 // Floating IPs Zod Schemas
 export {
@@ -370,26 +370,26 @@ export {
   changeFloatingIPProtectionResponseSchema,
   unassignFloatingIPRequestSchema,
   unassignFloatingIPResponseSchema,
-} from "@hcloud-js/apis/floating-ips/schemas";
+} from "./apis/floating-ips/schemas";
 
 // ISOs API
-export { ISOsClient } from "@hcloud-js/apis/isos/index";
+export { ISOsClient } from "./apis/isos/index";
 export type {
   ISO,
   ISOType,
   ListISOsParams,
   ListISOsResponse,
   GetISOResponse,
-} from "@hcloud-js/apis/isos/types";
+} from "./apis/isos/types";
 export {
   isoSchema,
   isoTypeSchema,
   listISOsResponseSchema,
   getISOResponseSchema,
-} from "@hcloud-js/apis/isos/schemas";
+} from "./apis/isos/schemas";
 
 // Placement Groups API
-export { PlacementGroupsClient } from "@hcloud-js/apis/placement-groups/index";
+export { PlacementGroupsClient } from "./apis/placement-groups/index";
 export type {
   PlacementGroup,
   PlacementGroupType,
@@ -401,7 +401,7 @@ export type {
   UpdatePlacementGroupParams,
   UpdatePlacementGroupResponse,
   DeletePlacementGroupResponse,
-} from "@hcloud-js/apis/placement-groups/types";
+} from "./apis/placement-groups/types";
 export {
   placementGroupSchema,
   placementGroupTypeSchema,
@@ -412,10 +412,10 @@ export {
   updatePlacementGroupRequestSchema,
   updatePlacementGroupResponseSchema,
   deletePlacementGroupResponseSchema,
-} from "@hcloud-js/apis/placement-groups/schemas";
+} from "./apis/placement-groups/schemas";
 
 // Primary IPs API
-export { PrimaryIPsClient } from "@hcloud-js/apis/primary-ips/index";
+export { PrimaryIPsClient } from "./apis/primary-ips/index";
 export type {
   PrimaryIP,
   PrimaryIPType,
@@ -440,7 +440,7 @@ export type {
   ChangePrimaryIPProtectionParams,
   ChangePrimaryIPProtectionResponse,
   UnassignPrimaryIPResponse,
-} from "@hcloud-js/apis/primary-ips/types";
+} from "./apis/primary-ips/types";
 export {
   primaryIpSchema,
   primaryIpTypeSchema,
@@ -464,22 +464,22 @@ export {
   changePrimaryIPProtectionResponseSchema,
   unassignPrimaryIPRequestSchema,
   unassignPrimaryIPResponseSchema,
-} from "@hcloud-js/apis/primary-ips/schemas";
+} from "./apis/primary-ips/schemas";
 
 // Server Types API
-export { ServerTypesClient } from "@hcloud-js/apis/server-types/index";
+export { ServerTypesClient } from "./apis/server-types/index";
 export type {
   ListServerTypesParams,
   ListServerTypesResponse,
   GetServerTypeResponse,
-} from "@hcloud-js/apis/server-types/types";
+} from "./apis/server-types/types";
 export {
   listServerTypesResponseSchema,
   getServerTypeResponseSchema,
-} from "@hcloud-js/apis/server-types/schemas";
+} from "./apis/server-types/schemas";
 
 // Load Balancers API
-export { LoadBalancersClient } from "@hcloud-js/apis/load-balancers/index";
+export { LoadBalancersClient } from "./apis/load-balancers/index";
 export type {
   LoadBalancer,
   LoadBalancerAlgorithmType,
@@ -521,7 +521,7 @@ export type {
   DisableLoadBalancerPublicInterfaceResponse,
   GetLoadBalancerMetricsParams,
   GetLoadBalancerMetricsResponse,
-} from "@hcloud-js/apis/load-balancers/types";
+} from "./apis/load-balancers/types";
 export {
   loadBalancerSchema,
   loadBalancerAlgorithmTypeSchema,
@@ -564,10 +564,10 @@ export {
   disableLoadBalancerPublicInterfaceResponseSchema,
   getLoadBalancerMetricsRequestSchema,
   getLoadBalancerMetricsResponseSchema,
-} from "@hcloud-js/apis/load-balancers/schemas";
+} from "./apis/load-balancers/schemas";
 
 // Networks API
-export { NetworksClient } from "@hcloud-js/apis/networks/index";
+export { NetworksClient } from "./apis/networks/index";
 export type {
   Network,
   NetworkSubnetType,
@@ -597,7 +597,7 @@ export type {
   ChangeNetworkIpRangeResponse,
   ChangeNetworkProtectionParams,
   ChangeNetworkProtectionResponse,
-} from "@hcloud-js/apis/networks/types";
+} from "./apis/networks/types";
 export {
   networkSchema,
   networkSubnetTypeSchema,
@@ -625,10 +625,10 @@ export {
   changeNetworkIpRangeResponseSchema,
   changeNetworkProtectionRequestSchema,
   changeNetworkProtectionResponseSchema,
-} from "@hcloud-js/apis/networks/schemas";
+} from "./apis/networks/schemas";
 
 // Pricing API
-export { PricingClient } from "@hcloud-js/apis/pricing/index";
+export { PricingClient } from "./apis/pricing/index";
 export type {
   Price,
   PricingLocation,
@@ -640,7 +640,7 @@ export type {
   TrafficPricing,
   ImagePricing,
   GetPricingResponse,
-} from "@hcloud-js/apis/pricing/types";
+} from "./apis/pricing/types";
 export {
   priceSchema,
   pricingLocationSchema,
@@ -652,10 +652,10 @@ export {
   trafficPricingSchema,
   imagePricingSchema,
   getPricingResponseSchema,
-} from "@hcloud-js/apis/pricing/schemas";
+} from "./apis/pricing/schemas";
 
 // Volumes API
-export { VolumesClient } from "@hcloud-js/apis/volumes/index";
+export { VolumesClient } from "./apis/volumes/index";
 export type {
   Volume,
   VolumeStatus,
@@ -678,7 +678,7 @@ export type {
   ResizeVolumeResponse,
   ChangeVolumeProtectionParams,
   ChangeVolumeProtectionResponse,
-} from "@hcloud-js/apis/volumes/types";
+} from "./apis/volumes/types";
 export {
   volumeSchema,
   volumeStatusSchema,
@@ -700,10 +700,10 @@ export {
   resizeVolumeResponseSchema,
   changeVolumeProtectionRequestSchema,
   changeVolumeProtectionResponseSchema,
-} from "@hcloud-js/apis/volumes/schemas";
+} from "./apis/volumes/schemas";
 
 // DNS (Zones) API
-export { DNSClient } from "@hcloud-js/apis/dns/index";
+export { DNSClient } from "./apis/dns/index";
 export type {
   Zone,
   ZoneStatus,
@@ -751,7 +751,7 @@ export type {
   RemoveRRSetRecordsResponse,
   UpdateRRSetRecordsParams,
   UpdateRRSetRecordsResponse,
-} from "@hcloud-js/apis/dns/types";
+} from "./apis/dns/types";
 export {
   zoneSchema,
   zoneStatusSchema,
@@ -796,4 +796,4 @@ export {
   removeRRSetRecordsResponseSchema,
   updateRRSetRecordsRequestSchema,
   updateRRSetRecordsResponseSchema,
-} from "@hcloud-js/apis/dns/schemas";
+} from "./apis/dns/schemas";

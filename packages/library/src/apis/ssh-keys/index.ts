@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListSSHKeysParams,
   ListSSHKeysResponse,
@@ -13,8 +13,8 @@ import type {
   UpdateSSHKeyParams,
   UpdateSSHKeyResponse,
   DeleteSSHKeyResponse,
-} from "@hcloud-js/apis/ssh-keys/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+} from "../../apis/ssh-keys/types";
+import { validate } from "../../validation/index";
 import {
   listSSHKeysResponseSchema,
   createSSHKeyRequestSchema,
@@ -23,7 +23,7 @@ import {
   updateSSHKeyRequestSchema,
   updateSSHKeyResponseSchema,
   deleteSSHKeyResponseSchema,
-} from "@hcloud-js/apis/ssh-keys/schemas.js";
+} from "../../apis/ssh-keys/schemas";
 
 /**
  * SSH Keys API client

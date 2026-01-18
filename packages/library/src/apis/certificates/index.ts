@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#certificates
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListCertificatesParams,
   ListCertificatesResponse,
@@ -17,8 +17,8 @@ import type {
   ListCertificateActionsResponse,
   GetCertificateActionResponse,
   RetryCertificateIssuanceResponse,
-} from "@hcloud-js/apis/certificates/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+} from "../../apis/certificates/types";
+import { validate } from "../../validation/index";
 import {
   listCertificatesResponseSchema,
   createCertificateRequestSchema,
@@ -30,7 +30,7 @@ import {
   listCertificateActionsResponseSchema,
   getCertificateActionResponseSchema,
   retryCertificateIssuanceResponseSchema,
-} from "@hcloud-js/apis/certificates/schemas.js";
+} from "../../apis/certificates/schemas";
 
 /**
  * Certificates API client

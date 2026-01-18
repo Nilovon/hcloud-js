@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#errors
  */
 
-import type { ApiErrorResponse } from "@hcloud-js/types/index.js";
+import type { ApiErrorResponse } from "../types/index";
 
 /**
  * Hetzner Cloud API Error

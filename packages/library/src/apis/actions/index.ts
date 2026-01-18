@@ -3,17 +3,17 @@
  * @see https://docs.hetzner.cloud/reference/cloud#actions
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListActionsParams,
   ListActionsResponse,
   GetActionResponse,
-} from "@hcloud-js/apis/actions/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+} from "../../apis/actions/types";
+import { validate } from "../../validation/index";
 import {
   listActionsResponseSchema,
   getActionResponseSchema,
-} from "@hcloud-js/apis/actions/schemas.js";
+} from "../../apis/actions/schemas";
 
 /**
  * Actions API client

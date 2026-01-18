@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#volumes
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "../../client/index";
 import type {
   ListVolumesParams,
   ListVolumesResponse,
@@ -23,8 +23,8 @@ import type {
   ResizeVolumeResponse,
   ChangeVolumeProtectionParams,
   ChangeVolumeProtectionResponse,
-} from "@hcloud-js/apis/volumes/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+  } from "../../apis/volumes/types";
+import { validate } from "../../validation/index";
 import {
   listVolumesResponseSchema,
   createVolumeRequestSchema,
@@ -43,7 +43,7 @@ import {
   resizeVolumeResponseSchema,
   changeVolumeProtectionRequestSchema,
   changeVolumeProtectionResponseSchema,
-} from "@hcloud-js/apis/volumes/schemas.js";
+} from "../../apis/volumes/schemas";
 
 /**
  * Volumes API client

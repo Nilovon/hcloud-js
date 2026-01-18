@@ -27,7 +27,7 @@ import {
   floatingIpTypeSchema,
   floatingIpDnsPointerSchema,
   floatingIpProtectionSchema,
-} from "@hcloud-js/apis/floating-ips/schemas.js";
+} from "../../apis/floating-ips/schemas";
 import type { z } from "zod";
 
 /**

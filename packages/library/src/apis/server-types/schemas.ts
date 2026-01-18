@@ -4,8 +4,8 @@
  */
 
 import { z } from "zod";
-import { paginationMetaSchema } from "@hcloud-js/apis/common/schemas.js";
-import { serverTypeSchema } from "@hcloud-js/apis/servers/schemas.js";
+import { paginationMetaSchema } from "../../apis/common/schemas";
+import { serverTypeSchema } from "../../apis/servers/schemas";
 
 /**
  * List Server Types response schema

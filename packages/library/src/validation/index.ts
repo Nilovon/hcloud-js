@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { HCloudError } from "@hcloud-js/errors/index.js";
+import { HCloudError } from "../errors/index";
 
 /**
  * Options for validation error messages

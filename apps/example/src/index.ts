@@ -13,14 +13,14 @@
  *   bun run dev
  */
 
-import { config } from "./config.js";
-import { runServerExamples } from "./examples/servers.js";
-import { runImageExamples } from "./examples/images.js";
-import { runActionExamples } from "./examples/actions.js";
-import { runCertificateExamples } from "./examples/certificates.js";
-import { runSSHKeyExamples } from "./examples/ssh-keys.js";
-import { runFirewallExamples } from "./examples/firewalls.js";
-import { runFloatingIPExamples } from "./examples/floating-ips.js";
+import { config } from "./config";
+import { runServerExamples } from "./examples/servers";
+import { runImageExamples } from "./examples/images";
+import { runActionExamples } from "./examples/actions";
+import { runCertificateExamples } from "./examples/certificates";
+import { runSSHKeyExamples } from "./examples/ssh-keys";
+import { runFirewallExamples } from "./examples/firewalls";
+import { runFloatingIPExamples } from "./examples/floating-ips";
 
 /**
  * Main entry point for the example application

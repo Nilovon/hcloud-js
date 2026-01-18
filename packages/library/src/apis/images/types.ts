@@ -13,8 +13,8 @@ import {
   getImageResponseSchema,
   updateImageResponseSchema,
   deleteImageResponseSchema,
-} from "@hcloud-js/apis/images/schemas.js";
-import { imageSchema } from "@hcloud-js/apis/images/schemas.js";
+} from "@/apis/images/schemas";
+import { imageSchema } from "@/apis/images/schemas";
 import type { z } from "zod";
 
 /**
@@ -38,7 +38,7 @@ export type Image = z.infer<typeof imageSchema>;
  * @see https://docs.hetzner.cloud/reference/cloud#pagination
  * Re-exported from servers module for consistency
  */
-export type { PaginationMeta } from "@hcloud-js/apis/servers/types.js";
+export type { PaginationMeta } from "@/apis/servers/types";
 
 /**
  * List Images query parameters

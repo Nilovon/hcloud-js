@@ -49,7 +49,7 @@ import {
   rrsetSchema,
   rrsetRecordSchema,
   rrsetProtectionSchema,
-} from "@hcloud-js/apis/dns/schemas.js";
+} from "../../apis/dns/schemas";
 import type { z } from "zod";
 
 /**

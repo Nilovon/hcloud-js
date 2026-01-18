@@ -32,7 +32,7 @@ import {
   networkRouteSchema,
   networkSubnetSchema,
   networkProtectionSchema,
-} from "@hcloud-js/apis/networks/schemas.js";
+} from "@/apis/networks/schemas";
 import type { z } from "zod";
 
 /**

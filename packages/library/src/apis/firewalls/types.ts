@@ -26,7 +26,7 @@ import {
   firewallRuleDirectionSchema,
   firewallRuleProtocolSchema,
   firewallAppliedToResourceSchema,
-} from "@hcloud-js/apis/firewalls/schemas.js";
+} from "../../apis/firewalls/schemas";
 import type { z } from "zod";
 
 /**

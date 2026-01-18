@@ -15,7 +15,7 @@ import {
   deletePlacementGroupResponseSchema,
   placementGroupSchema,
   placementGroupTypeSchema,
-} from "@hcloud-js/apis/placement-groups/schemas.js";
+} from "@/apis/placement-groups/schemas";
 import type { z } from "zod";
 
 /**

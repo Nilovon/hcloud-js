@@ -1,5 +1,5 @@
 {
-  "name": "@hcloud-js/example",
+  "name": "@/example",
   "version": "0.0.0",
   "type": "module",
   "private": true,
@@ -13,10 +13,10 @@
     "locations": "bun run src/examples/locations.ts"
   },
   "dependencies": {
-    "@nilovonjs/hcloud-js": "workspace:*"
   },
   "devDependencies": {
-    "@hcloud-js/config": "workspace:*",
+    "@nilovonjs/hcloud-js": "workspace:*",
+    "@/config": "workspace:*",
     "@types/bun": "latest",
     "typescript": "^5"
   }

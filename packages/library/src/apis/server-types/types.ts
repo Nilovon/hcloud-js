@@ -8,7 +8,7 @@
 import {
   listServerTypesResponseSchema,
   getServerTypeResponseSchema,
-} from "@hcloud-js/apis/server-types/schemas.js";
+} from "../../apis/server-types/schemas";
 import type { z } from "zod";
 
 /**

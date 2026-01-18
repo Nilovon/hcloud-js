@@ -3,7 +3,7 @@
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips
  */
 
-import type { HCloudClient } from "@hcloud-js/client/index.js";
+import type { HCloudClient } from "@/client/index";
 import type {
   ListPrimaryIPsParams,
   ListPrimaryIPsResponse,
@@ -23,8 +23,8 @@ import type {
   ChangePrimaryIPProtectionParams,
   ChangePrimaryIPProtectionResponse,
   UnassignPrimaryIPResponse,
-} from "@hcloud-js/apis/primary-ips/types.js";
-import { validate } from "@hcloud-js/validation/index.js";
+} from "@/apis/primary-ips/types";
+import { validate } from "@/validation/index";
 import {
   listPrimaryIPsResponseSchema,
   createPrimaryIPRequestSchema,
@@ -43,7 +43,7 @@ import {
   changePrimaryIPProtectionResponseSchema,
   unassignPrimaryIPRequestSchema,
   unassignPrimaryIPResponseSchema,
-} from "@hcloud-js/apis/primary-ips/schemas.js";
+} from "@/apis/primary-ips/schemas";
 
 /**
  * Primary IPs API client
