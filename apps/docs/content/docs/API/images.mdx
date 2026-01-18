@@ -1,0 +1,133 @@
+---
+title: Images API
+description: Work with server images and snapshots
+---
+
+# Images API
+
+The Images API allows you to manage system images, snapshots, and backups.
+
+## List Images
+
+Returns all Image objects.
+
+```typescript
+const images = await client.images.list();
+```
+
+### Parameters
+
+```typescript
+interface ListImagesParams {
+  type?: ImageType | ImageType[];      // Filter by type (system, app, snapshot, backup)
+  status?: ImageStatus | ImageStatus[]; // Filter by status (available, creating, unavailable)
+  name?: string;                        // Filter by name
+  label_selector?: string;              // Filter by labels
+  architecture?: 'x86' | 'arm' | ('x86' | 'arm')[]; // Filter by architecture
+  sort?: string | string[];             // Sort results
+  bound_to?: number;                    // Filter by bound server ID
+  include_deprecated?: boolean;         // Include deprecated images
+  page?: number;                        // Page number
+  per_page?: number;                    // Items per page
+}
+```
+
+### Example
+
+```typescript
+// List all images
+const images = await client.images.list();
+
+// List system images
+const systemImages = await client.images.list({
+  type: ['system'],
+  status: ['available']
+});
+
+// List snapshots
+const snapshots = await client.images.list({
+  type: ['snapshot'],
+  status: ['available']
+});
+```
+
+## Get Image
+
+Returns a specific Image object.
+
+```typescript
+const image = await client.images.get(12345);
+```
+
+### Example
+
+```typescript
+const image = await client.images.get(12345);
+console.log(image.image.name);
+console.log(image.image.type);
+console.log(image.image.disk_size);
+console.log(image.image.os_flavor);
+```
+
+## Update Image
+
+Updates an Image. Only available for snapshots and backups.
+
+```typescript
+const updated = await client.images.update(12345, {
+  description: 'Updated description',
+  type: 'snapshot',
+  labels: { environment: 'production' }
+});
+```
+
+### Parameters
+
+```typescript
+interface UpdateImageParams {
+  description?: string;              // Optional: Description
+  type?: 'snapshot' | 'backup';      // Optional: Type (only for snapshots/backups)
+  labels?: Record<string, string>;   // Optional: Labels
+}
+```
+
+## Delete Image
+
+Deletes an Image.
+
+```typescript
+await client.images.delete(12345);
+```
+
+## Image Actions
+
+### Change Protection
+
+```typescript
+await client.images.changeProtection(12345, {
+  delete: true
+});
+```
+
+## Types
+
+```typescript
+type ImageType = 'system' | 'app' | 'snapshot' | 'backup';
+type ImageStatus = 'available' | 'creating' | 'unavailable';
+
+interface Image {
+  id: number;
+  type: ImageType;
+  status: ImageStatus;
+  name: string;
+  description: string;
+  disk_size: number;
+  created: string;
+  os_flavor: string;
+  os_version: string | null;
+  architecture: 'x86' | 'arm';
+  rapid_deploy: boolean;
+  labels: Record<string, string>;
+  // ... more fields
+}
+```

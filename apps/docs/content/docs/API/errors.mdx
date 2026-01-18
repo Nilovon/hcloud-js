@@ -1,0 +1,94 @@
+---
+title: Error Handling
+description: How to handle errors in hcloud-js
+---
+
+# Error Handling
+
+hcloud-js provides a custom error class `HCloudError` for all API-related errors.
+
+## HCloudError
+
+All errors thrown by the SDK are instances of `HCloudError`:
+
+```typescript
+import { HCloudClient, HCloudError } '@nilovonjs/hcloud-js';
+
+try {
+  const server = await client.servers.get(999999);
+} catch (error) {
+  if (error instanceof HCloudError) {
+    console.error('Message:', error.message);
+    console.error('Status Code:', error.statusCode);
+    console.error('Error Code:', error.code);
+    console.error('Details:', error.details);
+  }
+}
+```
+
+## Error Properties
+
+```typescript
+class HCloudError extends Error {
+  message: string;        // Human-readable error message
+  code: string;           // Error code (e.g., 'invalid_input')
+  statusCode: number;     // HTTP status code
+  details?: any;          // Additional error details
+}
+```
+
+## Common Error Codes
+
+- `INVALID_TOKEN`: Invalid API token
+- `INVALID_INPUT`: Invalid request parameters
+- `VALIDATION_ERROR`: Validation failed (from Zod)
+- `NOT_FOUND`: Resource not found (404)
+- `RATE_LIMIT_EXCEEDED`: Too many requests (429)
+- `SERVER_ERROR`: Server error (500+)
+
+## Handling Specific Errors
+
+```typescript
+try {
+  const server = await client.servers.get(999999);
+} catch (error) {
+  if (error instanceof HCloudError) {
+    switch (error.statusCode) {
+      case 404:
+        console.error('Server not found');
+        break;
+      case 401:
+        console.error('Unauthorized - check your API token');
+        break;
+      case 429:
+        console.error('Rate limit exceeded - please wait');
+        break;
+      case 500:
+      case 502:
+      case 503:
+        console.error('Server error - try again later');
+        break;
+      default:
+        console.error(`API Error: ${error.message}`);
+    }
+  }
+}
+```
+
+## Validation Errors
+
+Validation errors include detailed information about which fields failed:
+
+```typescript
+try {
+  await client.servers.create({
+    name: '',  // Invalid: empty name
+    server_type: 'invalid-type'
+  });
+} catch (error) {
+  if (error instanceof HCloudError && error.code === 'VALIDATION_ERROR') {
+    // error.details contains Zod error details
+    console.error('Validation failed:', error.details);
+  }
+}
+```

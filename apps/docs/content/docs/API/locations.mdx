@@ -1,0 +1,93 @@
+---
+title: Locations API
+description: List available locations and datacenters
+---
+
+# Locations API
+
+The Locations API allows you to list available locations and datacenters.
+
+## List Locations
+
+Returns all Location objects.
+
+```typescript
+const locations = await client.locations.list();
+```
+
+### Parameters
+
+```typescript
+interface ListLocationsParams {
+  name?: string;              // Filter by name
+  sort?: string | string[];   // Sort results
+  page?: number;              // Page number
+  per_page?: number;          // Items per page
+}
+```
+
+### Example
+
+```typescript
+const locations = await client.locations.list({
+  name: 'nbg1',
+  sort: ['name:asc']
+});
+```
+
+## Get Location
+
+Returns a specific Location object.
+
+```typescript
+const location = await client.locations.get(1);
+console.log(location.location.name);
+console.log(location.location.country);
+console.log(location.location.city);
+```
+
+## List Datacenters
+
+Returns all Datacenter objects.
+
+```typescript
+const datacenters = await client.locations.listDataCenters();
+```
+
+## Get Datacenter
+
+Returns a specific Datacenter object.
+
+```typescript
+const datacenter = await client.locations.getDataCenter(1);
+console.log(datacenter.datacenter.name);
+console.log(datacenter.datacenter.location.name);
+console.log(datacenter.datacenter.server_types.available);
+```
+
+## Types
+
+```typescript
+interface Location {
+  id: number;
+  name: string;
+  description: string;
+  country: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+  network_zone: string;
+}
+
+interface Datacenter {
+  id: number;
+  name: string;
+  description: string;
+  location: Location;
+  server_types: {
+    supported: number[];
+    available: number[];
+    available_for_migration: number[];
+  };
+}
+```

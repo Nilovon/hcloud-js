@@ -1,0 +1,71 @@
+---
+title: Server Types API
+description: List available server types
+---
+
+# Server Types API
+
+The Server Types API allows you to list available server types and their specifications.
+
+## List Server Types
+
+Returns all Server Type objects.
+
+```typescript
+const serverTypes = await client.serverTypes.list();
+```
+
+### Example
+
+```typescript
+const serverTypes = await client.serverTypes.list();
+
+serverTypes.server_types.forEach(type => {
+  console.log(`${type.name}: ${type.cores} vCPU, ${type.memory} GB RAM`);
+  console.log(`  Prices: ${type.prices.length} locations`);
+});
+```
+
+## Get Server Type
+
+Returns a specific Server Type object.
+
+```typescript
+const serverType = await client.serverTypes.get(1);
+```
+
+### Example
+
+```typescript
+const serverType = await client.serverTypes.get(1);
+console.log(serverType.server_type.name);
+console.log(`Cores: ${serverType.server_type.cores}`);
+console.log(`Memory: ${serverType.server_type.memory} GB`);
+console.log(`Disk: ${serverType.server_type.disk} GB`);
+```
+
+## Types
+
+```typescript
+interface ServerType {
+  id: number;
+  name: string;
+  description: string;
+  cores: number;
+  memory: number;
+  disk: number;
+  prices: Array<{
+    location: string;
+    price_hourly: Price;
+    price_monthly: Price;
+  }>;
+  storage_type: string;
+  cpu_type: string;
+  architecture: 'x86' | 'arm';
+  included_traffic: number;
+  deprecation: {
+    announced: string;
+    unavailable_after: string;
+  } | null;
+}
+```

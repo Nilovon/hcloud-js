@@ -1,0 +1,126 @@
+---
+title: Volumes API
+description: Manage block storage volumes
+---
+
+# Volumes API
+
+The Volumes API allows you to create and manage block storage volumes.
+
+## List Volumes
+
+Returns all Volume objects.
+
+```typescript
+const volumes = await client.volumes.list();
+```
+
+## Get Volume
+
+Returns a specific Volume object.
+
+```typescript
+const volume = await client.volumes.get(12345);
+```
+
+## Create Volume
+
+Creates a new Volume.
+
+```typescript
+const volume = await client.volumes.create({
+  name: 'my-volume',
+  size: 100,
+  location: 'nbg1',
+  format: 'ext4',
+  labels: { environment: 'production' }
+});
+
+// Create and attach to a server
+const volume = await client.volumes.create({
+  name: 'my-volume',
+  size: 100,
+  server: 12345,
+  automount: true
+});
+```
+
+## Update Volume
+
+Updates a Volume.
+
+```typescript
+const updated = await client.volumes.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' }
+});
+```
+
+## Delete Volume
+
+Deletes a Volume.
+
+```typescript
+await client.volumes.delete(12345);
+```
+
+## Volume Actions
+
+### Attach to Server
+
+Attaches a Volume to a Server.
+
+```typescript
+await client.volumes.attachToServer(12345, {
+  server: 67890,
+  automount: true
+});
+```
+
+### Detach
+
+Detaches a Volume from a Server.
+
+```typescript
+await client.volumes.detach(12345);
+```
+
+### Resize
+
+Resizes a Volume.
+
+```typescript
+await client.volumes.resize(12345, {
+  size: 200
+});
+```
+
+### Change Protection
+
+Changes the Protection configuration.
+
+```typescript
+await client.volumes.changeProtection(12345, {
+  delete: true
+});
+```
+
+## Types
+
+```typescript
+type VolumeStatus = 'creating' | 'available' | 'deleting';
+
+interface Volume {
+  id: number;
+  name: string;
+  status: VolumeStatus;
+  server: number | null;
+  location: Location;
+  size: number;
+  linux_device: string;
+  format: string | null;
+  labels: Record<string, string>;
+  protection: VolumeProtection;
+  created: string;
+}
+```

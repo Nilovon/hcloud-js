@@ -1,0 +1,253 @@
+---
+title: Examples
+description: Code examples for common use cases
+---
+
+# Examples
+
+This page contains code examples for common use cases.
+
+## Creating a Server
+
+```typescript
+import { HCloudClient } from '@nilovonjs/hcloud-js';
+
+const client = new HCloudClient({
+  token: process.env.HCLOUD_TOKEN!
+});
+
+// Create a new server
+const server = await client.servers.create({
+  name: 'my-server',
+  server_type: 'cpx11',
+  image: 'ubuntu-22.04',
+  location: 'nbg1',
+  ssh_keys: [123],
+  labels: {
+    environment: 'production',
+    team: 'backend'
+  }
+});
+
+console.log(`Server created: ${server.server.name}`);
+console.log(`Waiting for server to be ready...`);
+
+// Wait for server to be running
+let currentServer = await client.servers.get(server.server.id);
+while (currentServer.server.status !== 'running') {
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  currentServer = await client.servers.get(server.server.id);
+}
+
+console.log(`Server is now running!`);
+```
+
+## Managing Firewalls
+
+```typescript
+// Create a firewall
+const firewall = await client.firewalls.create({
+  name: 'web-firewall',
+  rules: {
+    inbound: [
+      {
+        direction: 'in',
+        protocol: 'tcp',
+        port: '80',
+        source_ips: ['0.0.0.0/0', '::/0'],
+        description: 'Allow HTTP'
+      },
+      {
+        direction: 'in',
+        protocol: 'tcp',
+        port: '443',
+        source_ips: ['0.0.0.0/0', '::/0'],
+        description: 'Allow HTTPS'
+      }
+    ]
+  }
+});
+
+// Apply to a server
+await client.firewalls.applyToResources(firewall.firewall.id, {
+  resources: [
+    { type: 'server', server: { id: 12345 } }
+  ]
+});
+```
+
+## Setting up Load Balancer
+
+```typescript
+// Create a load balancer
+const lb = await client.loadBalancers.create({
+  name: 'my-load-balancer',
+  load_balancer_type: 'lb11',
+  location: 'nbg1',
+  algorithm: { type: 'round_robin' },
+  services: [{
+    protocol: 'http',
+    listen_port: 80,
+    destination_port: 80,
+    health_check: {
+      protocol: 'http',
+      port: 80,
+      interval: 15,
+      timeout: 10,
+      retries: 3
+    }
+  }],
+  targets: [
+    { type: 'server', server: { id: 12345 } },
+    { type: 'server', server: { id: 67890 } }
+  ]
+});
+
+console.log(`Load balancer created: ${lb.load_balancer.name}`);
+console.log(`Public IP: ${lb.load_balancer.public_net.ipv4?.ip}`);
+```
+
+## Managing DNS Records
+
+```typescript
+// Create a zone
+const zone = await client.dns.createZone({
+  name: 'example.com',
+  ttl: 3600
+});
+
+// Add A record
+await client.dns.createRRSet('example.com', {
+  name: 'www',
+  type: 'A',
+  ttl: 3600,
+  records: [
+    { value: '1.2.3.4', comment: 'Web server' }
+  ]
+});
+
+// Add MX record
+await client.dns.createRRSet('example.com', {
+  name: '@',
+  type: 'MX',
+  ttl: 3600,
+  records: [
+    { value: '10 mail.example.com', comment: 'Mail server' }
+  ]
+});
+```
+
+## Managing Volumes
+
+```typescript
+// Create a volume
+const volume = await client.volumes.create({
+  name: 'my-volume',
+  size: 100,
+  location: 'nbg1',
+  format: 'ext4'
+});
+
+// Attach to server
+await client.volumes.attachToServer(volume.volume.id, {
+  server: 12345,
+  automount: true
+});
+
+// Resize volume
+await client.volumes.resize(volume.volume.id, {
+  size: 200
+});
+```
+
+## Working with Networks
+
+```typescript
+// Create a network
+const network = await client.networks.create({
+  name: 'my-network',
+  ip_range: '10.0.0.0/16',
+  subnets: [{
+    type: 'cloud',
+    network_zone: 'eu-central'
+  }]
+});
+
+// Add a route
+await client.networks.addRoute(network.network.id, {
+  destination: '10.0.1.0/24',
+  gateway: '10.0.0.1'
+});
+
+// Attach server to network
+await client.servers.attachToNetwork(12345, {
+  network: network.network.id,
+  ip: '10.0.0.2'
+});
+```
+
+## Error Handling
+
+```typescript
+import { HCloudClient, HCloudError } from '@nilovonjs/hcloud-js';
+
+try {
+  const server = await client.servers.get(999999);
+} catch (error) {
+  if (error instanceof HCloudError) {
+    switch (error.statusCode) {
+      case 404:
+        console.error('Resource not found');
+        break;
+      case 429:
+        console.error('Rate limit exceeded');
+        break;
+      case 500:
+        console.error('Server error');
+        break;
+      default:
+        console.error(`API Error: ${error.message}`);
+    }
+    console.error('Error code:', error.code);
+    console.error('Error details:', error.details);
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+## Waiting for Actions
+
+```typescript
+async function waitForAction(
+  resourceType: 'server' | 'network' | 'load-balancer',
+  resourceId: number,
+  actionId: number,
+  timeout: number = 300000
+): Promise<void> {
+  const startTime = Date.now();
+  
+  while (true) {
+    const action = await client[resourceType].getAction(resourceId, actionId);
+    
+    if (action.action.status === 'success') {
+      console.log('Action completed successfully');
+      return;
+    }
+    
+    if (action.action.status === 'error') {
+      throw new Error(`Action failed: ${action.action.error?.message}`);
+    }
+    
+    if (Date.now() - startTime > timeout) {
+      throw new Error('Action timeout');
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+}
+
+// Usage
+const server = await client.servers.create({...});
+await waitForAction('server', server.server.id, server.action.id);
+```

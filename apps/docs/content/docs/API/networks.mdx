@@ -1,0 +1,184 @@
+---
+title: Networks API
+description: Manage private networks
+---
+
+# Networks API
+
+The Networks API allows you to create and manage private networks with routes and subnets.
+
+## List Networks
+
+Returns all Network objects.
+
+```typescript
+const networks = await client.networks.list();
+```
+
+### Parameters
+
+```typescript
+interface ListNetworksParams {
+  name?: string;              // Filter by name
+  label_selector?: string;    // Filter by labels
+  sort?: string | string[];   // Sort results
+  page?: number;              // Page number
+  per_page?: number;          // Items per page
+}
+```
+
+## Get Network
+
+Returns a specific Network object.
+
+```typescript
+const network = await client.networks.get(12345);
+```
+
+## Create Network
+
+Creates a new Network.
+
+```typescript
+const network = await client.networks.create({
+  name: 'my-network',
+  ip_range: '10.0.0.0/16',
+  subnets: [{
+    type: 'cloud',
+    network_zone: 'eu-central'
+  }],
+  labels: { environment: 'production' }
+});
+```
+
+### Parameters
+
+```typescript
+interface CreateNetworkParams {
+  name: string;                           // Required: Network name
+  ip_range: string;                       // Required: IP range (CIDR notation)
+  subnets?: NetworkSubnet[];              // Optional: Subnets
+  routes?: NetworkRoute[];                // Optional: Routes
+  labels?: Record<string, string>;        // Optional: Labels
+  expose_routes_to_vswitch?: boolean;     // Optional: Expose routes to vSwitch
+}
+```
+
+## Update Network
+
+Updates a Network. You can update a Network's name, labels, and expose_routes_to_vswitch.
+
+```typescript
+const updated = await client.networks.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' },
+  expose_routes_to_vswitch: true
+});
+```
+
+## Delete Network
+
+Deletes a Network.
+
+```typescript
+await client.networks.delete(12345);
+```
+
+## Network Actions
+
+### Add Route
+
+Adds a route to a Network.
+
+```typescript
+await client.networks.addRoute(12345, {
+  destination: '10.0.1.0/24',
+  gateway: '10.0.0.1'
+});
+```
+
+### Delete Route
+
+Deletes a route from a Network.
+
+```typescript
+await client.networks.deleteRoute(12345, {
+  destination: '10.0.1.0/24',
+  gateway: '10.0.0.1'
+});
+```
+
+### Add Subnet
+
+Adds a subnet to a Network.
+
+```typescript
+await client.networks.addSubnet(12345, {
+  type: 'cloud',
+  network_zone: 'eu-central',
+  ip_range: '10.0.1.0/24'
+});
+```
+
+### Delete Subnet
+
+Deletes a subnet from a Network.
+
+```typescript
+await client.networks.deleteSubnet(12345, {
+  ip_range: '10.0.1.0/24'
+});
+```
+
+### Change IP Range
+
+Changes the IP range of a Network.
+
+```typescript
+await client.networks.changeIpRange(12345, {
+  ip_range: '10.0.0.0/16'
+});
+```
+
+### Change Protection
+
+Changes the Protection configuration of a Network.
+
+```typescript
+await client.networks.changeProtection(12345, {
+  delete: true
+});
+```
+
+## Types
+
+```typescript
+type NetworkSubnetType = 'cloud' | 'server' | 'vswitch';
+
+interface Network {
+  id: number;
+  name: string;
+  ip_range: string;
+  subnets: NetworkSubnet[];
+  routes: NetworkRoute[];
+  servers: number[];
+  load_balancers?: number[];
+  protection: NetworkProtection;
+  labels: Record<string, string>;
+  created: string;
+  expose_routes_to_vswitch?: boolean;
+}
+
+interface NetworkSubnet {
+  type: NetworkSubnetType;
+  ip_range: string | null;
+  network_zone: string;
+  gateway: string | null;
+  vswitch_id: number | null;
+}
+
+interface NetworkRoute {
+  destination: { ip: string };
+  gateway: { ip: string };
+}
+```

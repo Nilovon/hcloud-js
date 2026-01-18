@@ -1,0 +1,51 @@
+---
+title: ISOs API
+description: List available ISO images
+---
+
+# ISOs API
+
+The ISOs API allows you to list available ISO images.
+
+## List ISOs
+
+Returns all ISO objects.
+
+```typescript
+const isos = await client.isos.list();
+```
+
+### Example
+
+```typescript
+const isos = await client.isos.list();
+
+isos.isos.forEach(iso => {
+  console.log(`${iso.name}: ${iso.description}`);
+  console.log(`  Type: ${iso.type}`);
+  console.log(`  Architecture: ${iso.architecture}`);
+});
+```
+
+## Get ISO
+
+Returns a specific ISO object.
+
+```typescript
+const iso = await client.isos.get(12345);
+```
+
+## Types
+
+```typescript
+type ISOType = 'public' | 'private';
+
+interface ISO {
+  id: number;
+  name: string;
+  description: string;
+  type: ISOType;
+  architecture: 'x86' | 'arm' | null;
+  deprecated: string | null;
+}
+```

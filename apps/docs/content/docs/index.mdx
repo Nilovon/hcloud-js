@@ -1,13 +1,52 @@
 ---
-title: Hello World
-description: Your first document
+title: Introduction
+description: TypeScript SDK for the Hetzner Cloud API
 ---
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+# hcloud-js
 
-## What is Next?
+A fully typed, modern TypeScript SDK for managing your Hetzner Cloud infrastructure. Built with type safety, validation, and developer experience in mind.
 
-<Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
-</Cards>
+## Features
+
+- **Fully Typed**: Complete TypeScript types for all API endpoints
+- **Validated**: Built-in validation using Zod schemas
+- **Easy to Use**: Simple, intuitive API
+- **Complete Coverage**: All Hetzner Cloud API endpoints supported
+- **Well Documented**: Comprehensive documentation with examples
+
+## Quick Example
+
+```typescript
+import { HCloudClient } from '@nilovonjs/hcloud-js';
+
+const client = new HCloudClient({
+  token: 'your-api-token'
+});
+
+// List all servers
+const servers = await client.servers.list();
+console.log(`Found ${servers.servers.length} server(s)`);
+
+// Get a specific server
+const server = await client.servers.get(12345);
+console.log(server.server.name);
+```
+
+## Installation
+
+<Card title="Installation" href="/docs/installation">
+  Learn how to install and configure hcloud-js
+</Card>
+
+## Getting Started
+
+<Card title="Getting Started" href="/docs/getting-started">
+  Start using the SDK in your project
+</Card>
+
+## API Reference
+
+<Card title="API Reference" href="/docs/api">
+  Complete API documentation
+</Card>

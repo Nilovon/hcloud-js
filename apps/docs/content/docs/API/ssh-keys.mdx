@@ -1,0 +1,68 @@
+---
+title: SSH Keys API
+description: Manage SSH keys
+---
+
+# SSH Keys API
+
+The SSH Keys API allows you to manage SSH keys for server access.
+
+## List SSH Keys
+
+Returns all SSH Key objects.
+
+```typescript
+const sshKeys = await client.sshKeys.list();
+```
+
+## Get SSH Key
+
+Returns a specific SSH Key object.
+
+```typescript
+const sshKey = await client.sshKeys.get(12345);
+```
+
+## Create SSH Key
+
+Creates a new SSH Key.
+
+```typescript
+const sshKey = await client.sshKeys.create({
+  name: 'my-ssh-key',
+  public_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ...',
+  labels: { environment: 'production' }
+});
+```
+
+## Update SSH Key
+
+Updates an SSH Key.
+
+```typescript
+const updated = await client.sshKeys.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' }
+});
+```
+
+## Delete SSH Key
+
+Deletes an SSH Key.
+
+```typescript
+await client.sshKeys.delete(12345);
+```
+
+## Types
+
+```typescript
+interface SSHKey {
+  id: number;
+  name: string;
+  fingerprint: string;
+  public_key: string;
+  labels: Record<string, string>;
+  created: string;
+}
+```

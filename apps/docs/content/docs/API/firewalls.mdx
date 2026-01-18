@@ -1,0 +1,147 @@
+---
+title: Firewalls API
+description: Configure firewall rules
+---
+
+# Firewalls API
+
+The Firewalls API allows you to configure firewall rules and apply them to resources.
+
+## List Firewalls
+
+Returns all Firewall objects.
+
+```typescript
+const firewalls = await client.firewalls.list();
+```
+
+## Get Firewall
+
+Returns a specific Firewall object.
+
+```typescript
+const firewall = await client.firewalls.get(12345);
+```
+
+## Create Firewall
+
+Creates a new Firewall.
+
+```typescript
+const firewall = await client.firewalls.create({
+  name: 'my-firewall',
+  rules: {
+    inbound: [
+      {
+        direction: 'in',
+        protocol: 'tcp',
+        port: '80',
+        source_ips: ['0.0.0.0/0', '::/0'],
+        description: 'Allow HTTP'
+      }
+    ],
+    outbound: [
+      {
+        direction: 'out',
+        protocol: 'tcp',
+        source_ips: ['0.0.0.0/0', '::/0']
+      }
+    ]
+  },
+  labels: { environment: 'production' }
+});
+```
+
+## Update Firewall
+
+Updates a Firewall.
+
+```typescript
+const updated = await client.firewalls.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' }
+});
+```
+
+## Delete Firewall
+
+Deletes a Firewall.
+
+```typescript
+await client.firewalls.delete(12345);
+```
+
+## Apply to Resources
+
+Applies a Firewall to resources.
+
+```typescript
+await client.firewalls.applyToResources(12345, {
+  resources: [
+    { type: 'server', server: { id: 12345 } }
+  ]
+});
+```
+
+## Remove from Resources
+
+Removes a Firewall from resources.
+
+```typescript
+await client.firewalls.removeFromResources(12345, {
+  resources: [
+    { type: 'server', server: { id: 12345 } }
+  ]
+});
+```
+
+## Set Rules
+
+Sets all rules for a Firewall.
+
+```typescript
+await client.firewalls.setRules(12345, {
+  rules: {
+    inbound: [
+      {
+        direction: 'in',
+        protocol: 'tcp',
+        port: '443',
+        source_ips: ['0.0.0.0/0', '::/0']
+      }
+    ]
+  }
+});
+```
+
+## Types
+
+```typescript
+type FirewallRuleProtocol = 'tcp' | 'udp' | 'icmp' | 'esp' | 'gre';
+type FirewallRuleDirection = 'in' | 'out';
+
+interface Firewall {
+  id: number;
+  name: string;
+  labels: Record<string, string>;
+  created: string;
+  rules?: {
+    inbound?: FirewallRule[];
+    outbound?: FirewallRule[];
+  };
+  applied_to?: Array<{
+    type: 'server' | 'label_selector';
+    server?: { id: number };
+    label_selector?: { selector: string };
+  }>;
+}
+
+interface FirewallRule {
+  direction: FirewallRuleDirection;
+  protocol: FirewallRuleProtocol;
+  port?: string | null;
+  source_ips?: string[];
+  destination_ips?: string[];
+  description?: string | null;
+}
+```

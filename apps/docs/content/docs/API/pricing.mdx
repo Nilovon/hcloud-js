@@ -1,0 +1,78 @@
+---
+title: Pricing API
+description: Get pricing information
+---
+
+# Pricing API
+
+The Pricing API allows you to retrieve pricing information for all resources.
+
+## Get All Prices
+
+Returns all prices for all resources.
+
+```typescript
+const pricing = await client.pricing.getAll();
+```
+
+### Example
+
+```typescript
+const pricing = await client.pricing.getAll();
+
+console.log(`Currency: ${pricing.currency}`);
+console.log(`VAT Rate: ${pricing.vat_rate}`);
+
+// Server type pricing
+pricing.server_types.forEach(serverType => {
+  console.log(`Server Type: ${serverType.name}`);
+  serverType.prices.forEach(price => {
+    console.log(`  Location: ${price.location}`);
+    console.log(`  Hourly: ${price.price_hourly.net}`);
+    console.log(`  Monthly: ${price.price_monthly.net}`);
+  });
+});
+
+// Volume pricing
+console.log(`Volume price per GB/month: ${pricing.volume.price_per_gb_month.net}`);
+
+// Floating IP pricing
+console.log(`Floating IP monthly: ${pricing.floating_ip.price_monthly.net}`);
+
+// Traffic pricing
+console.log(`Traffic price per TB: ${pricing.traffic.price_per_tb.net}`);
+```
+
+## Types
+
+```typescript
+interface GetPricingResponse {
+  currency: string;
+  vat_rate: string;
+  image: ImagePricing;
+  floating_ip: FloatingIpPricing;
+  floating_ip_price_monthly: Price;
+  primary_ips?: PrimaryIpPricing[];
+  server_types: ServerTypePricing[];
+  load_balancer_types?: LoadBalancerTypePricing[];
+  volume: VolumePricing;
+  traffic: TrafficPricing;
+}
+
+interface Price {
+  net: string;
+  gross: string;
+}
+
+interface PricingLocation {
+  location: string;
+  price_hourly: Price;
+  price_monthly: Price;
+}
+
+interface ServerTypePricing {
+  id: number;
+  name: string;
+  prices: PricingLocation[];
+}
+```

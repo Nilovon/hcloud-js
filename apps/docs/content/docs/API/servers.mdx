@@ -1,0 +1,349 @@
+---
+title: Servers API
+description: Manage your Hetzner Cloud servers
+---
+
+# Servers API
+
+The Servers API allows you to create, manage, and control your Hetzner Cloud servers.
+
+## List Servers
+
+Returns all Server objects.
+
+```typescript
+const servers = await client.servers.list();
+```
+
+### Parameters
+
+```typescript
+interface ListServersParams {
+  name?: string;                    // Filter by name
+  label_selector?: string;          // Filter by labels
+  sort?: string | string[];         // Sort results
+  status?: ServerStatus | ServerStatus[]; // Filter by status
+  page?: number;                    // Page number
+  per_page?: number;                // Items per page (default: 25)
+}
+```
+
+### Example
+
+```typescript
+// List all servers
+const servers = await client.servers.list();
+
+// List with filters
+const runningServers = await client.servers.list({
+  status: ['running'],
+  label_selector: 'environment=production',
+  sort: ['name:asc']
+});
+```
+
+## Get Server
+
+Returns a specific Server object.
+
+```typescript
+const server = await client.servers.get(12345);
+```
+
+### Example
+
+```typescript
+const server = await client.servers.get(12345);
+console.log(server.server.name);
+console.log(server.server.status);
+console.log(server.server.public_net.ipv4?.ip);
+```
+
+## Create Server
+
+Creates a new Server.
+
+```typescript
+const server = await client.servers.create({
+  name: 'my-server',
+  server_type: 'cpx11',
+  image: 'ubuntu-22.04',
+  location: 'nbg1'
+});
+```
+
+### Parameters
+
+```typescript
+interface CreateServerParams {
+  name: string;                     // Required: Server name
+  server_type: string | number;     // Required: Server type (ID or name)
+  image: string | number;           // Required: Image (ID or name)
+  location?: string;                // Optional: Location name
+  networks?: number[];              // Optional: Network IDs to attach
+  volumes?: number[];               // Optional: Volume IDs to attach
+  ssh_keys?: (string | number)[];  // Optional: SSH key IDs or names
+  user_data?: string;               // Optional: Cloud-init user data
+  labels?: Record<string, string>;  // Optional: Labels
+  automount?: boolean;              // Optional: Auto-mount volumes
+  start_after_create?: boolean;     // Optional: Start server after creation (default: true)
+  // ... more options
+}
+```
+
+### Example
+
+```typescript
+const server = await client.servers.create({
+  name: 'my-server',
+  server_type: 'cpx11',
+  image: 'ubuntu-22.04',
+  location: 'nbg1',
+  ssh_keys: [123],
+  labels: {
+    environment: 'production',
+    team: 'backend'
+  }
+});
+
+console.log(`Server created: ${server.server.name}`);
+console.log(`Action ID: ${server.action.id}`);
+```
+
+## Update Server
+
+Updates a Server. You can update a Server's name and labels.
+
+```typescript
+const updated = await client.servers.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' }
+});
+```
+
+## Delete Server
+
+Deletes a Server. This immediately removes the Server from your account.
+
+```typescript
+const result = await client.servers.delete(12345);
+console.log(`Delete action ID: ${result.action.id}`);
+```
+
+## Server Actions
+
+### Power Management
+
+```typescript
+// Power on
+await client.servers.powerOn(12345);
+
+// Power off
+await client.servers.powerOff(12345);
+
+// Reboot
+await client.servers.reboot(12345);
+
+// Reset (hard reboot)
+await client.servers.reset(12345);
+
+// Shutdown
+await client.servers.shutdown(12345);
+```
+
+### ISO Management
+
+```typescript
+// Attach ISO
+await client.servers.attachISO(12345, {
+  iso: 'debian-12'
+});
+
+// Detach ISO
+await client.servers.detachISO(12345);
+```
+
+### Rescue Mode
+
+```typescript
+// Enable rescue mode
+const rescue = await client.servers.enableRescueMode(12345, {
+  type: 'linux64',
+  ssh_keys: [123]
+});
+console.log(`Root password: ${rescue.root_password}`);
+
+// Disable rescue mode
+await client.servers.disableRescueMode(12345);
+```
+
+### Image Management
+
+```typescript
+// Create image/snapshot
+const image = await client.servers.createImage(12345, {
+  type: 'snapshot',
+  description: 'My server snapshot',
+  labels: { environment: 'production' }
+});
+
+// Rebuild from image
+await client.servers.rebuild(12345, {
+  image: 'ubuntu-22.04'
+});
+```
+
+### Protection
+
+```typescript
+// Change protection
+await client.servers.changeProtection(12345, {
+  delete: true,
+  rebuild: true
+});
+```
+
+### Type Changes
+
+```typescript
+// Change server type
+await client.servers.changeType(12345, {
+  server_type: 'cpx21',
+  upgrade_disk: true
+});
+```
+
+### Backups
+
+```typescript
+// Enable backups
+await client.servers.enableBackups(12345, {
+  backup_window: '22-02'
+});
+
+// Disable backups
+await client.servers.disableBackups(12345);
+```
+
+### Network Management
+
+```typescript
+// Attach to network
+await client.servers.attachToNetwork(12345, {
+  network: 67890,
+  ip: '10.0.0.2',
+  alias_ips: ['10.0.0.3']
+});
+
+// Detach from network
+await client.servers.detachFromNetwork(12345, {
+  network: 67890
+});
+
+// Change alias IPs
+await client.servers.changeAliasIPs(12345, {
+  network: 67890,
+  alias_ips: ['10.0.0.5', '10.0.0.6']
+});
+
+// Change reverse DNS
+await client.servers.changeReverseDNS(12345, {
+  ip: '1.2.3.4',
+  dns_ptr: 'server.example.com'
+});
+```
+
+### Console Access
+
+```typescript
+// Request console
+const console = await client.servers.requestConsole(12345, {
+  type: 'vnc'
+});
+console.log(`Password: ${console.password}`);
+console.log(`WebSocket URL: ${console.wss_url}`);
+```
+
+### Password Reset
+
+```typescript
+// Reset root password
+const reset = await client.servers.resetRootPassword(12345);
+if (reset.root_password) {
+  console.log(`New password: ${reset.root_password}`);
+}
+```
+
+### Placement Groups
+
+```typescript
+// Add to placement group
+await client.servers.addToPlacementGroup(12345, {
+  placement_group: 67890
+});
+
+// Remove from placement group
+await client.servers.removeFromPlacementGroup(12345);
+```
+
+## List Server Actions
+
+Returns all Action objects for a Server.
+
+```typescript
+const actions = await client.servers.listActions(12345, {
+  status: ['running'],
+  sort: ['started:desc']
+});
+```
+
+## Get Server Action
+
+Returns a specific Action object for a Server.
+
+```typescript
+const action = await client.servers.getAction(12345, 67890);
+console.log(action.action.command);
+console.log(action.action.status);
+```
+
+## Get Server Metrics
+
+Returns Metrics for a Server.
+
+```typescript
+const metrics = await client.servers.getMetrics(12345, {
+  type: 'cpu',
+  start: '2024-01-01T00:00:00Z',
+  end: '2024-01-01T23:59:59Z'
+});
+```
+
+## Types
+
+```typescript
+type ServerStatus = 
+  | 'running' 
+  | 'initializing' 
+  | 'starting' 
+  | 'stopping' 
+  | 'off' 
+  | 'deleting' 
+  | 'migrating' 
+  | 'rebuilding' 
+  | 'unknown';
+
+interface Server {
+  id: number;
+  name: string;
+  status: ServerStatus;
+  created: string;
+  public_net: PublicNet;
+  private_net: PrivateNet[];
+  server_type: ServerType;
+  datacenter: Datacenter;
+  image: ServerImage;
+  iso: ISO | null;
+  // ... more fields
+}
+```

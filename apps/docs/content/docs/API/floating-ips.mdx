@@ -1,0 +1,123 @@
+---
+title: Floating IPs API
+description: Manage floating IP addresses
+---
+
+# Floating IPs API
+
+The Floating IPs API allows you to manage floating IP addresses.
+
+## List Floating IPs
+
+Returns all Floating IP objects.
+
+```typescript
+const floatingIPs = await client.floatingIPs.list();
+```
+
+## Get Floating IP
+
+Returns a specific Floating IP object.
+
+```typescript
+const floatingIP = await client.floatingIPs.get(12345);
+```
+
+## Create Floating IP
+
+Creates a new Floating IP.
+
+```typescript
+const floatingIP = await client.floatingIPs.create({
+  type: 'ipv4',
+  location: 'nbg1',
+  name: 'my-floating-ip'
+});
+
+// Or assign to a server directly
+const floatingIP = await client.floatingIPs.create({
+  type: 'ipv4',
+  server: 12345,
+  name: 'my-floating-ip'
+});
+```
+
+## Update Floating IP
+
+Updates a Floating IP.
+
+```typescript
+const updated = await client.floatingIPs.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' }
+});
+```
+
+## Delete Floating IP
+
+Deletes a Floating IP.
+
+```typescript
+await client.floatingIPs.delete(12345);
+```
+
+## Floating IP Actions
+
+### Assign to Server
+
+Assigns a Floating IP to a Server.
+
+```typescript
+await client.floatingIPs.assignToServer(12345, {
+  server: 67890
+});
+```
+
+### Unassign
+
+Unassigns a Floating IP from a Server.
+
+```typescript
+await client.floatingIPs.unassign(12345);
+```
+
+### Change Reverse DNS
+
+Changes the reverse DNS entry.
+
+```typescript
+await client.floatingIPs.changeReverseDNS(12345, {
+  ip: '1.2.3.4',
+  dns_ptr: 'fip.example.com'
+});
+```
+
+### Change Protection
+
+Changes the Protection configuration.
+
+```typescript
+await client.floatingIPs.changeProtection(12345, {
+  delete: true
+});
+```
+
+## Types
+
+```typescript
+interface FloatingIP {
+  id: number;
+  name: string;
+  ip: string;
+  type: 'ipv4' | 'ipv6';
+  server: number | null;
+  dns_ptr: Array<{
+    ip: string;
+    dns_ptr: string;
+  }>;
+  location: Location;
+  protection: FloatingIPProtection;
+  labels: Record<string, string>;
+  created: string;
+}
+```

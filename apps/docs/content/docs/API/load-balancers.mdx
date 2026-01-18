@@ -1,0 +1,246 @@
+---
+title: Load Balancers API
+description: Configure load balancers
+---
+
+# Load Balancers API
+
+The Load Balancers API allows you to configure load balancers with services and targets.
+
+## List Load Balancers
+
+Returns all Load Balancer objects.
+
+```typescript
+const loadBalancers = await client.loadBalancers.list();
+```
+
+## Get Load Balancer
+
+Returns a specific Load Balancer object.
+
+```typescript
+const lb = await client.loadBalancers.get(12345);
+```
+
+## Create Load Balancer
+
+Creates a new Load Balancer.
+
+```typescript
+const lb = await client.loadBalancers.create({
+  name: 'my-lb',
+  load_balancer_type: 'lb11',
+  location: 'nbg1',
+  algorithm: { type: 'round_robin' },
+  services: [{
+    protocol: 'http',
+    listen_port: 80,
+    destination_port: 80,
+    health_check: {
+      protocol: 'http',
+      port: 80,
+      interval: 15,
+      timeout: 10,
+      retries: 3
+    }
+  }],
+  targets: [{
+    type: 'server',
+    server: { id: 12345 }
+  }]
+});
+```
+
+## Update Load Balancer
+
+Updates a Load Balancer.
+
+```typescript
+const updated = await client.loadBalancers.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' }
+});
+```
+
+## Delete Load Balancer
+
+Deletes a Load Balancer.
+
+```typescript
+await client.loadBalancers.delete(12345);
+```
+
+## Service Management
+
+### Add Service
+
+Adds a service to a Load Balancer.
+
+```typescript
+await client.loadBalancers.addService(12345, {
+  protocol: 'http',
+  listen_port: 443,
+  destination_port: 443,
+  health_check: {
+    protocol: 'http',
+    port: 443
+  }
+});
+```
+
+### Update Service
+
+Updates a service of a Load Balancer.
+
+```typescript
+await client.loadBalancers.updateService(12345, {
+  listen_port: 443,
+  health_check: {
+    interval: 20
+  }
+});
+```
+
+### Delete Service
+
+Deletes a service from a Load Balancer.
+
+```typescript
+await client.loadBalancers.deleteService(12345, {
+  listen_port: 443
+});
+```
+
+## Target Management
+
+### Add Target
+
+Adds a target to a Load Balancer.
+
+```typescript
+await client.loadBalancers.addTarget(12345, {
+  type: 'server',
+  server: { id: 12345 }
+});
+```
+
+### Remove Target
+
+Removes a target from a Load Balancer.
+
+```typescript
+await client.loadBalancers.removeTarget(12345, {
+  type: 'server',
+  server: { id: 12345 }
+});
+```
+
+## Network Management
+
+### Attach to Network
+
+Attaches a Load Balancer to a Network.
+
+```typescript
+await client.loadBalancers.attachToNetwork(12345, {
+  network: 67890,
+  ip: '10.0.0.2'
+});
+```
+
+### Detach from Network
+
+Detaches a Load Balancer from a Network.
+
+```typescript
+await client.loadBalancers.detachFromNetwork(12345, {
+  network: 67890
+});
+```
+
+## Other Actions
+
+### Change Algorithm
+
+Changes the algorithm of a Load Balancer.
+
+```typescript
+await client.loadBalancers.changeAlgorithm(12345, {
+  type: 'least_connections'
+});
+```
+
+### Change Protection
+
+Changes the Protection configuration.
+
+```typescript
+await client.loadBalancers.changeProtection(12345, {
+  delete: true
+});
+```
+
+### Change Type
+
+Changes the type of a Load Balancer.
+
+```typescript
+await client.loadBalancers.changeType(12345, {
+  load_balancer_type: 'lb21'
+});
+```
+
+### Change Reverse DNS
+
+Changes the reverse DNS entry.
+
+```typescript
+await client.loadBalancers.changeReverseDNS(12345, {
+  ip: '1.2.3.4',
+  dns_ptr: 'lb.example.com'
+});
+```
+
+### Enable/Disable Public Interface
+
+```typescript
+await client.loadBalancers.enablePublicInterface(12345);
+await client.loadBalancers.disablePublicInterface(12345);
+```
+
+## Get Metrics
+
+Returns Metrics for a Load Balancer.
+
+```typescript
+const metrics = await client.loadBalancers.getMetrics(12345, {
+  type: 'open_connections',
+  start: '2024-01-01T00:00:00Z',
+  end: '2024-01-01T23:59:59Z'
+});
+```
+
+## Types
+
+```typescript
+type LoadBalancerAlgorithmType = 'round_robin' | 'least_connections';
+type LoadBalancerServiceProtocol = 'http' | 'https' | 'tcp';
+type LoadBalancerTargetType = 'server' | 'label_selector' | 'ip';
+
+interface LoadBalancer {
+  id: number;
+  name: string;
+  load_balancer_type: LoadBalancerType;
+  location: Location;
+  algorithm: { type: LoadBalancerAlgorithmType };
+  services: LoadBalancerService[];
+  targets: LoadBalancerTarget[];
+  public_net: { enabled: boolean; ipv4: { ip: string }; ipv6: { ip: string } };
+  private_net?: Array<{ network: number; ip: string }>;
+  protection: LoadBalancerProtection;
+  labels: Record<string, string>;
+  created: string;
+  // ... more fields
+}
+```

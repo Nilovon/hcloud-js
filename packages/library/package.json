@@ -1,9 +1,13 @@
 {
   "name": "@hcloud-js/library",
   "version": "0.0.0",
+  "description": "Hetzner Cloud TypeScript SDK",
+  "author": "Nilovon",
+  "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "module": "./src/index.ts",
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -11,6 +15,8 @@
     }
   },
   "dependencies": {
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "react-syntax-highlighter": "^16.1.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

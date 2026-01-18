@@ -1,0 +1,106 @@
+---
+title: Getting Started
+description: Start using hcloud-js in your project
+---
+
+# Getting Started
+
+This guide will help you get started with hcloud-js.
+
+## Creating a Client
+
+First, import and create an `HCloudClient` instance:
+
+```typescript
+import { HCloudClient } from '@nilovonjs/hcloud-js';
+
+const client = new HCloudClient({
+  token: 'your-api-token'
+});
+```
+
+## Configuration Options
+
+The client accepts the following configuration options:
+
+```typescript
+const client = new HCloudClient({
+  token: 'your-api-token',        // Required: Your Hetzner Cloud API token
+  baseUrl: 'https://api.hetzner.cloud/v1', // Optional: API base URL (default)
+  timeout: 30000                  // Optional: Request timeout in milliseconds (default: 30000)
+});
+```
+
+## Getting Your API Token
+
+1. Log in to your [Hetzner Cloud Console](https://console.hetzner.cloud/)
+2. Navigate to **Security** → **API Tokens**
+3. Click **Generate API Token**
+4. Copy the token and store it securely
+
+:::warning
+Never commit your API token to version control. Use environment variables or a secure secret management system.
+:::
+
+## Environment Variables
+
+It's recommended to store your API token in an environment variable:
+
+```typescript
+import { HCloudClient } from '@nilovonjs/hcloud-js';
+
+const client = new HCloudClient({
+  token: process.env.HCLOUD_TOKEN!
+});
+```
+
+## Your First Request
+
+Let's start by listing your servers:
+
+```typescript
+import { HCloudClient } from '@nilovonjs/hcloud-js';
+
+const client = new HCloudClient({
+  token: process.env.HCLOUD_TOKEN!
+});
+
+async function main() {
+  try {
+    const response = await client.servers.list();
+    console.log(`Found ${response.servers.length} server(s)`);
+    
+    response.servers.forEach(server => {
+      console.log(`- ${server.name} (${server.status})`);
+    });
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+main();
+```
+
+## Error Handling
+
+All errors are thrown as `HCloudError` instances:
+
+```typescript
+import { HCloudClient, HCloudError } from '@nilovonjs/hcloud-js';
+
+try {
+  const server = await client.servers.get(999999);
+} catch (error) {
+  if (error instanceof HCloudError) {
+    console.error('API Error:', error.message);
+    console.error('Status Code:', error.statusCode);
+    console.error('Error Code:', error.code);
+  }
+}
+```
+
+## Next Steps
+
+- Learn about [Servers API](/docs/API/servers)
+- Explore [other APIs](/docs/api)
+- Check out [examples](/docs/examples)

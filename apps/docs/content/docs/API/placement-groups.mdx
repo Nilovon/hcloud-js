@@ -1,0 +1,75 @@
+---
+title: Placement Groups API
+description: Manage server placement groups
+---
+
+# Placement Groups API
+
+The Placement Groups API allows you to manage server placement groups.
+
+## List Placement Groups
+
+Returns all Placement Group objects.
+
+```typescript
+const placementGroups = await client.placementGroups.list();
+```
+
+## Get Placement Group
+
+Returns a specific Placement Group object.
+
+```typescript
+const placementGroup = await client.placementGroups.get(12345);
+```
+
+## Create Placement Group
+
+Creates a new Placement Group.
+
+```typescript
+const placementGroup = await client.placementGroups.create({
+  name: 'my-placement-group',
+  type: 'spread',
+  labels: { environment: 'production' }
+});
+```
+
+### Placement Group Types
+
+- `spread`: Spreads servers across different physical servers
+- `pack`: Packs servers onto the same physical server
+
+## Update Placement Group
+
+Updates a Placement Group.
+
+```typescript
+const updated = await client.placementGroups.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' }
+});
+```
+
+## Delete Placement Group
+
+Deletes a Placement Group.
+
+```typescript
+await client.placementGroups.delete(12345);
+```
+
+## Types
+
+```typescript
+type PlacementGroupType = 'spread' | 'pack';
+
+interface PlacementGroup {
+  id: number;
+  name: string;
+  labels: Record<string, string>;
+  created: string;
+  servers: number[];
+  type: PlacementGroupType;
+}
+```

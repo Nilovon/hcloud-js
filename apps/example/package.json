@@ -13,9 +13,9 @@
     "locations": "bun run src/examples/locations.ts"
   },
   "dependencies": {
+    "@hcloud-js/library": "workspace:*"
   },
   "devDependencies": {
-    "@hcloud-js/library": "workspace:*",
     "@hcloud-js/config": "workspace:*",
     "@types/bun": "latest",
     "typescript": "^5"

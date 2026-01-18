@@ -1,0 +1,100 @@
+---
+title: Certificates API
+description: Manage SSL/TLS certificates
+---
+
+# Certificates API
+
+The Certificates API allows you to manage SSL/TLS certificates for load balancers.
+
+## List Certificates
+
+Returns all Certificate objects.
+
+```typescript
+const certificates = await client.certificates.list();
+```
+
+## Get Certificate
+
+Returns a specific Certificate object.
+
+```typescript
+const certificate = await client.certificates.get(12345);
+```
+
+## Create Certificate
+
+Creates a new Certificate.
+
+```typescript
+// Uploaded certificate
+const cert = await client.certificates.create({
+  name: 'my-cert',
+  certificate: '-----BEGIN CERTIFICATE-----...',
+  private_key: '-----BEGIN PRIVATE KEY-----...',
+  labels: { environment: 'production' }
+});
+
+// Let's Encrypt certificate
+const cert = await client.certificates.create({
+  name: 'my-cert',
+  type: 'managed',
+  domain_names: ['example.com', 'www.example.com'],
+  labels: { environment: 'production' }
+});
+```
+
+## Update Certificate
+
+Updates a Certificate.
+
+```typescript
+const updated = await client.certificates.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' }
+});
+```
+
+## Delete Certificate
+
+Deletes a Certificate.
+
+```typescript
+await client.certificates.delete(12345);
+```
+
+## Certificate Actions
+
+### Retry Issuance
+
+Retries the issuance process for a managed certificate.
+
+```typescript
+await client.certificates.retryIssuance(12345);
+```
+
+## Types
+
+```typescript
+type CertificateType = 'uploaded' | 'managed';
+type CertificateStatus = 'pending' | 'issued' | 'failed';
+
+interface Certificate {
+  id: number;
+  name: string;
+  type: CertificateType;
+  status: CertificateStatus;
+  certificate: string | null;
+  created: string;
+  not_valid_before: string;
+  not_valid_after: string;
+  domain_names: string[];
+  fingerprint: string | null;
+  labels: Record<string, string>;
+  used_by: Array<{
+    id: number;
+    type: 'load_balancer';
+  }>;
+}
+```

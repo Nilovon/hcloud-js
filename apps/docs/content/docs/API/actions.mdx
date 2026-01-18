@@ -1,0 +1,92 @@
+---
+title: Actions API
+description: Monitor and retrieve action status
+---
+
+# Actions API
+
+The Actions API allows you to monitor and retrieve action status.
+
+:::warning
+The `list()` method may return a 410 error as the Hetzner Cloud API has removed the ability to list arbitrary actions. Use resource-specific action endpoints instead (e.g., `client.servers.listActions(serverId)`).
+:::
+
+## Get Action
+
+Returns a specific Action object.
+
+```typescript
+const action = await client.actions.get(12345);
+```
+
+### Example
+
+```typescript
+const action = await client.actions.get(12345);
+
+console.log(`Command: ${action.action.command}`);
+console.log(`Status: ${action.action.status}`);
+console.log(`Progress: ${action.action.progress}%`);
+
+if (action.action.status === 'success') {
+  console.log(`Completed in ${action.action.finished}`);
+} else if (action.action.status === 'error') {
+  console.error(`Error: ${action.action.error?.message}`);
+}
+
+// Show resources affected by this action
+action.action.resources.forEach(resource => {
+  console.log(`  - ${resource.type} #${resource.id}`);
+});
+```
+
+## Getting Action IDs
+
+Action IDs are returned when you perform operations on resources. For example:
+
+```typescript
+// Creating a server returns an action
+const server = await client.servers.create({...});
+const actionId = server.action.id;
+
+// Monitor the action
+const action = await client.actions.get(actionId);
+```
+
+## Resource-Specific Actions
+
+Most resources provide their own action endpoints:
+
+```typescript
+// List actions for a server
+const actions = await client.servers.listActions(12345);
+
+// List actions for a network
+const actions = await client.networks.listActions(12345);
+
+// Get a specific action for a server
+const action = await client.servers.getAction(12345, 67890);
+```
+
+## Types
+
+```typescript
+type ActionStatus = 'running' | 'success' | 'error';
+
+interface Action {
+  id: number;
+  command: string;
+  status: ActionStatus;
+  progress: number;
+  started: string;
+  finished: string | null;
+  resources: Array<{
+    id: number;
+    type: string;
+  }>;
+  error: {
+    code: string;
+    message: string;
+  } | null;
+}
+```

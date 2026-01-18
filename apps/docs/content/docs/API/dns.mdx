@@ -1,0 +1,224 @@
+---
+title: DNS API
+description: Manage DNS zones and records
+---
+
+# DNS API
+
+The DNS API allows you to manage DNS zones and record sets (RRSets).
+
+## Zones
+
+### List Zones
+
+Returns all Zone objects.
+
+```typescript
+const zones = await client.dns.listZones();
+```
+
+### Get Zone
+
+Returns a specific Zone object.
+
+```typescript
+const zone = await client.dns.getZone('example.com');
+```
+
+### Create Zone
+
+Creates a new Zone.
+
+```typescript
+const zone = await client.dns.createZone({
+  name: 'example.com',
+  ttl: 3600,
+  labels: { environment: 'production' }
+});
+```
+
+### Update Zone
+
+Updates a Zone.
+
+```typescript
+const updated = await client.dns.updateZone('example.com', {
+  ttl: 7200,
+  labels: { environment: 'production' }
+});
+```
+
+### Delete Zone
+
+Deletes a Zone.
+
+```typescript
+await client.dns.deleteZone('example.com');
+```
+
+### Export Zone
+
+Exports a Zone file.
+
+```typescript
+const exported = await client.dns.exportZone('example.com');
+console.log(exported.zone_file);
+```
+
+### Import Zone
+
+Imports a Zone file.
+
+```typescript
+const result = await client.dns.importZoneFile('example.com', {
+  zone_file: '$ORIGIN example.com.\n$TTL 3600\n...'
+});
+```
+
+### Zone Actions
+
+```typescript
+// Change primary nameservers
+await client.dns.changeZonePrimaryNameservers('example.com', {
+  nameservers: ['ns1.example.com', 'ns2.example.com']
+});
+
+// Change protection
+await client.dns.changeZoneProtection('example.com', {
+  delete: true
+});
+
+// Change default TTL
+await client.dns.changeZoneDefaultTTL('example.com', {
+  ttl: 7200
+});
+```
+
+## RRSets (Record Sets)
+
+### List RRSets
+
+Returns all RRSet objects for a Zone.
+
+```typescript
+const rrsets = await client.dns.listRRSets('example.com', {
+  type: 'A',
+  name: 'www'
+});
+```
+
+### Get RRSet
+
+Returns a specific RRSet object.
+
+```typescript
+const rrset = await client.dns.getRRSet('example.com', 'www', 'A');
+```
+
+### Create RRSet
+
+Creates a new RRSet.
+
+```typescript
+const rrset = await client.dns.createRRSet('example.com', {
+  name: 'www',
+  type: 'A',
+  ttl: 3600,
+  records: [
+    { value: '1.2.3.4', comment: 'Web server' }
+  ]
+});
+```
+
+### Update RRSet
+
+Updates an RRSet.
+
+```typescript
+const updated = await client.dns.updateRRSet('example.com', 'www', 'A', {
+  ttl: 7200,
+  records: [
+    { value: '5.6.7.8', comment: 'Updated web server' }
+  ]
+});
+```
+
+### Delete RRSet
+
+Deletes an RRSet.
+
+```typescript
+await client.dns.deleteRRSet('example.com', 'www', 'A');
+```
+
+### Record Management
+
+```typescript
+// Set all records
+await client.dns.setRRSetRecords('example.com', 'www', 'A', {
+  records: [{ value: '1.2.3.4' }],
+  ttl: 3600
+});
+
+// Add records
+await client.dns.addRRSetRecords('example.com', 'www', 'A', {
+  records: [{ value: '5.6.7.8' }]
+});
+
+// Remove records
+await client.dns.removeRRSetRecords('example.com', 'www', 'A', {
+  records: [{ value: '1.2.3.4' }]
+});
+
+// Update records
+await client.dns.updateRRSetRecords('example.com', 'www', 'A', {
+  records: [{ value: '1.2.3.4', comment: 'Updated' }]
+});
+```
+
+### Change Protection
+
+```typescript
+await client.dns.changeRRSetProtection('example.com', 'www', 'A', {
+  delete: true
+});
+```
+
+### Change TTL
+
+```typescript
+await client.dns.changeRRSetTTL('example.com', 'www', 'A', {
+  ttl: 7200
+});
+```
+
+## Types
+
+```typescript
+type ZoneStatus = 'verified' | 'pending' | 'unknown';
+
+interface Zone {
+  id: string;
+  name: string;
+  ttl: number;
+  nameservers: string[];
+  status: ZoneStatus;
+  created: string;
+  modified: string;
+  records_count: number;
+  labels: Record<string, string>;
+}
+
+interface RRSet {
+  type: string;
+  id: string;
+  name: string;
+  zone_id: string;
+  ttl: number | null;
+  records: Array<{
+    value: string;
+    comment: string | null;
+  }>;
+  labels: Record<string, string>;
+}
+```

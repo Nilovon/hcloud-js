@@ -1,0 +1,112 @@
+---
+title: API Reference
+description: Complete API documentation for hcloud-js
+---
+
+# API Reference
+
+hcloud-js provides a typed client for all Hetzner Cloud API endpoints. All APIs are accessible through the `HCloudClient` instance.
+
+## Client Structure
+
+```typescript
+const client = new HCloudClient({ token: 'your-token' });
+
+// Available API clients:
+client.servers         // Servers API
+client.images          // Images API
+client.actions         // Actions API
+client.certificates    // Certificates API
+client.sshKeys         // SSH Keys API
+client.locations       // Locations API
+client.firewalls       // Firewalls API
+client.floatingIPs     // Floating IPs API
+client.isos            // ISOs API
+client.placementGroups // Placement Groups API
+client.primaryIPs      // Primary IPs API
+client.serverTypes     // Server Types API
+client.loadBalancers   // Load Balancers API
+client.networks        // Networks API
+client.pricing         // Pricing API
+client.volumes         // Volumes API
+client.dns             // DNS (Zones) API
+```
+
+## Common Patterns
+
+### Listing Resources
+
+Most APIs support listing resources with optional filtering and pagination:
+
+```typescript
+// List all servers
+const servers = await client.servers.list();
+
+// List with filters
+const filtered = await client.servers.list({
+  name: 'my-server',
+  label_selector: 'environment=production',
+  sort: ['name:asc'],
+  page: 1,
+  per_page: 50
+});
+```
+
+### Getting a Single Resource
+
+```typescript
+const server = await client.servers.get(12345);
+console.log(server.server.name);
+```
+
+### Creating Resources
+
+```typescript
+const newServer = await client.servers.create({
+  name: 'my-server',
+  server_type: 'cpx11',
+  image: 'ubuntu-22.04',
+  location: 'nbg1'
+});
+```
+
+### Updating Resources
+
+```typescript
+const updated = await client.servers.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' }
+});
+```
+
+### Deleting Resources
+
+```typescript
+await client.servers.delete(12345);
+```
+
+## API Documentation
+
+<Card title="Servers API" href="/docs/API/servers">
+  Manage your Hetzner Cloud servers
+</Card>
+
+<Card title="Images API" href="/docs/API/images">
+  Work with server images and snapshots
+</Card>
+
+<Card title="Networks API" href="/docs/API/networks">
+  Manage private networks
+</Card>
+
+<Card title="Load Balancers API" href="/docs/API/load-balancers">
+  Configure load balancers
+</Card>
+
+<Card title="DNS API" href="/docs/API/dns">
+  Manage DNS zones and records
+</Card>
+
+<Card title="All APIs" href="/docs/API/overview">
+  Complete list of all available APIs
+</Card>

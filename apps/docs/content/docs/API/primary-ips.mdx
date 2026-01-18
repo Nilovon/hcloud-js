@@ -1,0 +1,121 @@
+---
+title: Primary IPs API
+description: Manage primary IP addresses
+---
+
+# Primary IPs API
+
+The Primary IPs API allows you to manage primary IP addresses.
+
+## List Primary IPs
+
+Returns all Primary IP objects.
+
+```typescript
+const primaryIPs = await client.primaryIPs.list();
+```
+
+## Get Primary IP
+
+Returns a specific Primary IP object.
+
+```typescript
+const primaryIP = await client.primaryIPs.get(12345);
+```
+
+## Create Primary IP
+
+Creates a new Primary IP.
+
+```typescript
+const primaryIP = await client.primaryIPs.create({
+  type: 'ipv4',
+  name: 'my-primary-ip',
+  assignee_id: 12345,
+  assignee_type: 'server',
+  datacenter: 'nbg1-dc3'
+});
+```
+
+## Update Primary IP
+
+Updates a Primary IP.
+
+```typescript
+const updated = await client.primaryIPs.update(12345, {
+  name: 'new-name',
+  labels: { environment: 'production' }
+});
+```
+
+## Delete Primary IP
+
+Deletes a Primary IP.
+
+```typescript
+await client.primaryIPs.delete(12345);
+```
+
+## Primary IP Actions
+
+### Assign to Resource
+
+Assigns a Primary IP to a resource.
+
+```typescript
+await client.primaryIPs.assignToResource(12345, {
+  assignee_id: 67890,
+  assignee_type: 'server'
+});
+```
+
+### Unassign from Resource
+
+Unassigns a Primary IP from a resource.
+
+```typescript
+await client.primaryIPs.unassignFromResource(12345);
+```
+
+### Change Reverse DNS
+
+Changes the reverse DNS entry.
+
+```typescript
+await client.primaryIPs.changeReverseDNS(12345, {
+  ip: '1.2.3.4',
+  dns_ptr: 'primary-ip.example.com'
+});
+```
+
+### Change Protection
+
+Changes the Protection configuration.
+
+```typescript
+await client.primaryIPs.changeProtection(12345, {
+  delete: true
+});
+```
+
+## Types
+
+```typescript
+interface PrimaryIP {
+  id: number;
+  name: string;
+  ip: string;
+  type: 'ipv4' | 'ipv6';
+  assignee_id: number | null;
+  assignee_type: 'server' | null;
+  dns_ptr: Array<{
+    ip: string;
+    dns_ptr: string;
+  }>;
+  datacenter: Datacenter;
+  protection: PrimaryIPProtection;
+  labels: Record<string, string>;
+  created: string;
+  auto_delete: boolean;
+}
+```
