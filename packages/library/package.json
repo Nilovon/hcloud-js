@@ -1,0 +1,15 @@
+{
+  "name": "@hcloud-ts/library",
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@hcloud-ts/config": "workspace:*",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
