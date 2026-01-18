@@ -1,7 +1,7 @@
 {
-  "name": "@hcloud-js/library",
-  "version": "0.0.0",
-  "description": "Hetzner Cloud TypeScript SDK",
+  "name": "@nilovonjs/hcloud-js",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Hetzner Cloud API - Fully typed, validated, and easy to use",
   "author": "Nilovon",
   "license": "MIT",
   "type": "module",
@@ -14,9 +14,35 @@
       "import": "./src/index.ts"
     }
   },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "hetzner",
+    "hetzner-cloud",
+    "hcloud",
+    "cloud",
+    "api",
+    "sdk",
+    "typescript",
+    "types",
+    "servers",
+    "networks",
+    "load-balancer",
+    "dns",
+    "infrastructure"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nilovonjs/hcloud-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nilovonjs/hcloud-js/issues"
+  },
+  "homepage": "https://github.com/nilovonjs/hcloud-js#readme",
   "dependencies": {
-    "@types/react-syntax-highlighter": "^15.5.13",
-    "react-syntax-highlighter": "^16.1.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -25,5 +51,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
