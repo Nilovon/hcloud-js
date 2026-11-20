@@ -4,19 +4,20 @@
  */
 
 import { z } from "zod";
-import { actionSchema } from "../../apis/actions/schemas";
-import { paginationMetaSchema } from "../../apis/common/schemas";
-import { locationSchema } from "../../apis/servers/schemas";
+import { actionSchema } from "../actions/schemas";
+import { labelsSchema, metaSchema } from "../common/schemas";
+import { datacenterSchema } from "../datacenters/schemas";
+import { locationSchema } from "../locations/schemas";
 
 /**
  * Primary IP type schema
  */
-export const primaryIpTypeSchema = z.enum(["ipv4", "ipv6"]);
+export const primaryIPTypeSchema = z.enum(["ipv4", "ipv6"]);
 
 /**
- * Primary IP DNS pointer schema
+ * Primary IP reverse DNS entry schema
  */
-export const primaryIpDnsPointerSchema = z.object({
+export const primaryIPDnsPointerSchema = z.object({
   ip: z.string(),
   dns_ptr: z.string(),
 });
@@ -24,59 +25,51 @@ export const primaryIpDnsPointerSchema = z.object({
 /**
  * Primary IP protection schema
  */
-export const primaryIpProtectionSchema = z.object({
+export const primaryIPProtectionSchema = z.object({
   delete: z.boolean(),
 });
 
 /**
- * Primary IP assignee type schema
+ * Types of resources a Primary IP can be assigned to
  */
-export const primaryIpAssigneeTypeSchema = z.enum(["server"]);
+export const primaryIPAssigneeTypeSchema = z.enum(["server", "load_balancer"]);
 
 /**
  * Primary IP schema
  */
-export const primaryIpSchema = z
-  .object({
-    id: z.number(),
-    name: z.string(),
-    ip: z.string(),
-    type: primaryIpTypeSchema,
-    assignee_id: z.number().nullable(),
-    assignee_type: primaryIpAssigneeTypeSchema.nullable(),
-    auto_delete: z.boolean(),
-    blocked: z.boolean(),
-    created: z.string(),
-    datacenter: z
-      .object({
-        id: z.number(),
-        name: z.string(),
-        description: z.string(),
-        location: locationSchema,
-        server_types: z.object({
-          supported: z.array(z.number()),
-          available: z.array(z.number()),
-          available_for_migration: z.array(z.number()),
-        }),
-      })
-      .nullable(),
-    dns_ptr: z.array(primaryIpDnsPointerSchema),
-    labels: z.record(z.string(), z.string()),
-    protection: primaryIpProtectionSchema,
-  })
-  .passthrough();
+export const primaryIPSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  ip: z.string(),
+  type: primaryIPTypeSchema,
+  /** ID of the resource the Primary IP is assigned to, `null` if it is not assigned. */
+  assignee_id: z.number().nullable(),
+  /**
+   * Type of the resource the Primary IP is assigned to: `server`, `load_balancer`
+   * or `unassigned`. More types may be added by Hetzner.
+   */
+  assignee_type: z.string(),
+  auto_delete: z.boolean(),
+  blocked: z.boolean(),
+  /** Location the Primary IP was created in. */
+  location: locationSchema,
+  /**
+   * @deprecated Removed from the API in favour of `location`.
+   */
+  datacenter: datacenterSchema.nullable().optional(),
+  dns_ptr: z.array(primaryIPDnsPointerSchema),
+  labels: labelsSchema,
+  protection: primaryIPProtectionSchema,
+  created: z.string(),
+});
 
 /**
  * List Primary IPs response schema
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-list-primary-ips
  */
 export const listPrimaryIPsResponseSchema = z.object({
-  primary_ips: z.array(primaryIpSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+  primary_ips: z.array(primaryIPSchema),
+  meta: metaSchema.optional(),
 });
 
 /**
@@ -84,22 +77,28 @@ export const listPrimaryIPsResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-create-a-primary-ip
  */
 export const createPrimaryIPRequestSchema = z.object({
-  name: z.string(),
-  type: primaryIpTypeSchema,
-  assignee_id: z.number().optional(),
-  assignee_type: primaryIpAssigneeTypeSchema.optional(),
+  name: z.string().min(1),
+  type: primaryIPTypeSchema,
+  /** ID or name of the location. Can be omitted if `assignee_id` is passed. */
+  location: z.string().min(1).optional(),
+  /** ID of the resource the Primary IP is assigned to. */
+  assignee_id: z.number().int().optional(),
+  /** Type of the resource the Primary IP is assigned to. Pass it together with `assignee_id`. */
+  assignee_type: primaryIPAssigneeTypeSchema.optional(),
+  /** Delete the Primary IP when the resource it is assigned to is deleted. */
   auto_delete: z.boolean().optional(),
-  datacenter: z.string().optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
  * Create Primary IP response schema
+ *
+ * The `action` is only present if the Primary IP is assigned to a resource on creation.
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-create-a-primary-ip
  */
 export const createPrimaryIPResponseSchema = z.object({
-  primary_ip: primaryIpSchema,
-  action: actionSchema,
+  primary_ip: primaryIPSchema,
+  action: actionSchema.nullable().optional(),
 });
 
 /**
@@ -107,7 +106,7 @@ export const createPrimaryIPResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-get-a-primary-ip
  */
 export const getPrimaryIPResponseSchema = z.object({
-  primary_ip: primaryIpSchema,
+  primary_ip: primaryIPSchema,
 });
 
 /**
@@ -115,9 +114,10 @@ export const getPrimaryIPResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-update-a-primary-ip
  */
 export const updatePrimaryIPRequestSchema = z.object({
-  name: z.string().optional(),
+  name: z.string().min(1).optional(),
+  /** Delete the Primary IP when the resource it is assigned to is deleted. */
   auto_delete: z.boolean().optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
@@ -125,36 +125,7 @@ export const updatePrimaryIPRequestSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-update-a-primary-ip
  */
 export const updatePrimaryIPResponseSchema = z.object({
-  primary_ip: primaryIpSchema,
-});
-
-/**
- * Delete Primary IP response schema
- * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-delete-a-primary-ip
- */
-export const deletePrimaryIPResponseSchema = z.object({
-  action: actionSchema.optional(),
-});
-
-/**
- * List Primary IP Actions response schema
- * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-list-actions-for-a-primary-ip
- */
-export const listPrimaryIPActionsResponseSchema = z.object({
-  actions: z.array(actionSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
-});
-
-/**
- * Get Primary IP Action response schema
- * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-get-an-action-for-a-primary-ip
- */
-export const getPrimaryIPActionResponseSchema = z.object({
-  action: actionSchema,
+  primary_ip: primaryIPSchema,
 });
 
 /**
@@ -162,15 +133,10 @@ export const getPrimaryIPActionResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-assign-a-primary-ip-to-a-resource
  */
 export const assignPrimaryIPToResourceRequestSchema = z.object({
-  assignee_id: z.number(),
-});
-
-/**
- * Assign Primary IP to resource response schema
- * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-assign-a-primary-ip-to-a-resource
- */
-export const assignPrimaryIPToResourceResponseSchema = z.object({
-  action: actionSchema,
+  /** ID of the resource the Primary IP is assigned to. */
+  assignee_id: z.number().int(),
+  /** Type of the resource the Primary IP is assigned to. */
+  assignee_type: primaryIPAssigneeTypeSchema,
 });
 
 /**
@@ -178,16 +144,10 @@ export const assignPrimaryIPToResourceResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-reverse-dns-records-for-a-primary-ip
  */
 export const changePrimaryIPReverseDNSRequestSchema = z.object({
-  ip: z.string(),
+  /** IP address for which to set the reverse DNS entry. */
+  ip: z.string().min(1),
+  /** Hostname to set as reverse DNS PTR entry. `null` resets it to the default value. */
   dns_ptr: z.string().nullable(),
-});
-
-/**
- * Change Primary IP reverse DNS response schema
- * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-reverse-dns-records-for-a-primary-ip
- */
-export const changePrimaryIPReverseDNSResponseSchema = z.object({
-  action: actionSchema,
 });
 
 /**
@@ -195,27 +155,6 @@ export const changePrimaryIPReverseDNSResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-primary-ip-protection
  */
 export const changePrimaryIPProtectionRequestSchema = z.object({
-  delete: z.boolean(),
-});
-
-/**
- * Change Primary IP Protection response schema
- * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-primary-ip-protection
- */
-export const changePrimaryIPProtectionResponseSchema = z.object({
-  action: actionSchema,
-});
-
-/**
- * Unassign Primary IP request schema
- * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-unassign-a-primary-ip-from-a-resource
- */
-export const unassignPrimaryIPRequestSchema = z.object({});
-
-/**
- * Unassign Primary IP response schema
- * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-unassign-a-primary-ip-from-a-resource
- */
-export const unassignPrimaryIPResponseSchema = z.object({
-  action: actionSchema,
+  /** If `true`, prevents the Primary IP from being deleted. */
+  delete: z.boolean().optional(),
 });

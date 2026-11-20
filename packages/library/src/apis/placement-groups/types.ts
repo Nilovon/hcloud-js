@@ -1,22 +1,20 @@
 /**
  * Types for Hetzner Cloud Placement Groups API
- * Types are inferred from Zod schemas
  * @see https://docs.hetzner.cloud/reference/cloud#placement-groups
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  listPlacementGroupsResponseSchema,
+import type { z } from "zod";
+import type { OneOrMany, PageParams, SortParam } from "../common/types";
+import type {
   createPlacementGroupRequestSchema,
   createPlacementGroupResponseSchema,
   getPlacementGroupResponseSchema,
-  updatePlacementGroupRequestSchema,
-  updatePlacementGroupResponseSchema,
-  deletePlacementGroupResponseSchema,
+  listPlacementGroupsResponseSchema,
   placementGroupSchema,
   placementGroupTypeSchema,
-} from "@/apis/placement-groups/schemas";
-import type { z } from "zod";
+  updatePlacementGroupRequestSchema,
+  updatePlacementGroupResponseSchema,
+} from "./schemas";
 
 /**
  * Placement Group type
@@ -25,35 +23,38 @@ export type PlacementGroupType = z.infer<typeof placementGroupTypeSchema>;
 
 /**
  * Hetzner Cloud Placement Group
+ * @see https://docs.hetzner.cloud/reference/cloud#placement-groups
  */
 export type PlacementGroup = z.infer<typeof placementGroupSchema>;
+
+/**
+ * Fields placement groups can be sorted by
+ */
+export type PlacementGroupSort = SortParam<"id" | "name" | "created">;
 
 /**
  * List Placement Groups query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#placement-groups-list-placement-groups
  */
-export interface ListPlacementGroupsParams {
+export interface ListPlacementGroupsParams extends PageParams {
   /**
-   * Can be used to filter resources by their name. The response will only contain the resources matching the specified name.
+   * Only return the placement group with this exact name.
    */
   name?: string;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, created, created:asc, created:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter resources by labels. The response will only contain resources matching the label selector.
+   * Only return placement groups matching the label selector.
+   * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
   /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Only return placement groups of the given type.
    */
-  page?: number;
+  type?: OneOrMany<PlacementGroupType>;
   /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Sort the result.
+   * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  per_page?: number;
+  sort?: OneOrMany<PlacementGroupSort>;
 }
 
 /**
@@ -63,10 +64,10 @@ export interface ListPlacementGroupsParams {
 export type ListPlacementGroupsResponse = z.infer<typeof listPlacementGroupsResponseSchema>;
 
 /**
- * Create Placement Group parameters
+ * Create Placement Group request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#placement-groups-create-a-placement-group
  */
-export type CreatePlacementGroupParams = z.infer<typeof createPlacementGroupRequestSchema>;
+export type CreatePlacementGroupParams = z.input<typeof createPlacementGroupRequestSchema>;
 
 /**
  * Create Placement Group response
@@ -81,19 +82,13 @@ export type CreatePlacementGroupResponse = z.infer<typeof createPlacementGroupRe
 export type GetPlacementGroupResponse = z.infer<typeof getPlacementGroupResponseSchema>;
 
 /**
- * Update Placement Group parameters
+ * Update Placement Group request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#placement-groups-update-a-placement-group
  */
-export type UpdatePlacementGroupParams = z.infer<typeof updatePlacementGroupRequestSchema>;
+export type UpdatePlacementGroupParams = z.input<typeof updatePlacementGroupRequestSchema>;
 
 /**
  * Update Placement Group response
  * @see https://docs.hetzner.cloud/reference/cloud#placement-groups-update-a-placement-group
  */
 export type UpdatePlacementGroupResponse = z.infer<typeof updatePlacementGroupResponseSchema>;
-
-/**
- * Delete Placement Group response
- * @see https://docs.hetzner.cloud/reference/cloud#placement-groups-delete-a-placement-group
- */
-export type DeletePlacementGroupResponse = z.infer<typeof deletePlacementGroupResponseSchema>;

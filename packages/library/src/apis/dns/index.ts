@@ -1,961 +1,842 @@
 /**
  * Hetzner Cloud DNS (Zones) API
- * @see https://docs.hetzner.cloud/reference/cloud#dns
+ * @see https://docs.hetzner.cloud/reference/cloud#zones
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets
  */
 
-import type { HCloudClient } from "../../client/index";
+import { iteratePages } from "../../core/pagination";
+import { ApiResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { ResourceActionsClient } from "../actions/index";
+import {
+  actionResponseSchema,
+  getActionResponseSchema,
+  listActionsResponseSchema,
+} from "../actions/schemas";
+import {
+  addRRSetRecordsRequestSchema,
+  changeRRSetProtectionRequestSchema,
+  changeRRSetTTLRequestSchema,
+  changeZoneDefaultTTLRequestSchema,
+  changeZonePrimaryNameserversRequestSchema,
+  changeZoneProtectionRequestSchema,
+  createRRSetRequestSchema,
+  createRRSetResponseSchema,
+  createZoneRequestSchema,
+  createZoneResponseSchema,
+  exportZoneResponseSchema,
+  getRRSetResponseSchema,
+  getZoneResponseSchema,
+  importZoneFileRequestSchema,
+  listRRSetsResponseSchema,
+  listZonesResponseSchema,
+  removeRRSetRecordsRequestSchema,
+  setRRSetRecordsRequestSchema,
+  updateRRSetRecordsRequestSchema,
+  updateRRSetRequestSchema,
+  updateRRSetResponseSchema,
+  updateZoneRequestSchema,
+  updateZoneResponseSchema,
+} from "./schemas";
 import type {
-  ListZonesParams,
-  ListZonesResponse,
-  CreateZoneParams,
-  CreateZoneResponse,
-  GetZoneResponse,
-  UpdateZoneParams,
-  UpdateZoneResponse,
-  DeleteZoneResponse,
-  ExportZoneResponse,
-  ListZoneActionsParams,
-  ListZoneActionsResponse,
-  GetZoneActionResponse,
-  ChangeZonePrimaryNameserversParams,
-  ChangeZonePrimaryNameserversResponse,
-  ChangeZoneProtectionParams,
-  ChangeZoneProtectionResponse,
-  ChangeZoneDefaultTTLParams,
-  ChangeZoneDefaultTTLResponse,
-  ImportZoneFileParams,
-  ImportZoneFileResponse,
-  ListRRSetsParams,
-  ListRRSetsResponse,
-  GetRRSetResponse,
-  CreateRRSetParams,
-  CreateRRSetResponse,
-  UpdateRRSetParams,
-  UpdateRRSetResponse,
-  DeleteRRSetResponse,
+  AddRRSetRecordsParams,
+  AddRRSetRecordsResponse,
   ChangeRRSetProtectionParams,
   ChangeRRSetProtectionResponse,
   ChangeRRSetTTLParams,
   ChangeRRSetTTLResponse,
-  SetRRSetRecordsParams,
-  SetRRSetRecordsResponse,
-  AddRRSetRecordsParams,
-  AddRRSetRecordsResponse,
+  ChangeZoneDefaultTTLParams,
+  ChangeZoneDefaultTTLResponse,
+  ChangeZonePrimaryNameserversParams,
+  ChangeZonePrimaryNameserversResponse,
+  ChangeZoneProtectionParams,
+  ChangeZoneProtectionResponse,
+  CreateRRSetParams,
+  CreateRRSetResponse,
+  CreateZoneParams,
+  CreateZoneResponse,
+  DeleteRRSetResponse,
+  DeleteZoneResponse,
+  ExportZoneResponse,
+  GetRRSetResponse,
+  GetZoneActionResponse,
+  GetZoneResponse,
+  ImportZoneFileParams,
+  ImportZoneFileResponse,
+  ListRRSetsParams,
+  ListRRSetsResponse,
+  ListZoneActionsParams,
+  ListZoneActionsResponse,
+  ListZonesParams,
+  ListZonesResponse,
   RemoveRRSetRecordsParams,
   RemoveRRSetRecordsResponse,
+  RRSet,
+  RRSetType,
+  SetRRSetRecordsParams,
+  SetRRSetRecordsResponse,
+  UpdateRRSetParams,
   UpdateRRSetRecordsParams,
   UpdateRRSetRecordsResponse,
-} from "../../apis/dns/types";
-import { validate } from "../../validation/index";
-import {
-  listZonesResponseSchema,
-  createZoneRequestSchema,
-  createZoneResponseSchema,
-  getZoneResponseSchema,
-  updateZoneRequestSchema,
-  updateZoneResponseSchema,
-  deleteZoneResponseSchema,
-  exportZoneResponseSchema,
-  listZoneActionsResponseSchema,
-  getZoneActionResponseSchema,
-  changeZonePrimaryNameserversRequestSchema,
-  changeZonePrimaryNameserversResponseSchema,
-  changeZoneProtectionRequestSchema,
-  changeZoneProtectionResponseSchema,
-  changeZoneDefaultTTLRequestSchema,
-  changeZoneDefaultTTLResponseSchema,
-  importZoneFileRequestSchema,
-  importZoneFileResponseSchema,
-  listRRSetsResponseSchema,
-  getRRSetResponseSchema,
-  createRRSetRequestSchema,
-  createRRSetResponseSchema,
-  updateRRSetRequestSchema,
-  updateRRSetResponseSchema,
-  deleteRRSetResponseSchema,
-  changeRRSetProtectionRequestSchema,
-  changeRRSetProtectionResponseSchema,
-  changeRRSetTTLRequestSchema,
-  changeRRSetTTLResponseSchema,
-  setRRSetRecordsRequestSchema,
-  setRRSetRecordsResponseSchema,
-  addRRSetRecordsRequestSchema,
-  addRRSetRecordsResponseSchema,
-  removeRRSetRecordsRequestSchema,
-  removeRRSetRecordsResponseSchema,
-  updateRRSetRecordsRequestSchema,
-  updateRRSetRecordsResponseSchema,
-} from "../../apis/dns/schemas";
+  UpdateRRSetResponse,
+  UpdateZoneParams,
+  UpdateZoneResponse,
+  Zone,
+  ZoneIdOrName,
+} from "./types";
 
 /**
- * DNS (Zones) API client
+ * Path of an RRSet. Zone, name and type are URI-encoded, so names such as `@` are safe.
  */
-export class DNSClient {
-  constructor(private readonly client: HCloudClient) {}
+function rrsetPath(zone: ZoneIdOrName, name: string, type: RRSetType): string {
+  return path`/zones/${zone}/rrsets/${name}/${type}`;
+}
+
+/**
+ * DNS API client
+ *
+ * Manages DNS zones and their resource record sets (RRSets). The Hetzner API
+ * calls this the "Zones" API.
+ *
+ * Zones are addressed by ID or name (`42` or `"example.com"`), RRSets by their
+ * name and type (`"www"`, `"A"`). The name of the RRSet at the zone apex is `"@"`.
+ *
+ * Use `iterateZones()` / `listAllZones()` and `iterateRRSets()` / `listAllRRSets()`
+ * to fetch all pages of a list.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#zones
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets
+ */
+export class DNSClient extends ApiResource {
+  /**
+   * Actions of all zones (`GET /zones/actions`, `GET /zones/actions/{id}`).
+   *
+   * @example
+   * ```typescript
+   * const { actions } = await client.dns.actions.list({ status: "running" });
+   * ```
+   */
+  public readonly actions = new ResourceActionsClient(this.client, "/zones");
+
+  // ---------------------------------------------------------------------------
+  // Zones
+  // ---------------------------------------------------------------------------
 
   /**
-   * Returns all Zone objects.
+   * Returns a page of zones.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of zones with pagination metadata
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#zones-list-zones
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all zones
-   * const result = await client.dns.listZones();
-   *
-   * // List zones with filters
-   * const zones = await client.dns.listZones({
-   *   name: 'example.com',
-   *   label_selector: 'environment=production',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
-   * });
+   * const { zones } = await client.dns.listZones({ mode: "primary", sort: "name:asc" });
    * ```
    */
-  async listZones(params?: ListZonesParams): Promise<ListZonesResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/zones", queryParams);
-
-    return validate(listZonesResponseSchema, response, {
-      context: "List zones response",
-      detailed: true,
-    });
+  listZones(params?: ListZonesParams, options?: RequestOptions): Promise<ListZonesResponse> {
+    return this._get("/zones", listZonesResponseSchema, params, options);
   }
 
   /**
-   * Creates a new Zone.
+   * Iterates over all zones, transparently fetching page after page.
    *
-   * @param params - Parameters for creating the zone
-   * @returns Promise resolving to the created zone and action
+   * @param params - Same filters as `listZones()`. `page` sets the first page, `per_page` the page size
+   * @param options - Request options applied to every page request
+   *
+   * @example
+   * ```typescript
+   * for await (const zone of client.dns.iterateZones({ label_selector: "env=prod" })) {
+   *   console.log(zone.name);
+   * }
+   * ```
+   */
+  async *iterateZones(
+    params?: ListZonesParams,
+    options?: RequestOptions,
+  ): AsyncGenerator<Zone, void, undefined> {
+    const pages = iteratePages((page: ListZonesParams) => this.listZones(page, options), params);
+    for await (const page of pages) {
+      yield* page.zones;
+    }
+  }
+
+  /**
+   * Fetches all zones across all pages.
+   *
+   * @param params - Same filters as `listZones()`
+   * @param options - Request options applied to every page request
+   *
+   * @example
+   * ```typescript
+   * const zones = await client.dns.listAllZones();
+   * ```
+   */
+  async listAllZones(params?: ListZonesParams, options?: RequestOptions): Promise<Zone[]> {
+    const zones: Zone[] = [];
+    for await (const zone of this.iterateZones(params, options)) zones.push(zone);
+    return zones;
+  }
+
+  /**
+   * Creates a zone.
+   *
+   * A default `SOA` and three `NS` records with the assigned Hetzner nameservers
+   * are created automatically.
+   *
+   * @param params - Name, mode and optional TTL, labels, RRSets or zone file
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#zones-create-a-zone
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const zone = await client.dns.createZone({
-   *   name: 'example.com',
-   *   ttl: 3600,
-   *   labels: { environment: 'production' }
+   * const { zone, action } = await client.dns.createZone({
+   *   name: "example.com",
+   *   mode: "primary",
+   *   rrsets: [{ name: "@", type: "A", records: [{ value: "198.51.100.1" }] }],
    * });
+   * await client.actions.waitFor(action);
    * ```
    */
-  async createZone(params: CreateZoneParams): Promise<CreateZoneResponse> {
-    const validatedParams = validate(createZoneRequestSchema, params, {
-      context: "Create zone request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>("/zones", validatedParams);
-
-    return validate(createZoneResponseSchema, response, {
-      context: "Create zone response",
-      detailed: true,
-    });
+  createZone(params: CreateZoneParams, options?: RequestOptions): Promise<CreateZoneResponse> {
+    return this._post("/zones", createZoneResponseSchema, params, createZoneRequestSchema, options);
   }
 
   /**
-   * Returns a specific Zone object.
+   * Returns a specific zone.
    *
-   * @param idOrName - ID or name of the Zone
-   * @returns Promise resolving to the zone
+   * @param idOrName - ID or name of the zone
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#zones-get-a-zone
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a zone by ID or name
-   * const zone = await client.dns.getZone('example.com');
-   * console.log(zone.zone.name);
+   * const { zone } = await client.dns.getZone("example.com");
+   * console.log(zone.status, zone.authoritative_nameservers.assigned);
    * ```
    */
-  async getZone(idOrName: string): Promise<GetZoneResponse> {
-    const response = await this.client.get<unknown>(`/zones/${idOrName}`);
-
-    return validate(getZoneResponseSchema, response, {
-      context: "Get zone response",
-      detailed: true,
-    });
+  getZone(idOrName: ZoneIdOrName, options?: RequestOptions): Promise<GetZoneResponse> {
+    return this._get(path`/zones/${idOrName}`, getZoneResponseSchema, undefined, options);
   }
 
   /**
-   * Updates the Zone.
+   * Updates the labels of a zone.
    *
-   * You can update a Zone's TTL and labels.
+   * To change the default TTL use `changeZoneDefaultTTL()`.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param params - Parameters to update (ttl and/or labels)
-   * @returns Promise resolving to the updated zone
+   * @param idOrName - ID or name of the zone
+   * @param params - Fields to update
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#zones-update-a-zone
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const updated = await client.dns.updateZone('example.com', {
-   *   ttl: 7200,
-   *   labels: { environment: 'production' }
+   * const { zone } = await client.dns.updateZone("example.com", {
+   *   labels: { environment: "production" },
    * });
    * ```
    */
-  async updateZone(idOrName: string, params: UpdateZoneParams): Promise<UpdateZoneResponse> {
-    const validatedParams = validate(updateZoneRequestSchema, params, {
-      context: "Update zone request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(`/zones/${idOrName}`, validatedParams);
-
-    return validate(updateZoneResponseSchema, response, {
-      context: "Update zone response",
-      detailed: true,
-    });
+  updateZone(
+    idOrName: ZoneIdOrName,
+    params: UpdateZoneParams,
+    options?: RequestOptions,
+  ): Promise<UpdateZoneResponse> {
+    return this._put(
+      path`/zones/${idOrName}`,
+      updateZoneResponseSchema,
+      params,
+      updateZoneRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Deletes a Zone.
+   * Deletes a zone including all of its RRSets.
    *
-   * @param idOrName - ID or name of the Zone
-   * @returns Promise resolving to empty object
+   * @param idOrName - ID or name of the zone
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#zones-delete-a-zone
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * await client.dns.deleteZone('example.com');
+   * const { action } = await client.dns.deleteZone("example.com");
+   * await client.actions.waitFor(action);
    * ```
    */
-  async deleteZone(idOrName: string): Promise<DeleteZoneResponse> {
-    const response = await this.client.delete<unknown>(`/zones/${idOrName}`);
-
-    return validate(deleteZoneResponseSchema, response, {
-      context: "Delete zone response",
-      detailed: true,
-    });
+  deleteZone(idOrName: ZoneIdOrName, options?: RequestOptions): Promise<DeleteZoneResponse> {
+    return this._delete(path`/zones/${idOrName}`, actionResponseSchema, options);
   }
 
   /**
-   * Exports a Zone file.
+   * Returns the zone file of a zone in BIND (RFC 1034/1035) format.
    *
-   * @param idOrName - ID or name of the Zone
-   * @returns Promise resolving to the zone file content
+   * @param idOrName - ID or name of the zone
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#zones-export-a-zone-file
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const exported = await client.dns.exportZone('example.com');
-   * console.log(exported.zone_file);
+   * const { zonefile } = await client.dns.exportZone("example.com");
+   * console.log(zonefile);
    * ```
    */
-  async exportZone(idOrName: string): Promise<ExportZoneResponse> {
-    const response = await this.client.get<unknown>(`/zones/${idOrName}/export`);
-
-    return validate(exportZoneResponseSchema, response, {
-      context: "Export zone response",
-      detailed: true,
-    });
+  exportZone(idOrName: ZoneIdOrName, options?: RequestOptions): Promise<ExportZoneResponse> {
+    return this._get(path`/zones/${idOrName}/zonefile`, exportZoneResponseSchema, undefined, options);
   }
 
+  // ---------------------------------------------------------------------------
+  // Zone actions
+  // ---------------------------------------------------------------------------
+
   /**
-   * Returns all Action objects for a Zone.
+   * Returns a page of actions of a zone.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of actions with pagination metadata
-   * @see https://docs.hetzner.cloud/reference/cloud#zones-list-actions-for-a-zone
+   * @param idOrName - ID or name of the zone
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-list-actions-for-a-zone
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const actions = await client.dns.listZoneActions('example.com', {
-   *   status: ['running'],
-   *   sort: ['started:desc']
-   * });
+   * const { actions } = await client.dns.listZoneActions("example.com", { status: "running" });
    * ```
    */
-  async listZoneActions(
-    idOrName: string,
+  listZoneActions(
+    idOrName: ZoneIdOrName,
     params?: ListZoneActionsParams,
+    options?: RequestOptions,
   ): Promise<ListZoneActionsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.status) {
-      queryParams.status = Array.isArray(params.status) ? params.status : [params.status];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>(`/zones/${idOrName}/actions`, queryParams);
-
-    return validate(listZoneActionsResponseSchema, response, {
-      context: "List zone actions response",
-      detailed: true,
-    });
+    return this._get(path`/zones/${idOrName}/actions`, listActionsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific Action object for a Zone.
+   * Returns a specific action of a zone.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param actionId - ID of the Action
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#zones-get-an-action-for-a-zone
+   * @param idOrName - ID or name of the zone
+   * @param actionId - ID of the action
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-get-an-action-for-a-zone
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const action = await client.dns.getZoneAction('example.com', 12345);
-   * console.log(action.action.command);
+   * const { action } = await client.dns.getZoneAction("example.com", 12345);
    * ```
    */
-  async getZoneAction(idOrName: string, actionId: number): Promise<GetZoneActionResponse> {
-    const response = await this.client.get<unknown>(`/zones/${idOrName}/actions/${actionId}`);
-
-    return validate(getZoneActionResponseSchema, response, {
-      context: "Get zone action response",
-      detailed: true,
-    });
+  getZoneAction(
+    idOrName: ZoneIdOrName,
+    actionId: number,
+    options?: RequestOptions,
+  ): Promise<GetZoneActionResponse> {
+    return this._get(
+      path`/zones/${idOrName}/actions/${actionId}`,
+      getActionResponseSchema,
+      undefined,
+      options,
+    );
   }
 
   /**
-   * Changes the primary nameservers of a Zone.
+   * Changes the primary nameservers of a zone in secondary mode.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param params - Nameservers configuration
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-primary-nameservers
+   * @param idOrName - ID or name of the zone
+   * @param params - The new primary nameservers
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-primary-nameservers
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.changeZonePrimaryNameservers('example.com', {
-   *   nameservers: ['ns1.example.com', 'ns2.example.com']
+   * const { action } = await client.dns.changeZonePrimaryNameservers("example.com", {
+   *   primary_nameservers: [{ address: "198.51.100.1", port: 53 }, { address: "203.0.113.1" }],
    * });
    * ```
    */
-  async changeZonePrimaryNameservers(
-    idOrName: string,
+  changeZonePrimaryNameservers(
+    idOrName: ZoneIdOrName,
     params: ChangeZonePrimaryNameserversParams,
+    options?: RequestOptions,
   ): Promise<ChangeZonePrimaryNameserversResponse> {
-    const validatedParams = validate(changeZonePrimaryNameserversRequestSchema, params, {
-      context: "Change zone primary nameservers request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/actions/change_nameservers`,
-      validatedParams,
+    return this._post(
+      path`/zones/${idOrName}/actions/change_primary_nameservers`,
+      actionResponseSchema,
+      params,
+      changeZonePrimaryNameserversRequestSchema,
+      options,
     );
-
-    return validate(changeZonePrimaryNameserversResponseSchema, response, {
-      context: "Change zone primary nameservers response",
-      detailed: true,
-    });
   }
 
   /**
-   * Changes the Protection configuration of a Zone.
+   * Changes the protection of a zone.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param params - Protection configuration
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-protection
+   * @param idOrName - ID or name of the zone
+   * @param params - `delete: true` prevents the zone from being deleted
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-protection
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.changeZoneProtection('example.com', {
-   *   delete: true
-   * });
+   * const { action } = await client.dns.changeZoneProtection("example.com", { delete: true });
    * ```
    */
-  async changeZoneProtection(
-    idOrName: string,
+  changeZoneProtection(
+    idOrName: ZoneIdOrName,
     params: ChangeZoneProtectionParams,
+    options?: RequestOptions,
   ): Promise<ChangeZoneProtectionResponse> {
-    const validatedParams = validate(changeZoneProtectionRequestSchema, params, {
-      context: "Change zone protection request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/actions/change_protection`,
-      validatedParams,
+    return this._post(
+      path`/zones/${idOrName}/actions/change_protection`,
+      actionResponseSchema,
+      params,
+      changeZoneProtectionRequestSchema,
+      options,
     );
-
-    return validate(changeZoneProtectionResponseSchema, response, {
-      context: "Change zone protection response",
-      detailed: true,
-    });
   }
 
   /**
-   * Changes the default TTL of a Zone.
+   * Changes the default TTL of a zone. It applies to RRSets without their own TTL.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param params - TTL configuration
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-default-ttl
+   * @param idOrName - ID or name of the zone
+   * @param params - The new default TTL in seconds
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-default-ttl
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.changeZoneDefaultTTL('example.com', {
-   *   ttl: 7200
-   * });
+   * const { action } = await client.dns.changeZoneDefaultTTL("example.com", { ttl: 3600 });
    * ```
    */
-  async changeZoneDefaultTTL(
-    idOrName: string,
+  changeZoneDefaultTTL(
+    idOrName: ZoneIdOrName,
     params: ChangeZoneDefaultTTLParams,
+    options?: RequestOptions,
   ): Promise<ChangeZoneDefaultTTLResponse> {
-    const validatedParams = validate(changeZoneDefaultTTLRequestSchema, params, {
-      context: "Change zone default TTL request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/actions/change_ttl`,
-      validatedParams,
+    return this._post(
+      path`/zones/${idOrName}/actions/change_ttl`,
+      actionResponseSchema,
+      params,
+      changeZoneDefaultTTLRequestSchema,
+      options,
     );
-
-    return validate(changeZoneDefaultTTLResponseSchema, response, {
-      context: "Change zone default TTL response",
-      detailed: true,
-    });
   }
 
   /**
-   * Imports a Zone file.
+   * Imports a zone file, replacing all RRSets of the zone.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param params - Zone file content
-   * @returns Promise resolving to the zone and action
-   * @see https://docs.hetzner.cloud/reference/cloud#zones-import-a-zone-file
+   * @param idOrName - ID or name of the zone
+   * @param params - Zone file in BIND (RFC 1034/1035) format
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-import-a-zone-file
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.importZoneFile('example.com', {
-   *   zone_file: '$ORIGIN example.com.\n$TTL 3600\n...'
+   * const { action } = await client.dns.importZoneFile("example.com", {
+   *   zonefile: "$ORIGIN example.com.\n$TTL 3600\n@ IN A 198.51.100.1\n",
    * });
+   * await client.actions.waitFor(action);
    * ```
    */
-  async importZoneFile(
-    idOrName: string,
+  importZoneFile(
+    idOrName: ZoneIdOrName,
     params: ImportZoneFileParams,
+    options?: RequestOptions,
   ): Promise<ImportZoneFileResponse> {
-    const validatedParams = validate(importZoneFileRequestSchema, params, {
-      context: "Import zone file request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/actions/import`,
-      validatedParams,
+    return this._post(
+      path`/zones/${idOrName}/actions/import_zonefile`,
+      actionResponseSchema,
+      params,
+      importZoneFileRequestSchema,
+      options,
     );
-
-    return validate(importZoneFileResponseSchema, response, {
-      context: "Import zone file response",
-      detailed: true,
-    });
   }
 
+  // ---------------------------------------------------------------------------
+  // RRSets
+  // ---------------------------------------------------------------------------
+
   /**
-   * Returns all RRSet objects for a Zone.
+   * Returns a page of RRSets of a zone.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of RRSets with pagination metadata
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-list-rrsets
+   * @param idOrName - ID or name of the zone
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-list-rrsets
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all RRSets for a zone
-   * const rrsets = await client.dns.listRRSets('example.com');
-   *
-   * // List RRSets with filters
-   * const aRecords = await client.dns.listRRSets('example.com', {
-   *   type: 'A',
-   *   name: 'www',
-   *   sort: ['name:asc']
-   * });
+   * const { rrsets } = await client.dns.listRRSets("example.com", { type: ["A", "AAAA"] });
    * ```
    */
-  async listRRSets(idOrName: string, params?: ListRRSetsParams): Promise<ListRRSetsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.type) {
-      queryParams.type = params.type;
-    }
-
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>(`/zones/${idOrName}/rrsets`, queryParams);
-
-    return validate(listRRSetsResponseSchema, response, {
-      context: "List RRSets response",
-      detailed: true,
-    });
+  listRRSets(
+    idOrName: ZoneIdOrName,
+    params?: ListRRSetsParams,
+    options?: RequestOptions,
+  ): Promise<ListRRSetsResponse> {
+    return this._get(path`/zones/${idOrName}/rrsets`, listRRSetsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific RRSet object.
+   * Iterates over all RRSets of a zone, transparently fetching page after page.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param rrName - Name of the RRSet
-   * @param rrType - Type of the RRSet
-   * @returns Promise resolving to the RRSet
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-get-an-rrset
+   * @param idOrName - ID or name of the zone
+   * @param params - Same filters as `listRRSets()`. `page` sets the first page, `per_page` the page size
+   * @param options - Request options applied to every page request
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const rrset = await client.dns.getRRSet('example.com', 'www', 'A');
-   * console.log(rrset.rrset.name);
+   * for await (const rrset of client.dns.iterateRRSets("example.com", { type: "TXT" })) {
+   *   console.log(rrset.name, rrset.records.map((record) => record.value));
+   * }
    * ```
    */
-  async getRRSet(idOrName: string, rrName: string, rrType: string): Promise<GetRRSetResponse> {
-    const response = await this.client.get<unknown>(
-      `/zones/${idOrName}/rrsets/${rrName}/${rrType}`,
+  async *iterateRRSets(
+    idOrName: ZoneIdOrName,
+    params?: ListRRSetsParams,
+    options?: RequestOptions,
+  ): AsyncGenerator<RRSet, void, undefined> {
+    const pages = iteratePages(
+      (page: ListRRSetsParams) => this.listRRSets(idOrName, page, options),
+      params,
     );
-
-    return validate(getRRSetResponseSchema, response, {
-      context: "Get RRSet response",
-      detailed: true,
-    });
+    for await (const page of pages) {
+      yield* page.rrsets;
+    }
   }
 
   /**
-   * Creates a new RRSet.
+   * Fetches all RRSets of a zone across all pages.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param params - Parameters for creating the RRSet
-   * @returns Promise resolving to the created RRSet and action
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-create-an-rrset
+   * @param idOrName - ID or name of the zone
+   * @param params - Same filters as `listRRSets()`
+   * @param options - Request options applied to every page request
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
+   * const rrsets = await client.dns.listAllRRSets("example.com");
+   * ```
+   */
+  async listAllRRSets(
+    idOrName: ZoneIdOrName,
+    params?: ListRRSetsParams,
+    options?: RequestOptions,
+  ): Promise<RRSet[]> {
+    const rrsets: RRSet[] = [];
+    for await (const rrset of this.iterateRRSets(idOrName, params, options)) rrsets.push(rrset);
+    return rrsets;
+  }
+
+  /**
+   * Returns a specific RRSet of a zone.
    *
-   * const rrset = await client.dns.createRRSet('example.com', {
-   *   name: 'www',
-   *   type: 'A',
+   * @param idOrName - ID or name of the zone
+   * @param name - Name of the RRSet, e.g. `"www"` or `"@"`
+   * @param type - Type of the RRSet, e.g. `"A"`
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-get-an-rrset
+   *
+   * @example
+   * ```typescript
+   * const { rrset } = await client.dns.getRRSet("example.com", "www", "A");
+   * console.log(rrset.records);
+   * ```
+   */
+  getRRSet(
+    idOrName: ZoneIdOrName,
+    name: string,
+    type: RRSetType,
+    options?: RequestOptions,
+  ): Promise<GetRRSetResponse> {
+    return this._get(rrsetPath(idOrName, name, type), getRRSetResponseSchema, undefined, options);
+  }
+
+  /**
+   * Creates an RRSet in a zone.
+   *
+   * @param idOrName - ID or name of the zone
+   * @param params - Name, type, records and optional TTL and labels
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-create-an-rrset
+   *
+   * @example
+   * ```typescript
+   * const { rrset, action } = await client.dns.createRRSet("example.com", {
+   *   name: "www",
+   *   type: "A",
    *   ttl: 3600,
-   *   records: [
-   *     { value: '1.2.3.4', comment: 'Web server' }
-   *   ]
+   *   records: [{ value: "198.51.100.1", comment: "web server" }],
    * });
+   * await client.actions.waitFor(action);
    * ```
    */
-  async createRRSet(idOrName: string, params: CreateRRSetParams): Promise<CreateRRSetResponse> {
-    const validatedParams = validate(createRRSetRequestSchema, params, {
-      context: "Create RRSet request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/rrsets`,
-      validatedParams,
+  createRRSet(
+    idOrName: ZoneIdOrName,
+    params: CreateRRSetParams,
+    options?: RequestOptions,
+  ): Promise<CreateRRSetResponse> {
+    return this._post(
+      path`/zones/${idOrName}/rrsets`,
+      createRRSetResponseSchema,
+      params,
+      createRRSetRequestSchema,
+      options,
     );
-
-    return validate(createRRSetResponseSchema, response, {
-      context: "Create RRSet response",
-      detailed: true,
-    });
   }
 
   /**
-   * Updates an RRSet.
+   * Updates the labels of an RRSet.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param rrName - Name of the RRSet
-   * @param rrType - Type of the RRSet
-   * @param params - Parameters to update
-   * @returns Promise resolving to the updated RRSet and action
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-update-an-rrset
+   * To change records or the TTL use `setRRSetRecords()`, `addRRSetRecords()`,
+   * `removeRRSetRecords()`, `updateRRSetRecords()` and `changeRRSetTTL()`.
+   *
+   * @param idOrName - ID or name of the zone
+   * @param name - Name of the RRSet
+   * @param type - Type of the RRSet
+   * @param params - Fields to update
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-update-an-rrset
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const updated = await client.dns.updateRRSet('example.com', 'www', 'A', {
-   *   ttl: 7200,
-   *   records: [
-   *     { value: '5.6.7.8', comment: 'Updated web server' }
-   *   ]
+   * const { rrset } = await client.dns.updateRRSet("example.com", "www", "A", {
+   *   labels: { environment: "production" },
    * });
    * ```
    */
-  async updateRRSet(
-    idOrName: string,
-    rrName: string,
-    rrType: string,
+  updateRRSet(
+    idOrName: ZoneIdOrName,
+    name: string,
+    type: RRSetType,
     params: UpdateRRSetParams,
+    options?: RequestOptions,
   ): Promise<UpdateRRSetResponse> {
-    const validatedParams = validate(updateRRSetRequestSchema, params, {
-      context: "Update RRSet request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(
-      `/zones/${idOrName}/rrsets/${rrName}/${rrType}`,
-      validatedParams,
+    return this._put(
+      rrsetPath(idOrName, name, type),
+      updateRRSetResponseSchema,
+      params,
+      updateRRSetRequestSchema,
+      options,
     );
-
-    return validate(updateRRSetResponseSchema, response, {
-      context: "Update RRSet response",
-      detailed: true,
-    });
   }
 
   /**
    * Deletes an RRSet.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param rrName - Name of the RRSet
-   * @param rrType - Type of the RRSet
-   * @returns Promise resolving to the delete action
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-delete-an-rrset
+   * @param idOrName - ID or name of the zone
+   * @param name - Name of the RRSet
+   * @param type - Type of the RRSet
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-delete-an-rrset
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.deleteRRSet('example.com', 'www', 'A');
+   * const { action } = await client.dns.deleteRRSet("example.com", "www", "A");
+   * await client.actions.waitFor(action);
    * ```
    */
-  async deleteRRSet(idOrName: string, rrName: string, rrType: string): Promise<DeleteRRSetResponse> {
-    const response = await this.client.delete<unknown>(
-      `/zones/${idOrName}/rrsets/${rrName}/${rrType}`,
-    );
-
-    return validate(deleteRRSetResponseSchema, response, {
-      context: "Delete RRSet response",
-      detailed: true,
-    });
+  deleteRRSet(
+    idOrName: ZoneIdOrName,
+    name: string,
+    type: RRSetType,
+    options?: RequestOptions,
+  ): Promise<DeleteRRSetResponse> {
+    return this._delete(rrsetPath(idOrName, name, type), actionResponseSchema, options);
   }
 
+  // ---------------------------------------------------------------------------
+  // RRSet actions
+  // ---------------------------------------------------------------------------
+
   /**
-   * Changes the Protection configuration of an RRSet.
+   * Changes the protection of an RRSet.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param rrName - Name of the RRSet
-   * @param rrType - Type of the RRSet
-   * @param params - Protection configuration
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-change-an-rrsets-protection
+   * @param idOrName - ID or name of the zone
+   * @param name - Name of the RRSet
+   * @param type - Type of the RRSet
+   * @param params - `change: true` prevents the RRSet from being changed or deleted
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-change-an-rrsets-protection
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.changeRRSetProtection('example.com', 'www', 'A', {
-   *   delete: true
+   * const { action } = await client.dns.changeRRSetProtection("example.com", "www", "A", {
+   *   change: true,
    * });
    * ```
    */
-  async changeRRSetProtection(
-    idOrName: string,
-    rrName: string,
-    rrType: string,
+  changeRRSetProtection(
+    idOrName: ZoneIdOrName,
+    name: string,
+    type: RRSetType,
     params: ChangeRRSetProtectionParams,
+    options?: RequestOptions,
   ): Promise<ChangeRRSetProtectionResponse> {
-    const validatedParams = validate(changeRRSetProtectionRequestSchema, params, {
-      context: "Change RRSet protection request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/rrsets/${rrName}/${rrType}/actions/change_protection`,
-      validatedParams,
+    return this._post(
+      `${rrsetPath(idOrName, name, type)}/actions/change_protection`,
+      actionResponseSchema,
+      params,
+      changeRRSetProtectionRequestSchema,
+      options,
     );
-
-    return validate(changeRRSetProtectionResponseSchema, response, {
-      context: "Change RRSet protection response",
-      detailed: true,
-    });
   }
 
   /**
    * Changes the TTL of an RRSet.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param rrName - Name of the RRSet
-   * @param rrType - Type of the RRSet
-   * @param params - TTL configuration
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-change-an-rrsets-ttl
+   * @param idOrName - ID or name of the zone
+   * @param name - Name of the RRSet
+   * @param type - Type of the RRSet
+   * @param params - The new TTL in seconds, or `null` to use the default TTL of the zone
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-change-an-rrsets-ttl
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.changeRRSetTTL('example.com', 'www', 'A', {
-   *   ttl: 7200
-   * });
+   * const { action } = await client.dns.changeRRSetTTL("example.com", "www", "A", { ttl: 300 });
    * ```
    */
-  async changeRRSetTTL(
-    idOrName: string,
-    rrName: string,
-    rrType: string,
+  changeRRSetTTL(
+    idOrName: ZoneIdOrName,
+    name: string,
+    type: RRSetType,
     params: ChangeRRSetTTLParams,
+    options?: RequestOptions,
   ): Promise<ChangeRRSetTTLResponse> {
-    const validatedParams = validate(changeRRSetTTLRequestSchema, params, {
-      context: "Change RRSet TTL request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/rrsets/${rrName}/${rrType}/actions/change_ttl`,
-      validatedParams,
+    return this._post(
+      `${rrsetPath(idOrName, name, type)}/actions/change_ttl`,
+      actionResponseSchema,
+      params,
+      changeRRSetTTLRequestSchema,
+      options,
     );
-
-    return validate(changeRRSetTTLResponseSchema, response, {
-      context: "Change RRSet TTL response",
-      detailed: true,
-    });
   }
 
   /**
-   * Sets all records of an RRSet.
+   * Replaces all records of an RRSet.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param rrName - Name of the RRSet
-   * @param rrType - Type of the RRSet
-   * @param params - Records to set
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-set-records-of-an-rrset
+   * @param idOrName - ID or name of the zone
+   * @param name - Name of the RRSet
+   * @param type - Type of the RRSet
+   * @param params - The new records
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-set-records-of-an-rrset
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.setRRSetRecords('example.com', 'www', 'A', {
-   *   records: [
-   *     { value: '1.2.3.4', comment: 'Web server' }
-   *   ],
-   *   ttl: 3600
+   * const { action } = await client.dns.setRRSetRecords("example.com", "www", "A", {
+   *   records: [{ value: "198.51.100.1" }, { value: "198.51.100.2" }],
    * });
    * ```
    */
-  async setRRSetRecords(
-    idOrName: string,
-    rrName: string,
-    rrType: string,
+  setRRSetRecords(
+    idOrName: ZoneIdOrName,
+    name: string,
+    type: RRSetType,
     params: SetRRSetRecordsParams,
+    options?: RequestOptions,
   ): Promise<SetRRSetRecordsResponse> {
-    const validatedParams = validate(setRRSetRecordsRequestSchema, params, {
-      context: "Set RRSet records request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/rrsets/${rrName}/${rrType}/actions/set_records`,
-      validatedParams,
+    return this._post(
+      `${rrsetPath(idOrName, name, type)}/actions/set_records`,
+      actionResponseSchema,
+      params,
+      setRRSetRecordsRequestSchema,
+      options,
     );
-
-    return validate(setRRSetRecordsResponseSchema, response, {
-      context: "Set RRSet records response",
-      detailed: true,
-    });
   }
 
   /**
-   * Adds records to an RRSet.
+   * Adds records to an RRSet. The RRSet is created if it does not exist yet.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param rrName - Name of the RRSet
-   * @param rrType - Type of the RRSet
-   * @param params - Records to add
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-add-records-to-an-rrset
+   * @param idOrName - ID or name of the zone
+   * @param name - Name of the RRSet
+   * @param type - Type of the RRSet
+   * @param params - Records to add and an optional TTL for the RRSet
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-add-records-to-an-rrset
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.addRRSetRecords('example.com', 'www', 'A', {
-   *   records: [
-   *     { value: '5.6.7.8', comment: 'Additional server' }
-   *   ],
-   *   ttl: 3600
+   * const { action } = await client.dns.addRRSetRecords("example.com", "www", "A", {
+   *   records: [{ value: "198.51.100.3", comment: "web server 3" }],
    * });
    * ```
    */
-  async addRRSetRecords(
-    idOrName: string,
-    rrName: string,
-    rrType: string,
+  addRRSetRecords(
+    idOrName: ZoneIdOrName,
+    name: string,
+    type: RRSetType,
     params: AddRRSetRecordsParams,
+    options?: RequestOptions,
   ): Promise<AddRRSetRecordsResponse> {
-    const validatedParams = validate(addRRSetRecordsRequestSchema, params, {
-      context: "Add RRSet records request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/rrsets/${rrName}/${rrType}/actions/add_records`,
-      validatedParams,
+    return this._post(
+      `${rrsetPath(idOrName, name, type)}/actions/add_records`,
+      actionResponseSchema,
+      params,
+      addRRSetRecordsRequestSchema,
+      options,
     );
-
-    return validate(addRRSetRecordsResponseSchema, response, {
-      context: "Add RRSet records response",
-      detailed: true,
-    });
   }
 
   /**
-   * Removes records from an RRSet.
+   * Removes records from an RRSet. The RRSet is deleted once it has no records left.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param rrName - Name of the RRSet
-   * @param rrType - Type of the RRSet
+   * @param idOrName - ID or name of the zone
+   * @param name - Name of the RRSet
+   * @param type - Type of the RRSet
    * @param params - Records to remove
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-remove-records-from-an-rrset
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-remove-records-from-an-rrset
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.removeRRSetRecords('example.com', 'www', 'A', {
-   *   records: [
-   *     { value: '1.2.3.4', comment: null }
-   *   ]
+   * const { action } = await client.dns.removeRRSetRecords("example.com", "www", "A", {
+   *   records: [{ value: "198.51.100.3" }],
    * });
    * ```
    */
-  async removeRRSetRecords(
-    idOrName: string,
-    rrName: string,
-    rrType: string,
+  removeRRSetRecords(
+    idOrName: ZoneIdOrName,
+    name: string,
+    type: RRSetType,
     params: RemoveRRSetRecordsParams,
+    options?: RequestOptions,
   ): Promise<RemoveRRSetRecordsResponse> {
-    const validatedParams = validate(removeRRSetRecordsRequestSchema, params, {
-      context: "Remove RRSet records request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/rrsets/${rrName}/${rrType}/actions/remove_records`,
-      validatedParams,
+    return this._post(
+      `${rrsetPath(idOrName, name, type)}/actions/remove_records`,
+      actionResponseSchema,
+      params,
+      removeRRSetRecordsRequestSchema,
+      options,
     );
-
-    return validate(removeRRSetRecordsResponseSchema, response, {
-      context: "Remove RRSet records response",
-      detailed: true,
-    });
   }
 
   /**
-   * Updates records of an RRSet.
+   * Updates the comments of existing records of an RRSet. Records are matched by their value.
    *
-   * @param idOrName - ID or name of the Zone
-   * @param rrName - Name of the RRSet
-   * @param rrType - Type of the RRSet
+   * @param idOrName - ID or name of the zone
+   * @param name - Name of the RRSet
+   * @param type - Type of the RRSet
    * @param params - Records to update
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#rrsets-update-records-of-an-rrset
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-update-records-of-an-rrset
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.dns.updateRRSetRecords('example.com', 'www', 'A', {
-   *   records: [
-   *     { value: '1.2.3.4', comment: 'Updated comment' }
-   *   ]
+   * const { action } = await client.dns.updateRRSetRecords("example.com", "www", "A", {
+   *   records: [{ value: "198.51.100.1", comment: "primary web server" }],
    * });
    * ```
    */
-  async updateRRSetRecords(
-    idOrName: string,
-    rrName: string,
-    rrType: string,
+  updateRRSetRecords(
+    idOrName: ZoneIdOrName,
+    name: string,
+    type: RRSetType,
     params: UpdateRRSetRecordsParams,
+    options?: RequestOptions,
   ): Promise<UpdateRRSetRecordsResponse> {
-    const validatedParams = validate(updateRRSetRecordsRequestSchema, params, {
-      context: "Update RRSet records request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/zones/${idOrName}/rrsets/${rrName}/${rrType}/actions/update_records`,
-      validatedParams,
+    return this._post(
+      `${rrsetPath(idOrName, name, type)}/actions/update_records`,
+      actionResponseSchema,
+      params,
+      updateRRSetRecordsRequestSchema,
+      options,
     );
-
-    return validate(updateRRSetRecordsResponseSchema, response, {
-      context: "Update RRSet records response",
-      detailed: true,
-    });
   }
 }

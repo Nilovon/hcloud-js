@@ -3,202 +3,153 @@
  * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys
  */
 
-import type { HCloudClient } from "../../client/index";
-import type {
-  ListSSHKeysParams,
-  ListSSHKeysResponse,
-  CreateSSHKeyParams,
-  CreateSSHKeyResponse,
-  GetSSHKeyResponse,
-  UpdateSSHKeyParams,
-  UpdateSSHKeyResponse,
-  DeleteSSHKeyResponse,
-} from "../../apis/ssh-keys/types";
-import { validate } from "../../validation/index";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
 import {
-  listSSHKeysResponseSchema,
   createSSHKeyRequestSchema,
   createSSHKeyResponseSchema,
   getSSHKeyResponseSchema,
+  listSSHKeysResponseSchema,
   updateSSHKeyRequestSchema,
   updateSSHKeyResponseSchema,
-  deleteSSHKeyResponseSchema,
-} from "../../apis/ssh-keys/schemas";
+} from "./schemas";
+import type {
+  CreateSSHKeyParams,
+  CreateSSHKeyResponse,
+  GetSSHKeyResponse,
+  ListSSHKeysParams,
+  ListSSHKeysResponse,
+  SSHKey,
+  UpdateSSHKeyParams,
+  UpdateSSHKeyResponse,
+} from "./types";
 
 /**
  * SSH Keys API client
+ *
+ * SSH keys are public keys you can inject into servers when creating them.
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys
  */
-export class SSHKeysClient {
-  constructor(private readonly client: HCloudClient) {}
+export class SSHKeysClient extends NamedResource<SSHKey, ListSSHKeysParams, "ssh_keys"> {
+  protected readonly itemsKey = "ssh_keys";
 
   /**
-   * Returns all SSH key objects.
+   * Returns a page of SSH keys.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of SSH keys with pagination metadata
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys-list-ssh-keys
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all SSH keys
-   * const result = await client.sshKeys.list();
-   *
-   * // List SSH keys with filters
-   * const filtered = await client.sshKeys.list({
-   *   label_selector: 'environment=production',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
+   * const { ssh_keys } = await client.sshKeys.list({
+   *   label_selector: "environment=production",
+   *   sort: "name:asc",
    * });
+   *
+   * // All SSH keys across all pages
+   * const all = await client.sshKeys.listAll();
    * ```
    */
-  async list(params?: ListSSHKeysParams): Promise<ListSSHKeysResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
+  list(params?: ListSSHKeysParams, options?: RequestOptions): Promise<ListSSHKeysResponse> {
+    return this._get("/ssh_keys", listSSHKeysResponseSchema, params, options);
+  }
 
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
+  /**
+   * Returns a specific SSH key.
+   *
+   * @param id - ID of the SSH key
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys-get-an-ssh-key
+   *
+   * @example
+   * ```typescript
+   * const { ssh_key } = await client.sshKeys.get(12345);
+   * console.log(ssh_key.fingerprint);
+   * ```
+   */
+  get(id: number, options?: RequestOptions): Promise<GetSSHKeyResponse> {
+    return this._get(path`/ssh_keys/${id}`, getSSHKeyResponseSchema, undefined, options);
+  }
 
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.fingerprint) {
-      queryParams.fingerprint = params.fingerprint;
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/ssh_keys", queryParams);
-
-    return validate(listSSHKeysResponseSchema, response, {
-      context: "List SSH keys response",
-      detailed: true,
-    });
+  /**
+   * Finds an SSH key by its fingerprint.
+   *
+   * @param fingerprint - Fingerprint of the SSH key
+   * @param options - Request options
+   * @returns The SSH key, or `undefined` if none matches
+   *
+   * @example
+   * ```typescript
+   * const key = await client.sshKeys.getByFingerprint("b7:2f:30:a0:2f:6c:58:6c:21:04:58:61:ba:06:3b:2f");
+   * ```
+   */
+  async getByFingerprint(fingerprint: string, options?: RequestOptions): Promise<SSHKey | undefined> {
+    const { ssh_keys } = await this.list({ fingerprint }, options);
+    return ssh_keys.find((key) => key.fingerprint === fingerprint);
   }
 
   /**
    * Creates a new SSH key.
    *
-   * @param params - Parameters for creating the SSH key
-   * @returns Promise resolving to the created SSH key
+   * @param params - Name, public key and optional labels
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys-create-an-ssh-key
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.sshKeys.create({
-   *   name: 'my-ssh-key',
-   *   public_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB...'
+   * const { ssh_key } = await client.sshKeys.create({
+   *   name: "my-ssh-key",
+   *   public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...",
    * });
    * ```
    */
-  async create(params: CreateSSHKeyParams): Promise<CreateSSHKeyResponse> {
-    const validatedParams = validate(createSSHKeyRequestSchema, params, {
-      context: "Create SSH key request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>("/ssh_keys", validatedParams);
-
-    return validate(createSSHKeyResponseSchema, response, {
-      context: "Create SSH key response",
-      detailed: true,
-    });
+  create(params: CreateSSHKeyParams, options?: RequestOptions): Promise<CreateSSHKeyResponse> {
+    return this._post("/ssh_keys", createSSHKeyResponseSchema, params, createSSHKeyRequestSchema, options);
   }
 
   /**
-   * Returns a specific SSH key object.
+   * Updates the name and/or labels of an SSH key.
    *
    * @param id - ID of the SSH key
-   * @returns Promise resolving to the SSH key
-   * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys-get-an-ssh-key
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const sshKey = await client.sshKeys.get(12345);
-   * console.log(sshKey.ssh_key.name);
-   * ```
-   */
-  async get(id: number): Promise<GetSSHKeyResponse> {
-    const response = await this.client.get<unknown>(`/ssh_keys/${id}`);
-
-    return validate(getSSHKeyResponseSchema, response, {
-      context: "Get SSH key response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Updates an SSH key.
-   *
-   * You can update an SSH key's name and labels.
-   *
-   * @param id - ID of the SSH key
-   * @param params - Parameters to update (name and/or labels)
-   * @returns Promise resolving to the updated SSH key
+   * @param params - Fields to update
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys-update-an-ssh-key
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const updated = await client.sshKeys.update(12345, {
-   *   name: 'new-ssh-key-name',
-   *   labels: { environment: 'production' }
+   * const { ssh_key } = await client.sshKeys.update(12345, {
+   *   name: "new-name",
+   *   labels: { environment: "production" },
    * });
    * ```
    */
-  async update(id: number, params: UpdateSSHKeyParams): Promise<UpdateSSHKeyResponse> {
-    const validatedParams = validate(updateSSHKeyRequestSchema, params, {
-      context: "Update SSH key request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(`/ssh_keys/${id}`, validatedParams);
-
-    return validate(updateSSHKeyResponseSchema, response, {
-      context: "Update SSH key response",
-      detailed: true,
-    });
+  update(
+    id: number,
+    params: UpdateSSHKeyParams,
+    options?: RequestOptions,
+  ): Promise<UpdateSSHKeyResponse> {
+    return this._put(path`/ssh_keys/${id}`, updateSSHKeyResponseSchema, params, updateSSHKeyRequestSchema, options);
   }
 
   /**
-   * Deletes an SSH key.
+   * Deletes an SSH key. It cannot be used anymore.
    *
    * @param id - ID of the SSH key
-   * @returns Promise resolving to the delete action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys-delete-an-ssh-key
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.sshKeys.delete(12345);
-   * console.log(`Delete action ID: ${result.action.id}`);
+   * await client.sshKeys.delete(12345);
    * ```
    */
-  async delete(id: number): Promise<DeleteSSHKeyResponse> {
-    const response = await this.client.delete<unknown>(`/ssh_keys/${id}`);
-
-    return validate(deleteSSHKeyResponseSchema, response, {
-      context: "Delete SSH key response",
-      detailed: true,
-    });
+  delete(id: number, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/ssh_keys/${id}`, null, options);
   }
 }

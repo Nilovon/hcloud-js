@@ -4,22 +4,19 @@
  */
 
 import { z } from "zod";
-import { actionSchema } from "../../apis/actions/schemas";
-import { paginationMetaSchema } from "../../apis/common/schemas";
+import { labelsSchema, metaSchema } from "../common/schemas";
 
 /**
  * SSH Key schema
  */
-export const sshKeySchema = z
-  .object({
-    id: z.number(),
-    name: z.string(),
-    fingerprint: z.string(),
-    public_key: z.string(),
-    labels: z.record(z.string(), z.string()),
-    created: z.string(),
-  })
-  .passthrough();
+export const sshKeySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  fingerprint: z.string(),
+  public_key: z.string(),
+  labels: labelsSchema,
+  created: z.string(),
+});
 
 /**
  * List SSH Keys response schema
@@ -27,11 +24,7 @@ export const sshKeySchema = z
  */
 export const listSSHKeysResponseSchema = z.object({
   ssh_keys: z.array(sshKeySchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+  meta: metaSchema.optional(),
 });
 
 /**
@@ -41,7 +34,7 @@ export const listSSHKeysResponseSchema = z.object({
 export const createSSHKeyRequestSchema = z.object({
   name: z.string().min(1),
   public_key: z.string().min(1),
-  labels: z.record(z.string(), z.string()).optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
@@ -65,7 +58,7 @@ export const getSSHKeyResponseSchema = z.object({
  */
 export const updateSSHKeyRequestSchema = z.object({
   name: z.string().min(1).optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
@@ -73,12 +66,4 @@ export const updateSSHKeyRequestSchema = z.object({
  */
 export const updateSSHKeyResponseSchema = z.object({
   ssh_key: sshKeySchema,
-});
-
-/**
- * Delete SSH Key response schema
- * @see https://docs.hetzner.cloud/reference/cloud#ssh-keys-delete-an-ssh-key
- */
-export const deleteSSHKeyResponseSchema = z.object({
-  action: actionSchema,
 });

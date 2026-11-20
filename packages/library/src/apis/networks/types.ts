@@ -1,42 +1,42 @@
 /**
  * Types for Hetzner Cloud Networks API
- * Types are inferred from Zod schemas
  * @see https://docs.hetzner.cloud/reference/cloud#networks
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  listNetworksResponseSchema,
+import type { z } from "zod";
+import type {
+  ActionResponse,
+  GetActionResponse,
+  ListActionsParams,
+  ListActionsResponse,
+} from "../actions/types";
+import type { OneOrMany, PageParams, SortParam } from "../common/types";
+import type {
+  addNetworkRouteRequestSchema,
+  addNetworkSubnetRequestSchema,
+  changeNetworkIpRangeRequestSchema,
+  changeNetworkProtectionRequestSchema,
   createNetworkRequestSchema,
   createNetworkResponseSchema,
+  deleteNetworkRouteRequestSchema,
+  deleteNetworkSubnetRequestSchema,
   getNetworkResponseSchema,
+  listNetworkMembersResponseSchema,
+  listNetworksResponseSchema,
+  networkMemberSchema,
+  networkMemberStatusSchema,
+  networkMemberTypeSchema,
+  networkProtectionSchema,
+  networkRouteSchema,
+  networkSchema,
+  networkSubnetSchema,
+  networkSubnetTypeSchema,
   updateNetworkRequestSchema,
   updateNetworkResponseSchema,
-  deleteNetworkResponseSchema,
-  listNetworkActionsResponseSchema,
-  getNetworkActionResponseSchema,
-  addNetworkRouteRequestSchema,
-  addNetworkRouteResponseSchema,
-  deleteNetworkRouteRequestSchema,
-  deleteNetworkRouteResponseSchema,
-  addNetworkSubnetRequestSchema,
-  addNetworkSubnetResponseSchema,
-  deleteNetworkSubnetRequestSchema,
-  deleteNetworkSubnetResponseSchema,
-  changeNetworkIpRangeRequestSchema,
-  changeNetworkIpRangeResponseSchema,
-  changeNetworkProtectionRequestSchema,
-  changeNetworkProtectionResponseSchema,
-  networkSchema,
-  networkSubnetTypeSchema,
-  networkRouteSchema,
-  networkSubnetSchema,
-  networkProtectionSchema,
-} from "./schemas.js";
-import type { z } from "zod";
+} from "./schemas";
 
 /**
- * Network subnet type
+ * Network subnet type. `server` is a deprecated alias of `cloud`.
  */
 export type NetworkSubnetType = z.infer<typeof networkSubnetTypeSchema>;
 
@@ -56,7 +56,8 @@ export type NetworkSubnet = z.infer<typeof networkSubnetSchema>;
 export type NetworkProtection = z.infer<typeof networkProtectionSchema>;
 
 /**
- * Network
+ * Hetzner Cloud Network
+ * @see https://docs.hetzner.cloud/reference/cloud#networks
  */
 export type Network = z.infer<typeof networkSchema>;
 
@@ -64,28 +65,16 @@ export type Network = z.infer<typeof networkSchema>;
  * List Networks query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#networks-list-networks
  */
-export interface ListNetworksParams {
+export interface ListNetworksParams extends PageParams {
   /**
-   * Can be used to filter resources by their name. The response will only contain the resources matching the specified name.
+   * Only return the network with this exact name.
    */
   name?: string;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, created, created:asc, created:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter resources by labels. The response will only contain resources matching the label selector.
+   * Only return networks matching the label selector.
+   * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
 }
 
 /**
@@ -95,10 +84,10 @@ export interface ListNetworksParams {
 export type ListNetworksResponse = z.infer<typeof listNetworksResponseSchema>;
 
 /**
- * Create Network parameters
+ * Create Network request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#networks-create-a-network
  */
-export type CreateNetworkParams = z.infer<typeof createNetworkRequestSchema>;
+export type CreateNetworkParams = z.input<typeof createNetworkRequestSchema>;
 
 /**
  * Create Network response
@@ -113,10 +102,10 @@ export type CreateNetworkResponse = z.infer<typeof createNetworkResponseSchema>;
 export type GetNetworkResponse = z.infer<typeof getNetworkResponseSchema>;
 
 /**
- * Update Network parameters
+ * Update Network request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#networks-update-a-network
  */
-export type UpdateNetworkParams = z.infer<typeof updateNetworkRequestSchema>;
+export type UpdateNetworkParams = z.input<typeof updateNetworkRequestSchema>;
 
 /**
  * Update Network response
@@ -125,119 +114,141 @@ export type UpdateNetworkParams = z.infer<typeof updateNetworkRequestSchema>;
 export type UpdateNetworkResponse = z.infer<typeof updateNetworkResponseSchema>;
 
 /**
- * Delete Network response
- * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-network
+ * Type of a resource attached to a network
  */
-export type DeleteNetworkResponse = z.infer<typeof deleteNetworkResponseSchema>;
+export type NetworkMemberType = z.infer<typeof networkMemberTypeSchema>;
+
+/**
+ * Status of a resource within a network
+ */
+export type NetworkMemberStatus = z.infer<typeof networkMemberStatusSchema>;
+
+/**
+ * Network member: a server or load balancer attached to a network
+ */
+export type NetworkMember = z.infer<typeof networkMemberSchema>;
+
+/**
+ * Fields network members can be sorted by
+ */
+export type NetworkMemberSort = SortParam<"id" | "type" | "status" | "ip">;
+
+/**
+ * List Network Members query parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#networks
+ */
+export interface ListNetworkMembersParams extends PageParams {
+  /**
+   * Only return members of the given type.
+   */
+  type?: OneOrMany<NetworkMemberType>;
+  /**
+   * Only return members with the given status.
+   */
+  status?: OneOrMany<NetworkMemberStatus>;
+  /**
+   * Only return members attached to the given subnet (IP range, e.g. `10.0.1.0/24`).
+   */
+  subnet?: OneOrMany<string>;
+  /**
+   * Sort the result.
+   * @see https://docs.hetzner.cloud/reference/cloud#sorting
+   */
+  sort?: OneOrMany<NetworkMemberSort>;
+}
+
+/**
+ * List Network Members response
+ * @see https://docs.hetzner.cloud/reference/cloud#networks
+ */
+export type ListNetworkMembersResponse = z.infer<typeof listNetworkMembersResponseSchema>;
 
 /**
  * List Network Actions query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#networks-list-actions-for-a-network
  */
-export interface ListNetworkActionsParams {
-  /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, command, command:asc, command:desc, status, status:asc, status:desc, progress, progress:asc, progress:desc, started, started:asc, started:desc, finished, finished:asc, finished:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter Actions by status. The response will only contain Actions matching the status.
-   */
-  status?: string | string[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
-}
+export type ListNetworkActionsParams = ListActionsParams;
 
 /**
  * List Network Actions response
  * @see https://docs.hetzner.cloud/reference/cloud#networks-list-actions-for-a-network
  */
-export type ListNetworkActionsResponse = z.infer<typeof listNetworkActionsResponseSchema>;
+export type ListNetworkActionsResponse = ListActionsResponse;
 
 /**
  * Get Network Action response
  * @see https://docs.hetzner.cloud/reference/cloud#networks-get-an-action-for-a-network
  */
-export type GetNetworkActionResponse = z.infer<typeof getNetworkActionResponseSchema>;
+export type GetNetworkActionResponse = GetActionResponse;
 
 /**
- * Add Network route parameters
+ * Add Network route request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#networks-add-a-route-to-a-network
  */
-export type AddNetworkRouteParams = z.infer<typeof addNetworkRouteRequestSchema>;
+export type AddNetworkRouteParams = z.input<typeof addNetworkRouteRequestSchema>;
 
 /**
  * Add Network route response
  * @see https://docs.hetzner.cloud/reference/cloud#networks-add-a-route-to-a-network
  */
-export type AddNetworkRouteResponse = z.infer<typeof addNetworkRouteResponseSchema>;
+export type AddNetworkRouteResponse = ActionResponse;
 
 /**
- * Delete Network route parameters
+ * Delete Network route request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-route-from-a-network
  */
-export type DeleteNetworkRouteParams = z.infer<typeof deleteNetworkRouteRequestSchema>;
+export type DeleteNetworkRouteParams = z.input<typeof deleteNetworkRouteRequestSchema>;
 
 /**
  * Delete Network route response
  * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-route-from-a-network
  */
-export type DeleteNetworkRouteResponse = z.infer<typeof deleteNetworkRouteResponseSchema>;
+export type DeleteNetworkRouteResponse = ActionResponse;
 
 /**
- * Add Network subnet parameters
+ * Add Network subnet request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#networks-add-a-subnet-to-a-network
  */
-export type AddNetworkSubnetParams = z.infer<typeof addNetworkSubnetRequestSchema>;
+export type AddNetworkSubnetParams = z.input<typeof addNetworkSubnetRequestSchema>;
 
 /**
  * Add Network subnet response
  * @see https://docs.hetzner.cloud/reference/cloud#networks-add-a-subnet-to-a-network
  */
-export type AddNetworkSubnetResponse = z.infer<typeof addNetworkSubnetResponseSchema>;
+export type AddNetworkSubnetResponse = ActionResponse;
 
 /**
- * Delete Network subnet parameters
+ * Delete Network subnet request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-subnet-from-a-network
  */
-export type DeleteNetworkSubnetParams = z.infer<typeof deleteNetworkSubnetRequestSchema>;
+export type DeleteNetworkSubnetParams = z.input<typeof deleteNetworkSubnetRequestSchema>;
 
 /**
  * Delete Network subnet response
  * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-subnet-from-a-network
  */
-export type DeleteNetworkSubnetResponse = z.infer<typeof deleteNetworkSubnetResponseSchema>;
+export type DeleteNetworkSubnetResponse = ActionResponse;
 
 /**
- * Change Network IP range parameters
+ * Change Network IP range request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#networks-change-ip-range-of-a-network
  */
-export type ChangeNetworkIpRangeParams = z.infer<typeof changeNetworkIpRangeRequestSchema>;
+export type ChangeNetworkIpRangeParams = z.input<typeof changeNetworkIpRangeRequestSchema>;
 
 /**
  * Change Network IP range response
  * @see https://docs.hetzner.cloud/reference/cloud#networks-change-ip-range-of-a-network
  */
-export type ChangeNetworkIpRangeResponse = z.infer<typeof changeNetworkIpRangeResponseSchema>;
+export type ChangeNetworkIpRangeResponse = ActionResponse;
 
 /**
- * Change Network Protection parameters
+ * Change Network Protection request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#networks-change-network-protection
  */
-export type ChangeNetworkProtectionParams = z.infer<
-  typeof changeNetworkProtectionRequestSchema
->;
+export type ChangeNetworkProtectionParams = z.input<typeof changeNetworkProtectionRequestSchema>;
 
 /**
  * Change Network Protection response
  * @see https://docs.hetzner.cloud/reference/cloud#networks-change-network-protection
  */
-export type ChangeNetworkProtectionResponse = z.infer<
-  typeof changeNetworkProtectionResponseSchema
->;
+export type ChangeNetworkProtectionResponse = ActionResponse;

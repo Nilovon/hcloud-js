@@ -1,56 +1,63 @@
 /**
  * Types for Hetzner Cloud DNS (Zones) API
- * Types are inferred from Zod schemas
- * @see https://docs.hetzner.cloud/reference/cloud#dns
+ * @see https://docs.hetzner.cloud/reference/cloud#zones
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  listZonesResponseSchema,
-  createZoneRequestSchema,
-  createZoneResponseSchema,
-  getZoneResponseSchema,
-  updateZoneRequestSchema,
-  updateZoneResponseSchema,
-  deleteZoneResponseSchema,
-  exportZoneResponseSchema,
-  listZoneActionsResponseSchema,
-  getZoneActionResponseSchema,
-  changeZonePrimaryNameserversRequestSchema,
-  changeZonePrimaryNameserversResponseSchema,
-  changeZoneProtectionRequestSchema,
-  changeZoneProtectionResponseSchema,
+import type { z } from "zod";
+import type {
+  ActionResponse,
+  GetActionResponse,
+  ListActionsParams,
+  ListActionsResponse,
+} from "../actions/types";
+import type { OneOrMany, PageParams, SortParam } from "../common/types";
+import type {
+  addRRSetRecordsRequestSchema,
+  changeRRSetProtectionRequestSchema,
+  changeRRSetTTLRequestSchema,
   changeZoneDefaultTTLRequestSchema,
-  changeZoneDefaultTTLResponseSchema,
-  importZoneFileRequestSchema,
-  importZoneFileResponseSchema,
-  listRRSetsResponseSchema,
-  getRRSetResponseSchema,
+  changeZonePrimaryNameserversRequestSchema,
+  changeZoneProtectionRequestSchema,
   createRRSetRequestSchema,
   createRRSetResponseSchema,
+  createZoneRequestSchema,
+  createZoneResponseSchema,
+  createZoneRRSetInputSchema,
+  exportZoneResponseSchema,
+  getRRSetResponseSchema,
+  getZoneResponseSchema,
+  importZoneFileRequestSchema,
+  listRRSetsResponseSchema,
+  listZonesResponseSchema,
+  removeRRSetRecordsRequestSchema,
+  rrsetProtectionSchema,
+  rrsetRecordInputSchema,
+  rrsetRecordSchema,
+  rrsetSchema,
+  rrsetTypeSchema,
+  setRRSetRecordsRequestSchema,
+  updateRRSetRecordsRequestSchema,
   updateRRSetRequestSchema,
   updateRRSetResponseSchema,
-  deleteRRSetResponseSchema,
-  changeRRSetProtectionRequestSchema,
-  changeRRSetProtectionResponseSchema,
-  changeRRSetTTLRequestSchema,
-  changeRRSetTTLResponseSchema,
-  setRRSetRecordsRequestSchema,
-  setRRSetRecordsResponseSchema,
-  addRRSetRecordsRequestSchema,
-  addRRSetRecordsResponseSchema,
-  removeRRSetRecordsRequestSchema,
-  removeRRSetRecordsResponseSchema,
-  updateRRSetRecordsRequestSchema,
-  updateRRSetRecordsResponseSchema,
+  updateZoneRequestSchema,
+  updateZoneResponseSchema,
+  zoneAuthoritativeNameserversSchema,
+  zoneDelegationStatusSchema,
+  zoneModeSchema,
+  zonePrimaryNameserverInputSchema,
+  zonePrimaryNameserverSchema,
+  zoneProtectionSchema,
+  zoneRegistrarSchema,
   zoneSchema,
   zoneStatusSchema,
-  zoneProtectionSchema,
-  rrsetSchema,
-  rrsetRecordSchema,
-  rrsetProtectionSchema,
-} from "../../apis/dns/schemas";
-import type { z } from "zod";
+  zoneTSIGAlgorithmSchema,
+} from "./schemas";
+
+/**
+ * Zone mode: `primary` or `secondary`
+ */
+export type ZoneMode = z.infer<typeof zoneModeSchema>;
 
 /**
  * Zone status
@@ -58,19 +65,55 @@ import type { z } from "zod";
 export type ZoneStatus = z.infer<typeof zoneStatusSchema>;
 
 /**
+ * Zone registrar
+ */
+export type ZoneRegistrar = z.infer<typeof zoneRegistrarSchema>;
+
+/**
  * Zone protection
  */
 export type ZoneProtection = z.infer<typeof zoneProtectionSchema>;
 
 /**
- * Zone
+ * TSIG algorithm of a primary nameserver
+ */
+export type ZoneTSIGAlgorithm = z.infer<typeof zoneTSIGAlgorithmSchema>;
+
+/**
+ * Primary nameserver of a zone in secondary mode
+ */
+export type ZonePrimaryNameserver = z.infer<typeof zonePrimaryNameserverSchema>;
+
+/**
+ * Primary nameserver as sent in requests
+ */
+export type ZonePrimaryNameserverInput = z.input<typeof zonePrimaryNameserverInputSchema>;
+
+/**
+ * Delegation status of the authoritative nameservers of a zone
+ */
+export type ZoneDelegationStatus = z.infer<typeof zoneDelegationStatusSchema>;
+
+/**
+ * Authoritative nameservers of a zone
+ */
+export type ZoneAuthoritativeNameservers = z.infer<typeof zoneAuthoritativeNameserversSchema>;
+
+/**
+ * Hetzner Cloud DNS Zone
+ * @see https://docs.hetzner.cloud/reference/cloud#zones
  */
 export type Zone = z.infer<typeof zoneSchema>;
 
 /**
- * RRSet record
+ * ID or name of a zone, e.g. `42` or `"example.com"`
  */
-export type RRSetRecord = z.infer<typeof rrsetRecordSchema>;
+export type ZoneIdOrName = number | string;
+
+/**
+ * RRSet type, e.g. `"A"`, `"AAAA"` or `"TXT"`. Other strings are accepted as well.
+ */
+export type RRSetType = z.infer<typeof rrsetTypeSchema>;
 
 /**
  * RRSet protection
@@ -78,36 +121,54 @@ export type RRSetRecord = z.infer<typeof rrsetRecordSchema>;
 export type RRSetProtection = z.infer<typeof rrsetProtectionSchema>;
 
 /**
- * RRSet
+ * Record of an RRSet
+ */
+export type RRSetRecord = z.infer<typeof rrsetRecordSchema>;
+
+/**
+ * Record of an RRSet as sent in requests
+ */
+export type RRSetRecordInput = z.input<typeof rrsetRecordInputSchema>;
+
+/**
+ * Hetzner Cloud DNS RRSet (resource record set)
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets
  */
 export type RRSet = z.infer<typeof rrsetSchema>;
+
+/**
+ * RRSet as sent when creating a zone
+ */
+export type CreateZoneRRSetInput = z.input<typeof createZoneRRSetInputSchema>;
+
+/**
+ * Fields zones can be sorted by
+ */
+export type ZoneSort = SortParam<"id" | "name" | "created">;
 
 /**
  * List Zones query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#zones-list-zones
  */
-export interface ListZonesParams {
+export interface ListZonesParams extends PageParams {
   /**
-   * Can be used to filter resources by their name. The response will only contain the resources matching the specified name.
+   * Only return the zone with this exact name.
    */
   name?: string;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, created, created:asc, created:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
+   * Only return zones in this mode.
    */
-  sort?: string | string[];
+  mode?: ZoneMode;
   /**
-   * Can be used to filter resources by labels. The response will only contain resources matching the label selector.
+   * Only return zones matching the label selector.
+   * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
   /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Sort the result.
+   * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
+  sort?: OneOrMany<ZoneSort>;
 }
 
 /**
@@ -117,10 +178,10 @@ export interface ListZonesParams {
 export type ListZonesResponse = z.infer<typeof listZonesResponseSchema>;
 
 /**
- * Create Zone parameters
+ * Create Zone request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#zones-create-a-zone
  */
-export type CreateZoneParams = z.infer<typeof createZoneRequestSchema>;
+export type CreateZoneParams = z.input<typeof createZoneRequestSchema>;
 
 /**
  * Create Zone response
@@ -135,10 +196,10 @@ export type CreateZoneResponse = z.infer<typeof createZoneResponseSchema>;
 export type GetZoneResponse = z.infer<typeof getZoneResponseSchema>;
 
 /**
- * Update Zone parameters
+ * Update Zone request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#zones-update-a-zone
  */
-export type UpdateZoneParams = z.infer<typeof updateZoneRequestSchema>;
+export type UpdateZoneParams = z.input<typeof updateZoneRequestSchema>;
 
 /**
  * Update Zone response
@@ -150,248 +211,222 @@ export type UpdateZoneResponse = z.infer<typeof updateZoneResponseSchema>;
  * Delete Zone response
  * @see https://docs.hetzner.cloud/reference/cloud#zones-delete-a-zone
  */
-export type DeleteZoneResponse = z.infer<typeof deleteZoneResponseSchema>;
+export type DeleteZoneResponse = ActionResponse;
 
 /**
- * Export Zone response
+ * Export Zone file response
  * @see https://docs.hetzner.cloud/reference/cloud#zones-export-a-zone-file
  */
 export type ExportZoneResponse = z.infer<typeof exportZoneResponseSchema>;
 
 /**
  * List Zone Actions query parameters
- * @see https://docs.hetzner.cloud/reference/cloud#zones-list-actions-for-a-zone
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-list-actions-for-a-zone
  */
-export interface ListZoneActionsParams {
-  /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, command, command:asc, command:desc, status, status:asc, status:desc, progress, progress:asc, progress:desc, started, started:asc, started:desc, finished, finished:asc, finished:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter Actions by status. The response will only contain Actions matching the status.
-   */
-  status?: string | string[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
-}
+export type ListZoneActionsParams = ListActionsParams;
 
 /**
  * List Zone Actions response
- * @see https://docs.hetzner.cloud/reference/cloud#zones-list-actions-for-a-zone
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-list-actions-for-a-zone
  */
-export type ListZoneActionsResponse = z.infer<typeof listZoneActionsResponseSchema>;
+export type ListZoneActionsResponse = ListActionsResponse;
 
 /**
  * Get Zone Action response
- * @see https://docs.hetzner.cloud/reference/cloud#zones-get-an-action-for-a-zone
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-get-an-action-for-a-zone
  */
-export type GetZoneActionResponse = z.infer<typeof getZoneActionResponseSchema>;
+export type GetZoneActionResponse = GetActionResponse;
 
 /**
- * Change Zone Primary Nameservers parameters
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-primary-nameservers
+ * Change Zone Primary Nameservers request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-primary-nameservers
  */
-export type ChangeZonePrimaryNameserversParams = z.infer<
+export type ChangeZonePrimaryNameserversParams = z.input<
   typeof changeZonePrimaryNameserversRequestSchema
 >;
 
 /**
  * Change Zone Primary Nameservers response
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-primary-nameservers
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-primary-nameservers
  */
-export type ChangeZonePrimaryNameserversResponse = z.infer<
-  typeof changeZonePrimaryNameserversResponseSchema
->;
+export type ChangeZonePrimaryNameserversResponse = ActionResponse;
 
 /**
- * Change Zone Protection parameters
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-protection
+ * Change Zone Protection request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-protection
  */
-export type ChangeZoneProtectionParams = z.infer<typeof changeZoneProtectionRequestSchema>;
+export type ChangeZoneProtectionParams = z.input<typeof changeZoneProtectionRequestSchema>;
 
 /**
  * Change Zone Protection response
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-protection
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-protection
  */
-export type ChangeZoneProtectionResponse = z.infer<typeof changeZoneProtectionResponseSchema>;
+export type ChangeZoneProtectionResponse = ActionResponse;
 
 /**
- * Change Zone Default TTL parameters
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-default-ttl
+ * Change Zone Default TTL request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-default-ttl
  */
-export type ChangeZoneDefaultTTLParams = z.infer<typeof changeZoneDefaultTTLRequestSchema>;
+export type ChangeZoneDefaultTTLParams = z.input<typeof changeZoneDefaultTTLRequestSchema>;
 
 /**
  * Change Zone Default TTL response
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-default-ttl
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-default-ttl
  */
-export type ChangeZoneDefaultTTLResponse = z.infer<typeof changeZoneDefaultTTLResponseSchema>;
+export type ChangeZoneDefaultTTLResponse = ActionResponse;
 
 /**
- * Import Zone file parameters
- * @see https://docs.hetzner.cloud/reference/cloud#zones-import-a-zone-file
+ * Import Zone file request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-import-a-zone-file
  */
-export type ImportZoneFileParams = z.infer<typeof importZoneFileRequestSchema>;
+export type ImportZoneFileParams = z.input<typeof importZoneFileRequestSchema>;
 
 /**
  * Import Zone file response
- * @see https://docs.hetzner.cloud/reference/cloud#zones-import-a-zone-file
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-import-a-zone-file
  */
-export type ImportZoneFileResponse = z.infer<typeof importZoneFileResponseSchema>;
+export type ImportZoneFileResponse = ActionResponse;
+
+/**
+ * Fields RRSets can be sorted by
+ */
+export type RRSetSort = SortParam<"id" | "name">;
 
 /**
  * List RRSets query parameters
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-list-rrsets
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-list-rrsets
  */
-export interface ListRRSetsParams {
+export interface ListRRSetsParams extends PageParams {
   /**
-   * Can be used to filter resources by their name. The response will only contain the resources matching the specified name.
+   * Only return RRSets with this exact name, e.g. `"www"` or `"@"`.
    */
   name?: string;
   /**
-   * Can be used to filter resources by their type. The response will only contain the resources matching the specified type.
+   * Only return RRSets of the given types.
    */
-  type?: string;
+  type?: OneOrMany<RRSetType>;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, type, type:asc, type:desc, created, created:asc, created:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter resources by labels. The response will only contain resources matching the label selector.
+   * Only return RRSets matching the label selector.
+   * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
   /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Sort the result.
+   * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
+  sort?: OneOrMany<RRSetSort>;
 }
 
 /**
  * List RRSets response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-list-rrsets
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-list-rrsets
  */
 export type ListRRSetsResponse = z.infer<typeof listRRSetsResponseSchema>;
 
 /**
  * Get RRSet response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-get-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-get-an-rrset
  */
 export type GetRRSetResponse = z.infer<typeof getRRSetResponseSchema>;
 
 /**
- * Create RRSet parameters
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-create-an-rrset
+ * Create RRSet request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-create-an-rrset
  */
-export type CreateRRSetParams = z.infer<typeof createRRSetRequestSchema>;
+export type CreateRRSetParams = z.input<typeof createRRSetRequestSchema>;
 
 /**
  * Create RRSet response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-create-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-create-an-rrset
  */
 export type CreateRRSetResponse = z.infer<typeof createRRSetResponseSchema>;
 
 /**
- * Update RRSet parameters
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-update-an-rrset
+ * Update RRSet request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-update-an-rrset
  */
-export type UpdateRRSetParams = z.infer<typeof updateRRSetRequestSchema>;
+export type UpdateRRSetParams = z.input<typeof updateRRSetRequestSchema>;
 
 /**
  * Update RRSet response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-update-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-update-an-rrset
  */
 export type UpdateRRSetResponse = z.infer<typeof updateRRSetResponseSchema>;
 
 /**
  * Delete RRSet response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-delete-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-delete-an-rrset
  */
-export type DeleteRRSetResponse = z.infer<typeof deleteRRSetResponseSchema>;
+export type DeleteRRSetResponse = ActionResponse;
 
 /**
- * Change RRSet Protection parameters
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-change-an-rrsets-protection
+ * Change RRSet Protection request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-change-an-rrsets-protection
  */
-export type ChangeRRSetProtectionParams = z.infer<
-  typeof changeRRSetProtectionRequestSchema
->;
+export type ChangeRRSetProtectionParams = z.input<typeof changeRRSetProtectionRequestSchema>;
 
 /**
  * Change RRSet Protection response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-change-an-rrsets-protection
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-change-an-rrsets-protection
  */
-export type ChangeRRSetProtectionResponse = z.infer<
-  typeof changeRRSetProtectionResponseSchema
->;
+export type ChangeRRSetProtectionResponse = ActionResponse;
 
 /**
- * Change RRSet TTL parameters
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-change-an-rrsets-ttl
+ * Change RRSet TTL request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-change-an-rrsets-ttl
  */
-export type ChangeRRSetTTLParams = z.infer<typeof changeRRSetTTLRequestSchema>;
+export type ChangeRRSetTTLParams = z.input<typeof changeRRSetTTLRequestSchema>;
 
 /**
  * Change RRSet TTL response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-change-an-rrsets-ttl
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-change-an-rrsets-ttl
  */
-export type ChangeRRSetTTLResponse = z.infer<typeof changeRRSetTTLResponseSchema>;
+export type ChangeRRSetTTLResponse = ActionResponse;
 
 /**
- * Set RRSet Records parameters
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-set-records-of-an-rrset
+ * Set RRSet Records request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-set-records-of-an-rrset
  */
-export type SetRRSetRecordsParams = z.infer<typeof setRRSetRecordsRequestSchema>;
+export type SetRRSetRecordsParams = z.input<typeof setRRSetRecordsRequestSchema>;
 
 /**
  * Set RRSet Records response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-set-records-of-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-set-records-of-an-rrset
  */
-export type SetRRSetRecordsResponse = z.infer<typeof setRRSetRecordsResponseSchema>;
+export type SetRRSetRecordsResponse = ActionResponse;
 
 /**
- * Add RRSet Records parameters
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-add-records-to-an-rrset
+ * Add RRSet Records request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-add-records-to-an-rrset
  */
-export type AddRRSetRecordsParams = z.infer<typeof addRRSetRecordsRequestSchema>;
+export type AddRRSetRecordsParams = z.input<typeof addRRSetRecordsRequestSchema>;
 
 /**
  * Add RRSet Records response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-add-records-to-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-add-records-to-an-rrset
  */
-export type AddRRSetRecordsResponse = z.infer<typeof addRRSetRecordsResponseSchema>;
+export type AddRRSetRecordsResponse = ActionResponse;
 
 /**
- * Remove RRSet Records parameters
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-remove-records-from-an-rrset
+ * Remove RRSet Records request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-remove-records-from-an-rrset
  */
-export type RemoveRRSetRecordsParams = z.infer<typeof removeRRSetRecordsRequestSchema>;
+export type RemoveRRSetRecordsParams = z.input<typeof removeRRSetRecordsRequestSchema>;
 
 /**
  * Remove RRSet Records response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-remove-records-from-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-remove-records-from-an-rrset
  */
-export type RemoveRRSetRecordsResponse = z.infer<typeof removeRRSetRecordsResponseSchema>;
+export type RemoveRRSetRecordsResponse = ActionResponse;
 
 /**
- * Update RRSet Records parameters
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-update-records-of-an-rrset
+ * Update RRSet Records request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-update-records-of-an-rrset
  */
-export type UpdateRRSetRecordsParams = z.infer<typeof updateRRSetRecordsRequestSchema>;
+export type UpdateRRSetRecordsParams = z.input<typeof updateRRSetRecordsRequestSchema>;
 
 /**
  * Update RRSet Records response
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-update-records-of-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-update-records-of-an-rrset
  */
-export type UpdateRRSetRecordsResponse = z.infer<typeof updateRRSetRecordsResponseSchema>;
+export type UpdateRRSetRecordsResponse = ActionResponse;

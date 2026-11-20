@@ -3,542 +3,496 @@
  * @see https://docs.hetzner.cloud/reference/cloud#networks
  */
 
-import type { HCloudClient } from "../../client/index";
+import { ResourceActionsClient } from "../actions/index";
+import {
+  actionResponseSchema,
+  getActionResponseSchema,
+  listActionsResponseSchema,
+} from "../actions/schemas";
+import { iteratePages } from "../../core/pagination";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import {
+  addNetworkRouteRequestSchema,
+  addNetworkSubnetRequestSchema,
+  changeNetworkIpRangeRequestSchema,
+  changeNetworkProtectionRequestSchema,
+  createNetworkRequestSchema,
+  createNetworkResponseSchema,
+  deleteNetworkRouteRequestSchema,
+  deleteNetworkSubnetRequestSchema,
+  getNetworkResponseSchema,
+  listNetworkMembersResponseSchema,
+  listNetworksResponseSchema,
+  updateNetworkRequestSchema,
+  updateNetworkResponseSchema,
+} from "./schemas";
 import type {
-  ListNetworksParams,
-  ListNetworksResponse,
-  CreateNetworkParams,
-  CreateNetworkResponse,
-  GetNetworkResponse,
-  UpdateNetworkParams,
-  UpdateNetworkResponse,
-  DeleteNetworkResponse,
-  ListNetworkActionsParams,
-  ListNetworkActionsResponse,
-  GetNetworkActionResponse,
   AddNetworkRouteParams,
   AddNetworkRouteResponse,
-  DeleteNetworkRouteParams,
-  DeleteNetworkRouteResponse,
   AddNetworkSubnetParams,
   AddNetworkSubnetResponse,
-  DeleteNetworkSubnetParams,
-  DeleteNetworkSubnetResponse,
   ChangeNetworkIpRangeParams,
   ChangeNetworkIpRangeResponse,
   ChangeNetworkProtectionParams,
   ChangeNetworkProtectionResponse,
-} from "./types.js";
-import { validate } from "../../validation/index";
-import {
-  listNetworksResponseSchema,
-  createNetworkRequestSchema,
-  createNetworkResponseSchema,
-  getNetworkResponseSchema,
-  updateNetworkRequestSchema,
-  updateNetworkResponseSchema,
-  deleteNetworkResponseSchema,
-  listNetworkActionsResponseSchema,
-  getNetworkActionResponseSchema,
-  addNetworkRouteRequestSchema,
-  addNetworkRouteResponseSchema,
-  deleteNetworkRouteRequestSchema,
-  deleteNetworkRouteResponseSchema,
-  addNetworkSubnetRequestSchema,
-  addNetworkSubnetResponseSchema,
-  deleteNetworkSubnetRequestSchema,
-  deleteNetworkSubnetResponseSchema,
-  changeNetworkIpRangeRequestSchema,
-  changeNetworkIpRangeResponseSchema,
-  changeNetworkProtectionRequestSchema,
-  changeNetworkProtectionResponseSchema,
-} from "./schemas.js";
+  CreateNetworkParams,
+  CreateNetworkResponse,
+  DeleteNetworkRouteParams,
+  DeleteNetworkRouteResponse,
+  DeleteNetworkSubnetParams,
+  DeleteNetworkSubnetResponse,
+  GetNetworkActionResponse,
+  GetNetworkResponse,
+  ListNetworkActionsParams,
+  ListNetworkActionsResponse,
+  ListNetworkMembersParams,
+  ListNetworkMembersResponse,
+  ListNetworksParams,
+  ListNetworksResponse,
+  Network,
+  NetworkMember,
+  UpdateNetworkParams,
+  UpdateNetworkResponse,
+} from "./types";
 
 /**
  * Networks API client
+ *
+ * Networks are private networks servers and load balancers can be attached to.
+ * A network consists of subnets (IP ranges resources get their IPs from) and
+ * routes.
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#networks
  */
-export class NetworksClient {
-  constructor(private readonly client: HCloudClient) {}
+export class NetworksClient extends NamedResource<Network, ListNetworksParams, "networks"> {
+  protected readonly itemsKey = "networks";
 
   /**
-   * Returns all Network objects.
+   * Actions of all networks: `list()`, `get()`, `waitFor()` and `waitForAll()`.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of networks with pagination metadata
+   * @example
+   * ```typescript
+   * const { actions } = await client.networks.actions.list({ status: "running" });
+   * ```
+   */
+  public readonly actions = new ResourceActionsClient(this.client, "/networks");
+
+  /**
+   * Returns a page of networks.
+   *
+   * @param params - Filters and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-list-networks
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
+   * const { networks } = await client.networks.list({ label_selector: "environment=production" });
    *
-   * // List all networks
-   * const result = await client.networks.list();
-   *
-   * // List networks with filters
-   * const networks = await client.networks.list({
-   *   name: 'my-network',
-   *   label_selector: 'environment=production',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
-   * });
+   * // All networks across all pages
+   * const all = await client.networks.listAll();
    * ```
    */
-  async list(params?: ListNetworksParams): Promise<ListNetworksResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/networks", queryParams);
-
-    return validate(listNetworksResponseSchema, response, {
-      context: "List networks response",
-      detailed: true,
-    });
+  list(params?: ListNetworksParams, options?: RequestOptions): Promise<ListNetworksResponse> {
+    return this._get("/networks", listNetworksResponseSchema, params, options);
   }
 
   /**
-   * Creates a new Network.
+   * Returns a specific network.
    *
-   * @param params - Parameters for creating the network
-   * @returns Promise resolving to the created network and action
-   * @see https://docs.hetzner.cloud/reference/cloud#networks-create-a-network
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Create a network
-   * const network = await client.networks.create({
-   *   name: 'my-network',
-   *   ip_range: '10.0.0.0/16',
-   *   subnets: [{
-   *     type: 'cloud',
-   *     network_zone: 'eu-central'
-   *   }],
-   *   labels: { environment: 'production' }
-   * });
-   * ```
-   */
-  async create(params: CreateNetworkParams): Promise<CreateNetworkResponse> {
-    const validatedParams = validate(createNetworkRequestSchema, params, {
-      context: "Create network request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>("/networks", validatedParams);
-
-    return validate(createNetworkResponseSchema, response, {
-      context: "Create network response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Returns a specific Network object.
-   *
-   * @param id - ID of the Network
-   * @returns Promise resolving to the network
+   * @param id - ID of the network
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-get-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a network by ID
-   * const network = await client.networks.get(12345);
-   * console.log(network.network.name);
+   * const { network } = await client.networks.get(12345);
+   * console.log(network.ip_range);
    * ```
    */
-  async get(id: number): Promise<GetNetworkResponse> {
-    const response = await this.client.get<unknown>(`/networks/${id}`);
-
-    return validate(getNetworkResponseSchema, response, {
-      context: "Get network response",
-      detailed: true,
-    });
+  get(id: number, options?: RequestOptions): Promise<GetNetworkResponse> {
+    return this._get(path`/networks/${id}`, getNetworkResponseSchema, undefined, options);
   }
 
   /**
-   * Updates the Network.
+   * Creates a new network.
    *
-   * You can update a Network's name, labels, and expose_routes_to_vswitch.
+   * @param params - Name, IP range and optional subnets, routes and labels
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#networks-create-a-network
    *
-   * @param id - ID of the Network
-   * @param params - Parameters to update (name, labels, and/or expose_routes_to_vswitch)
-   * @returns Promise resolving to the updated network
+   * @example
+   * ```typescript
+   * const { network } = await client.networks.create({
+   *   name: "my-network",
+   *   ip_range: "10.0.0.0/16",
+   *   subnets: [{ type: "cloud", network_zone: "eu-central", ip_range: "10.0.1.0/24" }],
+   * });
+   * ```
+   */
+  create(params: CreateNetworkParams, options?: RequestOptions): Promise<CreateNetworkResponse> {
+    return this._post(
+      "/networks",
+      createNetworkResponseSchema,
+      params,
+      createNetworkRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Updates the name, labels and/or `expose_routes_to_vswitch` of a network.
+   *
+   * @param id - ID of the network
+   * @param params - Fields to update
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-update-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Update network name
-   * const updated = await client.networks.update(12345, {
-   *   name: 'new-network-name'
-   * });
-   *
-   * // Update labels
-   * const updated = await client.networks.update(12345, {
-   *   labels: { environment: 'production', team: 'backend' }
+   * const { network } = await client.networks.update(12345, {
+   *   name: "new-name",
+   *   labels: { environment: "production" },
    * });
    * ```
    */
-  async update(id: number, params: UpdateNetworkParams): Promise<UpdateNetworkResponse> {
-    const validatedParams = validate(updateNetworkRequestSchema, params, {
-      context: "Update network request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(`/networks/${id}`, validatedParams);
-
-    return validate(updateNetworkResponseSchema, response, {
-      context: "Update network response",
-      detailed: true,
-    });
+  update(
+    id: number,
+    params: UpdateNetworkParams,
+    options?: RequestOptions,
+  ): Promise<UpdateNetworkResponse> {
+    return this._put(
+      path`/networks/${id}`,
+      updateNetworkResponseSchema,
+      params,
+      updateNetworkRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Deletes a Network.
+   * Deletes a network. Attached servers and load balancers are detached first.
    *
-   * @param id - ID of the Network
-   * @returns Promise resolving to empty object
+   * @param id - ID of the network
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Delete a network
    * await client.networks.delete(12345);
    * ```
    */
-  async delete(id: number): Promise<DeleteNetworkResponse> {
-    const response = await this.client.delete<unknown>(`/networks/${id}`);
-
-    return validate(deleteNetworkResponseSchema, response, {
-      context: "Delete network response",
-      detailed: true,
-    });
+  delete(id: number, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/networks/${id}`, null, options);
   }
 
   /**
-   * Returns all Action objects for a Network.
+   * Returns a page of members of a network: the servers and load balancers
+   * attached to it, with their IPs, subnet and attachment status.
    *
-   * @param id - ID of the Network
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of actions with pagination metadata
+   * @param id - ID of the network
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#networks
+   *
+   * @example
+   * ```typescript
+   * const { members } = await client.networks.listMembers(12345, {
+   *   type: "server",
+   *   sort: "ip:asc",
+   * });
+   * ```
+   */
+  listMembers(
+    id: number,
+    params?: ListNetworkMembersParams,
+    options?: RequestOptions,
+  ): Promise<ListNetworkMembersResponse> {
+    return this._get(
+      path`/networks/${id}/members`,
+      listNetworkMembersResponseSchema,
+      params,
+      options,
+    );
+  }
+
+  /**
+   * Iterates over all members of a network, transparently fetching page after page.
+   *
+   * @param id - ID of the network
+   * @param params - Same filters as `listMembers()`
+   * @param options - Request options applied to every page request
+   *
+   * @example
+   * ```typescript
+   * for await (const member of client.networks.iterateMembers(12345, { status: "error" })) {
+   *   console.log(member.type, member.id, member.ip);
+   * }
+   * ```
+   */
+  async *iterateMembers(
+    id: number,
+    params?: ListNetworkMembersParams,
+    options?: RequestOptions,
+  ): AsyncGenerator<NetworkMember, void, undefined> {
+    const pages = iteratePages(
+      (pageParams: ListNetworkMembersParams) => this.listMembers(id, pageParams, options),
+      params,
+    );
+    for await (const page of pages) {
+      yield* page.members;
+    }
+  }
+
+  /**
+   * Fetches all members of a network across all pages.
+   *
+   * @param id - ID of the network
+   * @param params - Same filters as `listMembers()`
+   * @param options - Request options applied to every page request
+   *
+   * @example
+   * ```typescript
+   * const loadBalancers = await client.networks.listAllMembers(12345, { type: "load_balancer" });
+   * ```
+   */
+  async listAllMembers(
+    id: number,
+    params?: ListNetworkMembersParams,
+    options?: RequestOptions,
+  ): Promise<NetworkMember[]> {
+    const members: NetworkMember[] = [];
+    for await (const member of this.iterateMembers(id, params, options)) {
+      members.push(member);
+    }
+    return members;
+  }
+
+  /**
+   * Returns a page of actions of a network.
+   *
+   * @param id - ID of the network
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-list-actions-for-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all actions for a network
-   * const actions = await client.networks.listActions(12345);
-   *
-   * // List actions with filters
-   * const runningActions = await client.networks.listActions(12345, {
-   *   status: ['running'],
-   *   sort: ['started:desc']
+   * const { actions } = await client.networks.listActions(12345, {
+   *   status: "running",
+   *   sort: "started:desc",
    * });
    * ```
    */
-  async listActions(
+  listActions(
     id: number,
     params?: ListNetworkActionsParams,
+    options?: RequestOptions,
   ): Promise<ListNetworkActionsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.status) {
-      queryParams.status = Array.isArray(params.status) ? params.status : [params.status];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>(`/networks/${id}/actions`, queryParams);
-
-    return validate(listNetworkActionsResponseSchema, response, {
-      context: "List network actions response",
-      detailed: true,
-    });
+    return this._get(path`/networks/${id}/actions`, listActionsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific Action object for a Network.
+   * Returns a specific action of a network.
    *
-   * @param id - ID of the Network
-   * @param actionId - ID of the Action
-   * @returns Promise resolving to the action
+   * @param id - ID of the network
+   * @param actionId - ID of the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-get-an-action-for-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get an action by ID
-   * const action = await client.networks.getAction(12345, 67890);
-   * console.log(action.action.command);
+   * const { action } = await client.networks.getAction(12345, 67890);
+   * console.log(action.status);
    * ```
    */
-  async getAction(id: number, actionId: number): Promise<GetNetworkActionResponse> {
-    const response = await this.client.get<unknown>(`/networks/${id}/actions/${actionId}`);
-
-    return validate(getNetworkActionResponseSchema, response, {
-      context: "Get network action response",
-      detailed: true,
-    });
+  getAction(
+    id: number,
+    actionId: number,
+    options?: RequestOptions,
+  ): Promise<GetNetworkActionResponse> {
+    return this._get(
+      path`/networks/${id}/actions/${actionId}`,
+      getActionResponseSchema,
+      undefined,
+      options,
+    );
   }
 
   /**
-   * Adds a route to a Network.
+   * Adds a route to a network.
    *
-   * @param id - ID of the Network
-   * @param params - Route configuration
-   * @returns Promise resolving to the action
+   * @param id - ID of the network
+   * @param params - Destination and gateway of the route
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-add-a-route-to-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.networks.addRoute(12345, {
-   *   destination: '10.0.1.0/24',
-   *   gateway: '10.0.0.1'
+   * const { action } = await client.networks.addRoute(12345, {
+   *   destination: "10.100.1.0/24",
+   *   gateway: "10.0.1.1",
    * });
+   * await client.actions.waitFor(action);
    * ```
    */
-  async addRoute(id: number, params: AddNetworkRouteParams): Promise<AddNetworkRouteResponse> {
-    const validatedParams = validate(addNetworkRouteRequestSchema, params, {
-      context: "Add network route request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/networks/${id}/actions/add_route`,
-      validatedParams,
+  addRoute(
+    id: number,
+    params: AddNetworkRouteParams,
+    options?: RequestOptions,
+  ): Promise<AddNetworkRouteResponse> {
+    return this._post(
+      path`/networks/${id}/actions/add_route`,
+      actionResponseSchema,
+      params,
+      addNetworkRouteRequestSchema,
+      options,
     );
-
-    return validate(addNetworkRouteResponseSchema, response, {
-      context: "Add network route response",
-      detailed: true,
-    });
   }
 
   /**
-   * Deletes a route from a Network.
+   * Deletes a route from a network.
    *
-   * @param id - ID of the Network
-   * @param params - Route to delete
-   * @returns Promise resolving to the action
+   * @param id - ID of the network
+   * @param params - Destination and gateway of the route to delete
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-route-from-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.networks.deleteRoute(12345, {
-   *   destination: '10.0.1.0/24',
-   *   gateway: '10.0.0.1'
+   * const { action } = await client.networks.deleteRoute(12345, {
+   *   destination: "10.100.1.0/24",
+   *   gateway: "10.0.1.1",
    * });
    * ```
    */
-  async deleteRoute(
+  deleteRoute(
     id: number,
     params: DeleteNetworkRouteParams,
+    options?: RequestOptions,
   ): Promise<DeleteNetworkRouteResponse> {
-    const validatedParams = validate(deleteNetworkRouteRequestSchema, params, {
-      context: "Delete network route request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/networks/${id}/actions/delete_route`,
-      validatedParams,
+    return this._post(
+      path`/networks/${id}/actions/delete_route`,
+      actionResponseSchema,
+      params,
+      deleteNetworkRouteRequestSchema,
+      options,
     );
-
-    return validate(deleteNetworkRouteResponseSchema, response, {
-      context: "Delete network route response",
-      detailed: true,
-    });
   }
 
   /**
-   * Adds a subnet to a Network.
+   * Adds a subnet to a network. If `ip_range` is omitted, the API picks a free range.
    *
-   * @param id - ID of the Network
-   * @param params - Subnet configuration
-   * @returns Promise resolving to the action
+   * @param id - ID of the network
+   * @param params - Subnet type, network zone and optional IP range / vSwitch ID
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-add-a-subnet-to-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.networks.addSubnet(12345, {
-   *   type: 'cloud',
-   *   network_zone: 'eu-central',
-   *   ip_range: '10.0.1.0/24'
+   * const { action } = await client.networks.addSubnet(12345, {
+   *   type: "cloud",
+   *   network_zone: "eu-central",
+   *   ip_range: "10.0.2.0/24",
    * });
    * ```
    */
-  async addSubnet(
+  addSubnet(
     id: number,
     params: AddNetworkSubnetParams,
+    options?: RequestOptions,
   ): Promise<AddNetworkSubnetResponse> {
-    const validatedParams = validate(addNetworkSubnetRequestSchema, params, {
-      context: "Add network subnet request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/networks/${id}/actions/add_subnet`,
-      validatedParams,
+    return this._post(
+      path`/networks/${id}/actions/add_subnet`,
+      actionResponseSchema,
+      params,
+      addNetworkSubnetRequestSchema,
+      options,
     );
-
-    return validate(addNetworkSubnetResponseSchema, response, {
-      context: "Add network subnet response",
-      detailed: true,
-    });
   }
 
   /**
-   * Deletes a subnet from a Network.
+   * Deletes a subnet from a network. No resources may be attached to the subnet.
    *
-   * @param id - ID of the Network
-   * @param params - Subnet to delete
-   * @returns Promise resolving to the action
+   * @param id - ID of the network
+   * @param params - IP range of the subnet to delete
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-subnet-from-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.networks.deleteSubnet(12345, {
-   *   ip_range: '10.0.1.0/24'
-   * });
+   * const { action } = await client.networks.deleteSubnet(12345, { ip_range: "10.0.2.0/24" });
    * ```
    */
-  async deleteSubnet(
+  deleteSubnet(
     id: number,
     params: DeleteNetworkSubnetParams,
+    options?: RequestOptions,
   ): Promise<DeleteNetworkSubnetResponse> {
-    const validatedParams = validate(deleteNetworkSubnetRequestSchema, params, {
-      context: "Delete network subnet request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/networks/${id}/actions/delete_subnet`,
-      validatedParams,
+    return this._post(
+      path`/networks/${id}/actions/delete_subnet`,
+      actionResponseSchema,
+      params,
+      deleteNetworkSubnetRequestSchema,
+      options,
     );
-
-    return validate(deleteNetworkSubnetResponseSchema, response, {
-      context: "Delete network subnet response",
-      detailed: true,
-    });
   }
 
   /**
-   * Changes the IP range of a Network.
+   * Changes the IP range of a network. The range can only be extended, not shrunk.
    *
-   * @param id - ID of the Network
-   * @param params - New IP range
-   * @returns Promise resolving to the action
+   * @param id - ID of the network
+   * @param params - New IP range of the whole network
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-change-ip-range-of-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.networks.changeIpRange(12345, {
-   *   ip_range: '10.0.0.0/16'
-   * });
+   * const { action } = await client.networks.changeIpRange(12345, { ip_range: "10.0.0.0/12" });
    * ```
    */
-  async changeIpRange(
+  changeIpRange(
     id: number,
     params: ChangeNetworkIpRangeParams,
+    options?: RequestOptions,
   ): Promise<ChangeNetworkIpRangeResponse> {
-    const validatedParams = validate(changeNetworkIpRangeRequestSchema, params, {
-      context: "Change network IP range request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/networks/${id}/actions/change_ip_range`,
-      validatedParams,
+    return this._post(
+      path`/networks/${id}/actions/change_ip_range`,
+      actionResponseSchema,
+      params,
+      changeNetworkIpRangeRequestSchema,
+      options,
     );
-
-    return validate(changeNetworkIpRangeResponseSchema, response, {
-      context: "Change network IP range response",
-      detailed: true,
-    });
   }
 
   /**
-   * Changes the Protection configuration of a Network.
+   * Changes the protection configuration of a network.
    *
-   * @param id - ID of the Network
+   * @param id - ID of the network
    * @param params - Protection configuration
-   * @returns Promise resolving to the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#networks-change-network-protection
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Enable delete protection
-   * const result = await client.networks.changeProtection(12345, {
-   *   delete: true
-   * });
+   * const { action } = await client.networks.changeProtection(12345, { delete: true });
    * ```
    */
-  async changeProtection(
+  changeProtection(
     id: number,
     params: ChangeNetworkProtectionParams,
+    options?: RequestOptions,
   ): Promise<ChangeNetworkProtectionResponse> {
-    const validatedParams = validate(changeNetworkProtectionRequestSchema, params, {
-      context: "Change network protection request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/networks/${id}/actions/change_protection`,
-      validatedParams,
+    return this._post(
+      path`/networks/${id}/actions/change_protection`,
+      actionResponseSchema,
+      params,
+      changeNetworkProtectionRequestSchema,
+      options,
     );
-
-    return validate(changeNetworkProtectionResponseSchema, response, {
-      context: "Change network protection response",
-      detailed: true,
-    });
   }
 }

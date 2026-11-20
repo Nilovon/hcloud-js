@@ -1,16 +1,34 @@
 /**
  * Zod schemas for Hetzner Cloud DNS (Zones) API
- * @see https://docs.hetzner.cloud/reference/cloud#dns
+ * @see https://docs.hetzner.cloud/reference/cloud#zones
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets
  */
 
 import { z } from "zod";
-import { actionSchema, actionResourceSchema } from "../../apis/actions/schemas";
-import { paginationMetaSchema } from "../../apis/common/schemas";
+import { actionSchema } from "../actions/schemas";
+import { labelsSchema, metaSchema } from "../common/schemas";
+
+/**
+ * Zone mode schema
+ *
+ * - `primary`: RRSets are managed via the API or the Console
+ * - `secondary`: Hetzner's nameservers fetch the RRSets from the primary nameservers via AXFR
+ */
+export const zoneModeSchema = z.enum(["primary", "secondary"]);
 
 /**
  * Zone status schema
+ *
+ * - `ok`: the zone is published to the authoritative nameservers
+ * - `updating`: the zone is currently being published
+ * - `error`: the zone could not be published
  */
-export const zoneStatusSchema = z.enum(["verified", "pending", "unknown"]);
+export const zoneStatusSchema = z.enum(["ok", "updating", "error"]);
+
+/**
+ * Zone registrar schema
+ */
+export const zoneRegistrarSchema = z.enum(["hetzner", "other", "unknown"]);
 
 /**
  * Zone protection schema
@@ -20,65 +38,152 @@ export const zoneProtectionSchema = z.object({
 });
 
 /**
- * Zone schema
+ * TSIG algorithm of a primary nameserver
  */
-export const zoneSchema = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    ttl: z.number(),
-    nameservers: z.array(z.string()),
-    status: zoneStatusSchema,
-    created: z.string(),
-    modified: z.string(),
-    verified: z.string().nullable(),
-    records_count: z.number(),
-    is_secondary_dns: z.boolean(),
-    txt_verification: z
-      .object({
-        name: z.string(),
-        record: z.string(),
-      })
-      .nullable(),
-    protected: z.boolean().optional(),
-    labels: z.record(z.string(), z.string()),
-    blocking: z.array(actionResourceSchema).optional(),
-  })
-  .passthrough();
+export const zoneTSIGAlgorithmSchema = z.enum(["hmac-md5", "hmac-sha1", "hmac-sha256"]);
+
+/**
+ * Primary nameserver of a zone in secondary mode
+ */
+export const zonePrimaryNameserverSchema = z.object({
+  address: z.string(),
+  port: z.number().optional(),
+  tsig_algorithm: zoneTSIGAlgorithmSchema.nullable().optional(),
+  tsig_key: z.string().nullable().optional(),
+});
+
+/**
+ * Delegation status of the authoritative nameservers of a zone
+ */
+export const zoneDelegationStatusSchema = z.enum([
+  "valid",
+  "partially-valid",
+  "invalid",
+  "lame",
+  "unregistered",
+  "unknown",
+]);
+
+/**
+ * Authoritative nameservers of a zone
+ */
+export const zoneAuthoritativeNameserversSchema = z.object({
+  assigned: z.array(z.string()),
+  delegated: z.array(z.string()),
+  delegation_last_check: z.string().nullable(),
+  delegation_status: zoneDelegationStatusSchema,
+});
+
+/**
+ * Zone schema
+ * @see https://docs.hetzner.cloud/reference/cloud#zones
+ */
+export const zoneSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  created: z.string(),
+  mode: zoneModeSchema,
+  ttl: z.number(),
+  labels: labelsSchema,
+  protection: zoneProtectionSchema,
+  status: zoneStatusSchema,
+  record_count: z.number(),
+  registrar: zoneRegistrarSchema,
+  primary_nameservers: z.array(zonePrimaryNameserverSchema).nullable().optional(),
+  authoritative_nameservers: zoneAuthoritativeNameserversSchema,
+});
+
+/**
+ * RRSet types known to this SDK version
+ */
+export const rrsetKnownTypeSchema = z.enum([
+  "A",
+  "AAAA",
+  "CAA",
+  "CNAME",
+  "DS",
+  "HINFO",
+  "HTTPS",
+  "MX",
+  "NS",
+  "PTR",
+  "RP",
+  "SOA",
+  "SRV",
+  "SVCB",
+  "TLSA",
+  "TXT",
+]);
+
+/**
+ * RRSet type schema
+ *
+ * Accepts the well-known types as well as any other non-empty string, so types
+ * added to the API later can be used without an SDK update.
+ */
+export const rrsetTypeSchema = z.custom<z.infer<typeof rrsetKnownTypeSchema> | (string & {})>(
+  (value) => typeof value === "string" && value.length > 0,
+  'Invalid input: expected an RRSet type such as "A"',
+);
+
+/**
+ * RRSet protection schema
+ */
+export const rrsetProtectionSchema = z.object({
+  change: z.boolean(),
+});
 
 /**
  * RRSet record schema
  */
 export const rrsetRecordSchema = z.object({
   value: z.string(),
-  comment: z.string().nullable(),
+  comment: z.string().nullable().optional(),
 });
 
 /**
- * RRSet protection schema
+ * RRSet (resource record set) schema
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets
  */
-export const rrsetProtectionSchema = z.object({
-  delete: z.boolean(),
+export const rrsetSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: rrsetTypeSchema,
+  ttl: z.number().nullable(),
+  labels: labelsSchema,
+  protection: rrsetProtectionSchema,
+  records: z.array(rrsetRecordSchema),
+  zone: z.number(),
 });
 
 /**
- * RRSet schema
+ * Primary nameserver as sent in requests
  */
-export const rrsetSchema = z
-  .object({
-    type: z.string(),
-    id: z.string(),
-    name: z.string(),
-    zone_id: z.string(),
-    created: z.string(),
-    modified: z.string(),
-    ttl: z.number().nullable(),
-    records: z.array(rrsetRecordSchema),
-    protected: z.boolean().optional(),
-    labels: z.record(z.string(), z.string()),
-    blocking: z.array(actionResourceSchema).optional(),
-  })
-  .passthrough();
+export const zonePrimaryNameserverInputSchema = z.object({
+  address: z.string().min(1),
+  port: z.number().int().optional(),
+  tsig_algorithm: zoneTSIGAlgorithmSchema.optional(),
+  tsig_key: z.string().optional(),
+});
+
+/**
+ * RRSet record as sent in requests
+ */
+export const rrsetRecordInputSchema = z.object({
+  value: z.string().min(1),
+  comment: z.string().optional(),
+});
+
+/**
+ * RRSet as sent when creating a zone
+ */
+export const createZoneRRSetInputSchema = z.object({
+  name: z.string().min(1),
+  type: rrsetTypeSchema,
+  ttl: z.number().int().nullable().optional(),
+  labels: labelsSchema.optional(),
+  records: z.array(rrsetRecordInputSchema).optional(),
+});
 
 /**
  * List Zones response schema
@@ -86,11 +191,7 @@ export const rrsetSchema = z
  */
 export const listZonesResponseSchema = z.object({
   zones: z.array(zoneSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+  meta: metaSchema.optional(),
 });
 
 /**
@@ -98,9 +199,13 @@ export const listZonesResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#zones-create-a-zone
  */
 export const createZoneRequestSchema = z.object({
-  name: z.string(),
-  ttl: z.number().optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  name: z.string().min(1),
+  mode: zoneModeSchema,
+  ttl: z.number().int().optional(),
+  labels: labelsSchema.optional(),
+  primary_nameservers: z.array(zonePrimaryNameserverInputSchema).optional(),
+  rrsets: z.array(createZoneRRSetInputSchema).optional(),
+  zonefile: z.string().optional(),
 });
 
 /**
@@ -109,7 +214,7 @@ export const createZoneRequestSchema = z.object({
  */
 export const createZoneResponseSchema = z.object({
   zone: zoneSchema,
-  action: actionSchema.optional(),
+  action: actionSchema,
 });
 
 /**
@@ -125,8 +230,7 @@ export const getZoneResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#zones-update-a-zone
  */
 export const updateZoneRequestSchema = z.object({
-  ttl: z.number().optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
@@ -138,121 +242,57 @@ export const updateZoneResponseSchema = z.object({
 });
 
 /**
- * Delete Zone response schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-delete-a-zone
- */
-export const deleteZoneResponseSchema = z.object({});
-
-/**
- * Export Zone response schema
+ * Export Zone file response schema
  * @see https://docs.hetzner.cloud/reference/cloud#zones-export-a-zone-file
  */
 export const exportZoneResponseSchema = z.object({
-  zone_file: z.string(),
-});
-
-/**
- * List Zone Actions response schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-list-actions-for-a-zone
- */
-export const listZoneActionsResponseSchema = z.object({
-  actions: z.array(actionSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
-});
-
-/**
- * Get Zone Action response schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-get-an-action-for-a-zone
- */
-export const getZoneActionResponseSchema = z.object({
-  action: actionSchema,
-});
-
-/**
- * Change Zone Primary Nameservers request schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-primary-nameservers
- */
-export const changeZonePrimaryNameserversRequestSchema = z.object({
-  nameservers: z.array(z.string()),
-});
-
-/**
- * Change Zone Primary Nameservers response schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-primary-nameservers
- */
-export const changeZonePrimaryNameserversResponseSchema = z.object({
-  action: actionSchema,
-});
-
-/**
- * Change Zone Protection request schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-protection
- */
-export const changeZoneProtectionRequestSchema = z.object({
-  delete: z.boolean(),
-});
-
-/**
- * Change Zone Protection response schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-protection
- */
-export const changeZoneProtectionResponseSchema = z.object({
-  action: actionSchema,
-});
-
-/**
- * Change Zone Default TTL request schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-default-ttl
- */
-export const changeZoneDefaultTTLRequestSchema = z.object({
-  ttl: z.number(),
-});
-
-/**
- * Change Zone Default TTL response schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-change-a-zones-default-ttl
- */
-export const changeZoneDefaultTTLResponseSchema = z.object({
-  action: actionSchema,
+  zonefile: z.string(),
 });
 
 /**
  * Import Zone file request schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-import-a-zone-file
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-import-a-zone-file
  */
 export const importZoneFileRequestSchema = z.object({
-  zone_file: z.string(),
+  zonefile: z.string().min(1),
 });
 
 /**
- * Import Zone file response schema
- * @see https://docs.hetzner.cloud/reference/cloud#zones-import-a-zone-file
+ * Change Zone Protection request schema
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-protection
  */
-export const importZoneFileResponseSchema = z.object({
-  zone: zoneSchema,
-  action: actionSchema,
+export const changeZoneProtectionRequestSchema = z.object({
+  delete: z.boolean().optional(),
+});
+
+/**
+ * Change Zone Default TTL request schema
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-default-ttl
+ */
+export const changeZoneDefaultTTLRequestSchema = z.object({
+  ttl: z.number().int(),
+});
+
+/**
+ * Change Zone Primary Nameservers request schema
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-actions-change-a-zones-primary-nameservers
+ */
+export const changeZonePrimaryNameserversRequestSchema = z.object({
+  primary_nameservers: z.array(zonePrimaryNameserverInputSchema),
 });
 
 /**
  * List RRSets response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-list-rrsets
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-list-rrsets
  */
 export const listRRSetsResponseSchema = z.object({
   rrsets: z.array(rrsetSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+  meta: metaSchema.optional(),
 });
 
 /**
  * Get RRSet response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-get-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-get-an-rrset
  */
 export const getRRSetResponseSchema = z.object({
   rrset: rrsetSchema,
@@ -260,178 +300,86 @@ export const getRRSetResponseSchema = z.object({
 
 /**
  * Create RRSet request schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-create-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-create-an-rrset
  */
 export const createRRSetRequestSchema = z.object({
-  name: z.string(),
-  type: z.string(),
-  ttl: z.number().optional(),
-  records: z.array(
-    z.object({
-      value: z.string(),
-      comment: z.string().nullable().optional(),
-    }),
-  ),
-  labels: z.record(z.string(), z.string()).optional(),
+  name: z.string().min(1),
+  type: rrsetTypeSchema,
+  ttl: z.number().int().nullable().optional(),
+  labels: labelsSchema.optional(),
+  records: z.array(rrsetRecordInputSchema).optional(),
 });
 
 /**
  * Create RRSet response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-create-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-create-an-rrset
  */
 export const createRRSetResponseSchema = z.object({
   rrset: rrsetSchema,
-  action: actionSchema.optional(),
+  action: actionSchema,
 });
 
 /**
  * Update RRSet request schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-update-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-update-an-rrset
  */
 export const updateRRSetRequestSchema = z.object({
-  ttl: z.number().nullable().optional(),
-  records: z
-    .array(
-      z.object({
-        value: z.string(),
-        comment: z.string().nullable().optional(),
-      }),
-    )
-    .optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
  * Update RRSet response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-update-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrsets-update-an-rrset
  */
 export const updateRRSetResponseSchema = z.object({
   rrset: rrsetSchema,
-  action: actionSchema.optional(),
-});
-
-/**
- * Delete RRSet response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-delete-an-rrset
- */
-export const deleteRRSetResponseSchema = z.object({
-  action: actionSchema.optional(),
 });
 
 /**
  * Change RRSet Protection request schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-change-an-rrsets-protection
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-change-an-rrsets-protection
  */
 export const changeRRSetProtectionRequestSchema = z.object({
-  delete: z.boolean(),
+  change: z.boolean().optional(),
 });
 
 /**
- * Change RRSet Protection response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-change-an-rrsets-protection
- */
-export const changeRRSetProtectionResponseSchema = z.object({
-  action: actionSchema,
-});
-
-/**
- * Change RRSet TTL request schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-change-an-rrsets-ttl
+ * Change RRSet TTL request schema. `null` resets the TTL to the default TTL of the zone.
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-change-an-rrsets-ttl
  */
 export const changeRRSetTTLRequestSchema = z.object({
-  ttl: z.number().nullable(),
-});
-
-/**
- * Change RRSet TTL response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-change-an-rrsets-ttl
- */
-export const changeRRSetTTLResponseSchema = z.object({
-  action: actionSchema,
+  ttl: z.number().int().nullable(),
 });
 
 /**
  * Set RRSet Records request schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-set-records-of-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-set-records-of-an-rrset
  */
 export const setRRSetRecordsRequestSchema = z.object({
-  records: z.array(
-    z.object({
-      value: z.string(),
-      comment: z.string().nullable().optional(),
-    }),
-  ),
-  ttl: z.number().nullable().optional(),
-});
-
-/**
- * Set RRSet Records response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-set-records-of-an-rrset
- */
-export const setRRSetRecordsResponseSchema = z.object({
-  action: actionSchema,
+  records: z.array(rrsetRecordInputSchema),
 });
 
 /**
  * Add RRSet Records request schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-add-records-to-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-add-records-to-an-rrset
  */
 export const addRRSetRecordsRequestSchema = z.object({
-  records: z.array(
-    z.object({
-      value: z.string(),
-      comment: z.string().nullable().optional(),
-    }),
-  ),
-  ttl: z.number().nullable().optional(),
-});
-
-/**
- * Add RRSet Records response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-add-records-to-an-rrset
- */
-export const addRRSetRecordsResponseSchema = z.object({
-  action: actionSchema,
+  records: z.array(rrsetRecordInputSchema),
+  ttl: z.number().int().optional(),
 });
 
 /**
  * Remove RRSet Records request schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-remove-records-from-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-remove-records-from-an-rrset
  */
 export const removeRRSetRecordsRequestSchema = z.object({
-  records: z.array(
-    z.object({
-      value: z.string(),
-      comment: z.string().nullable().optional(),
-    }),
-  ),
-});
-
-/**
- * Remove RRSet Records response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-remove-records-from-an-rrset
- */
-export const removeRRSetRecordsResponseSchema = z.object({
-  action: actionSchema,
+  records: z.array(rrsetRecordInputSchema),
 });
 
 /**
  * Update RRSet Records request schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-update-records-of-an-rrset
+ * @see https://docs.hetzner.cloud/reference/cloud#zone-rrset-actions-update-records-of-an-rrset
  */
 export const updateRRSetRecordsRequestSchema = z.object({
-  records: z.array(
-    z.object({
-      value: z.string(),
-      comment: z.string().nullable().optional(),
-    }),
-  ),
-});
-
-/**
- * Update RRSet Records response schema
- * @see https://docs.hetzner.cloud/reference/cloud#rrsets-update-records-of-an-rrset
- */
-export const updateRRSetRecordsResponseSchema = z.object({
-  action: actionSchema,
+  records: z.array(rrsetRecordInputSchema),
 });
