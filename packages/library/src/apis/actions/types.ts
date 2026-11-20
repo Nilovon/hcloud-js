@@ -1,67 +1,65 @@
 /**
  * Types for Hetzner Cloud Actions API
- * Types are inferred from Zod schemas
- * @see https://docs.hetzner.cloud/reference/cloud#actions-get-multiple-actions
+ * @see https://docs.hetzner.cloud/reference/cloud#actions
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  listActionsResponseSchema,
-  getActionResponseSchema,
-} from "../../apis/actions/schemas";
-import { actionSchema, actionResourceSchema } from "../../apis/actions/schemas";
 import type { z } from "zod";
+import type { OneOrMany, PageParams, SortParam } from "../common/types";
+import type {
+  actionErrorSchema,
+  actionResourceSchema,
+  actionResponseSchema,
+  actionSchema,
+  actionsResponseSchema,
+  actionStatusSchema,
+  getActionResponseSchema,
+  listActionsResponseSchema,
+} from "./schemas";
 
 /**
- * Action resource information
+ * Resource an action relates to
  */
 export type ActionResource = z.infer<typeof actionResourceSchema>;
 
 /**
- * Hetzner Cloud Action
- * @see https://docs.hetzner.cloud/reference/cloud#actions-get-multiple-actions
+ * Error of a failed action
+ */
+export type ActionError = z.infer<typeof actionErrorSchema>;
+
+/**
+ * Hetzner Cloud Action: an asynchronous operation on one or more resources
+ * @see https://docs.hetzner.cloud/reference/cloud#actions
  */
 export type Action = z.infer<typeof actionSchema>;
 
 /**
  * Action status values
  */
-export type ActionStatus = "running" | "success" | "error";
+export type ActionStatus = z.infer<typeof actionStatusSchema>;
 
 /**
- * Pagination metadata
- * @see https://docs.hetzner.cloud/reference/cloud#pagination
- * Re-exported from servers module for consistency
+ * Fields actions can be sorted by
  */
-export type { PaginationMeta } from "../../apis/servers/types";
+export type ActionSort = SortParam<"id" | "command" | "status" | "started" | "finished">;
 
 /**
  * List Actions query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#actions-get-multiple-actions
  */
-export interface ListActionsParams {
+export interface ListActionsParams extends PageParams {
   /**
-   * Can be used multiple times. The response will only contain Actions matching the specified IDs.
+   * Only return actions with the given IDs.
    */
-  id?: number | number[];
+  id?: OneOrMany<number>;
   /**
-   * Can be used multiple times. The response will only contain Actions matching the specified status.
-   * Choices: running, success, error
+   * Only return actions with the given status.
    */
-  status?: ActionStatus | ActionStatus[];
+  status?: OneOrMany<ActionStatus>;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, command, command:asc, command:desc, status, status:asc, status:desc, progress, progress:asc, progress:desc, started, started:asc, started:desc, finished, finished:asc, finished:desc
+   * Sort the result.
    * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  sort?: string | string[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
+  sort?: OneOrMany<ActionSort>;
 }
 
 /**
@@ -75,3 +73,66 @@ export type ListActionsResponse = z.infer<typeof listActionsResponseSchema>;
  * @see https://docs.hetzner.cloud/reference/cloud#actions-get-an-action
  */
 export type GetActionResponse = z.infer<typeof getActionResponseSchema>;
+
+/**
+ * Response containing a single action
+ */
+export type ActionResponse = z.infer<typeof actionResponseSchema>;
+
+/**
+ * Response containing multiple actions
+ */
+export type ActionsResponse = z.infer<typeof actionsResponseSchema>;
+
+/**
+ * An action, its ID, or a response containing an action.
+ */
+export type ActionInput = number | Action | { action: Action };
+
+/**
+ * A list of actions (or IDs), or a response containing actions. For responses,
+ * `action`, `actions` and `next_actions` are all taken into account.
+ */
+export type ActionsInput =
+  | ReadonlyArray<number | Action>
+  | {
+      action?: Action | null;
+      actions?: readonly Action[] | null;
+      next_actions?: readonly Action[] | null;
+    };
+
+/**
+ * Options for waiting on actions
+ */
+export interface WaitForActionOptions {
+  /**
+   * Delay between polls in milliseconds, or a function computing the delay for
+   * the n-th poll (starting at `0`).
+   *
+   * Default: the client's `actions.pollInterval`, which itself defaults to an
+   * exponential backoff from 500ms up to 5s.
+   */
+  pollInterval?: number | ((attempt: number) => number);
+  /**
+   * @deprecated Use `pollInterval` instead.
+   */
+  interval?: number;
+  /**
+   * Maximum time to wait in milliseconds.
+   * Default: the client's `actions.timeout` (5 minutes).
+   */
+  timeout?: number;
+  /**
+   * Throw a `HCloudActionError` if an action fails. If `false`, failed actions
+   * are returned like successful ones. Default: `true`.
+   */
+  throwOnError?: boolean;
+  /**
+   * Called with the current state of an action after every poll.
+   */
+  onProgress?: (action: Action) => void;
+  /**
+   * Abort waiting.
+   */
+  signal?: AbortSignal;
+}

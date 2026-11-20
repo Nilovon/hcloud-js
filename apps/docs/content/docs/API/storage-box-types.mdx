@@ -1,0 +1,98 @@
+---
+title: Storage Box Types
+description: List the available Storage Box types, their limits and prices
+---
+
+`client.storageBoxTypes` lists the types a [Storage Box](/docs/API/storage-boxes) can have. A type
+defines the size, the snapshot and subaccount limits and the price. Storage Box Types are read-only.
+
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
+```
+
+- Storage Box Types are served by the [Hetzner API](https://docs.hetzner.cloud/reference/hetzner#storage-box-types)
+  (`https://api.hetzner.com/v1`), not by the Hetzner Cloud API. The client picks the host for you;
+  override it with the `hetznerBaseUrl` client option if needed.
+- Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+
+| Method                                                                               | Endpoint                             |
+| ------------------------------------------------------------------------------------ | ------------------------------------ |
+| `list(params?)`                                                                      | `GET /storage_box_types`             |
+| `get(id)`                                                                            | `GET /storage_box_types/{id}`        |
+| `getByName(name)`                                                                    | `GET /storage_box_types?name=`       |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /storage_box_types` (all pages) |
+
+## List Storage Box Types
+
+Returns one page of Storage Box Types. Filters: `name`, `page`, `per_page`.
+
+```typescript
+const { storage_box_types, meta } = await client.storageBoxTypes.list();
+
+for (const type of storage_box_types) {
+  console.log(type.name, type.size, type.prices[0]?.price_monthly.gross);
+}
+```
+
+## Get a Storage Box Type
+
+```typescript
+const { storage_box_type } = await client.storageBoxTypes.get(42);
+console.log(storage_box_type.description, storage_box_type.subaccounts_limit);
+```
+
+## Find by name
+
+`getByName()` returns the type or `undefined`.
+
+```typescript
+const bx11 = await client.storageBoxTypes.getByName("bx11");
+if (bx11?.deprecation) {
+  console.log(`bx11 is unavailable after ${bx11.deprecation.unavailable_after}`);
+}
+```
+
+## All Storage Box Types
+
+`iterate()`, `iteratePages()` and `listAll()` follow the pagination for you, `first()` returns the
+first match or `undefined`.
+
+```typescript
+const all = await client.storageBoxTypes.listAll();
+
+for await (const type of client.storageBoxTypes.iterate()) {
+  console.log(type.name);
+}
+
+const first = await client.storageBoxTypes.first();
+```
+
+## Types
+
+```typescript
+import type { StorageBoxType, StorageBoxTypePrice } from "@nilovonjs/hcloud-js";
+
+interface StorageBoxType {
+  id: number;
+  name: string; // e.g. "bx11"
+  description: string;
+  snapshot_limit: number | null; // max. number of manual snapshots
+  automatic_snapshot_limit: number | null; // max. number of snapshots created by the snapshot plan
+  subaccounts_limit: number;
+  size: number; // bytes
+  prices: StorageBoxTypePrice[];
+  deprecation: { announced: string; unavailable_after: string } | null;
+}
+
+interface StorageBoxTypePrice {
+  location: string; // e.g. "fsn1"
+  price_hourly: { net: string; gross: string };
+  price_monthly: { net: string; gross: string };
+  setup_fee: { net: string; gross: string };
+}
+```
+
+Zod schemas are exported as well: `storageBoxTypeSchema`, `storageBoxTypePriceSchema`,
+`listStorageBoxTypesResponseSchema`, `getStorageBoxTypeResponseSchema`.

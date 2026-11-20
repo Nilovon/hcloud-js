@@ -3,450 +3,350 @@
  * @see https://docs.hetzner.cloud/reference/cloud#volumes
  */
 
-import type { HCloudClient } from "../../client/index";
-import type {
-  ListVolumesParams,
-  ListVolumesResponse,
-  CreateVolumeParams,
-  CreateVolumeResponse,
-  GetVolumeResponse,
-  UpdateVolumeParams,
-  UpdateVolumeResponse,
-  DeleteVolumeResponse,
-  ListVolumeActionsParams,
-  ListVolumeActionsResponse,
-  GetVolumeActionResponse,
-  AttachVolumeToServerParams,
-  AttachVolumeToServerResponse,
-  DetachVolumeResponse,
-  ResizeVolumeParams,
-  ResizeVolumeResponse,
-  ChangeVolumeProtectionParams,
-  ChangeVolumeProtectionResponse,
-  } from "../../apis/volumes/types";
-import { validate } from "../../validation/index";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { ResourceActionsClient } from "../actions/index";
 import {
-  listVolumesResponseSchema,
+  actionResponseSchema,
+  getActionResponseSchema,
+  listActionsResponseSchema,
+} from "../actions/schemas";
+import {
+  attachVolumeToServerRequestSchema,
+  changeVolumeProtectionRequestSchema,
   createVolumeRequestSchema,
   createVolumeResponseSchema,
   getVolumeResponseSchema,
+  listVolumesResponseSchema,
+  resizeVolumeRequestSchema,
   updateVolumeRequestSchema,
   updateVolumeResponseSchema,
-  deleteVolumeResponseSchema,
-  listVolumeActionsResponseSchema,
-  getVolumeActionResponseSchema,
-  attachVolumeToServerRequestSchema,
-  attachVolumeToServerResponseSchema,
-  detachVolumeRequestSchema,
-  detachVolumeResponseSchema,
-  resizeVolumeRequestSchema,
-  resizeVolumeResponseSchema,
-  changeVolumeProtectionRequestSchema,
-  changeVolumeProtectionResponseSchema,
-} from "../../apis/volumes/schemas";
+} from "./schemas";
+import type {
+  AttachVolumeToServerParams,
+  AttachVolumeToServerResponse,
+  ChangeVolumeProtectionParams,
+  ChangeVolumeProtectionResponse,
+  CreateVolumeParams,
+  CreateVolumeResponse,
+  DetachVolumeResponse,
+  GetVolumeActionResponse,
+  GetVolumeResponse,
+  ListVolumeActionsParams,
+  ListVolumeActionsResponse,
+  ListVolumesParams,
+  ListVolumesResponse,
+  ResizeVolumeParams,
+  ResizeVolumeResponse,
+  UpdateVolumeParams,
+  UpdateVolumeResponse,
+  Volume,
+} from "./types";
 
 /**
  * Volumes API client
+ *
+ * Volumes are block storage devices that can be attached to a server in the
+ * same location.
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#volumes
  */
-export class VolumesClient {
-  constructor(private readonly client: HCloudClient) {}
+export class VolumesClient extends NamedResource<Volume, ListVolumesParams, "volumes"> {
+  protected readonly itemsKey = "volumes";
 
   /**
-   * Returns all Volume objects.
+   * Actions of all volumes (`GET /volumes/actions`), including `waitFor()` and
+   * `waitForAll()`.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of volumes with pagination metadata
+   * @example
+   * ```typescript
+   * const { actions } = await client.volumes.actions.list({ status: "running" });
+   * ```
+   */
+  public readonly actions = new ResourceActionsClient(this.client, "/volumes");
+
+  /**
+   * Returns a page of volumes.
+   *
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#volumes-list-volumes
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all volumes
-   * const result = await client.volumes.list();
-   *
-   * // List volumes with filters
-   * const volumes = await client.volumes.list({
-   *   name: 'my-volume',
-   *   label_selector: 'environment=production',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
+   * const { volumes } = await client.volumes.list({
+   *   status: "available",
+   *   label_selector: "environment=production",
+   *   sort: "name:asc",
    * });
+   *
+   * // All volumes across all pages
+   * const all = await client.volumes.listAll();
    * ```
    */
-  async list(params?: ListVolumesParams): Promise<ListVolumesResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/volumes", queryParams);
-
-    return validate(listVolumesResponseSchema, response, {
-      context: "List volumes response",
-      detailed: true,
-    });
+  list(params?: ListVolumesParams, options?: RequestOptions): Promise<ListVolumesResponse> {
+    return this._get("/volumes", listVolumesResponseSchema, params, options);
   }
 
   /**
-   * Creates a new Volume.
+   * Returns a specific volume.
    *
-   * @param params - Parameters for creating the volume
-   * @returns Promise resolving to the created volume and action
-   * @see https://docs.hetzner.cloud/reference/cloud#volumes-create-a-volume
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Create a volume
-   * const volume = await client.volumes.create({
-   *   name: 'my-volume',
-   *   size: 100,
-   *   location: 'nbg1',
-   *   labels: { environment: 'production' }
-   * });
-   *
-   * // Create and attach to a server
-   * const volume = await client.volumes.create({
-   *   name: 'my-volume',
-   *   size: 100,
-   *   server: 12345,
-   *   automount: true
-   * });
-   * ```
-   */
-  async create(params: CreateVolumeParams): Promise<CreateVolumeResponse> {
-    const validatedParams = validate(createVolumeRequestSchema, params, {
-      context: "Create volume request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>("/volumes", validatedParams);
-
-    return validate(createVolumeResponseSchema, response, {
-      context: "Create volume response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Returns a specific Volume object.
-   *
-   * @param id - ID of the Volume
-   * @returns Promise resolving to the volume
+   * @param id - ID of the volume
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#volumes-get-a-volume
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a volume by ID
-   * const volume = await client.volumes.get(12345);
-   * console.log(volume.volume.name);
+   * const { volume } = await client.volumes.get(12345);
+   * console.log(volume.size, volume.linux_device);
    * ```
    */
-  async get(id: number): Promise<GetVolumeResponse> {
-    const response = await this.client.get<unknown>(`/volumes/${id}`);
-
-    return validate(getVolumeResponseSchema, response, {
-      context: "Get volume response",
-      detailed: true,
-    });
+  get(id: number, options?: RequestOptions): Promise<GetVolumeResponse> {
+    return this._get(path`/volumes/${id}`, getVolumeResponseSchema, undefined, options);
   }
 
   /**
-   * Updates the Volume.
+   * Creates a new volume, either in a location or attached to a server.
    *
-   * You can update a Volume's name and labels.
+   * Exactly one of `location` and `server` must be given. If a server is
+   * given, attaching the volume is tracked by `next_actions`.
    *
-   * @param id - ID of the Volume
-   * @param params - Parameters to update (name and/or labels)
-   * @returns Promise resolving to the updated volume
+   * @param params - Name, size and either `location` or `server`
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#volumes-create-a-volume
+   *
+   * @example
+   * ```typescript
+   * const created = await client.volumes.create({
+   *   name: "database-storage",
+   *   size: 50,
+   *   server: 42,
+   *   format: "ext4",
+   *   automount: true,
+   * });
+   * await client.actions.waitForAll(created); // waits for `action` and `next_actions`
+   * ```
+   */
+  create(params: CreateVolumeParams, options?: RequestOptions): Promise<CreateVolumeResponse> {
+    return this._post(
+      "/volumes",
+      createVolumeResponseSchema,
+      params,
+      createVolumeRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Updates the name and/or labels of a volume.
+   *
+   * @param id - ID of the volume
+   * @param params - Fields to update
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#volumes-update-a-volume
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Update volume name
-   * const updated = await client.volumes.update(12345, {
-   *   name: 'new-volume-name'
-   * });
-   *
-   * // Update labels
-   * const updated = await client.volumes.update(12345, {
-   *   labels: { environment: 'production', team: 'backend' }
+   * const { volume } = await client.volumes.update(12345, {
+   *   name: "new-name",
+   *   labels: { environment: "production" },
    * });
    * ```
    */
-  async update(id: number, params: UpdateVolumeParams): Promise<UpdateVolumeResponse> {
-    const validatedParams = validate(updateVolumeRequestSchema, params, {
-      context: "Update volume request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(`/volumes/${id}`, validatedParams);
-
-    return validate(updateVolumeResponseSchema, response, {
-      context: "Update volume response",
-      detailed: true,
-    });
+  update(
+    id: number,
+    params: UpdateVolumeParams,
+    options?: RequestOptions,
+  ): Promise<UpdateVolumeResponse> {
+    return this._put(
+      path`/volumes/${id}`,
+      updateVolumeResponseSchema,
+      params,
+      updateVolumeRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Deletes a Volume.
+   * Deletes a volume. All data on it is irreversibly destroyed. The volume must
+   * not be attached to a server and must not have delete protection enabled.
    *
-   * @param id - ID of the Volume
-   * @returns Promise resolving to the delete action
+   * @param id - ID of the volume
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#volumes-delete-a-volume
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Delete a volume
-   * const result = await client.volumes.delete(12345);
-   * if (result.action) {
-   *   console.log(`Delete action ID: ${result.action.id}`);
-   * }
+   * await client.volumes.delete(12345);
    * ```
    */
-  async delete(id: number): Promise<DeleteVolumeResponse> {
-    const response = await this.client.delete<unknown>(`/volumes/${id}`);
-
-    return validate(deleteVolumeResponseSchema, response, {
-      context: "Delete volume response",
-      detailed: true,
-    });
+  delete(id: number, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/volumes/${id}`, null, options);
   }
 
   /**
-   * Returns all Action objects for a Volume.
+   * Returns a page of actions of a volume.
    *
-   * @param id - ID of the Volume
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of actions with pagination metadata
+   * @param id - ID of the volume
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#volumes-list-actions-for-a-volume
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all actions for a volume
-   * const actions = await client.volumes.listActions(12345);
-   *
-   * // List actions with filters
-   * const runningActions = await client.volumes.listActions(12345, {
-   *   status: ['running'],
-   *   sort: ['started:desc']
+   * const { actions } = await client.volumes.listActions(12345, {
+   *   status: "running",
+   *   sort: "started:desc",
    * });
    * ```
    */
-  async listActions(
+  listActions(
     id: number,
     params?: ListVolumeActionsParams,
+    options?: RequestOptions,
   ): Promise<ListVolumeActionsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.status) {
-      queryParams.status = Array.isArray(params.status) ? params.status : [params.status];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>(`/volumes/${id}/actions`, queryParams);
-
-    return validate(listVolumeActionsResponseSchema, response, {
-      context: "List volume actions response",
-      detailed: true,
-    });
+    return this._get(path`/volumes/${id}/actions`, listActionsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific Action object for a Volume.
+   * Returns a specific action of a volume.
    *
-   * @param id - ID of the Volume
-   * @param actionId - ID of the Action
-   * @returns Promise resolving to the action
+   * @param id - ID of the volume
+   * @param actionId - ID of the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#volumes-get-an-action-for-a-volume
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get an action by ID
-   * const action = await client.volumes.getAction(12345, 67890);
-   * console.log(action.action.command);
+   * const { action } = await client.volumes.getAction(12345, 67890);
+   * console.log(action.status);
    * ```
    */
-  async getAction(id: number, actionId: number): Promise<GetVolumeActionResponse> {
-    const response = await this.client.get<unknown>(`/volumes/${id}/actions/${actionId}`);
-
-    return validate(getVolumeActionResponseSchema, response, {
-      context: "Get volume action response",
-      detailed: true,
-    });
+  getAction(
+    id: number,
+    actionId: number,
+    options?: RequestOptions,
+  ): Promise<GetVolumeActionResponse> {
+    return this._get(
+      path`/volumes/${id}/actions/${actionId}`,
+      getActionResponseSchema,
+      undefined,
+      options,
+    );
   }
 
   /**
-   * Attaches a Volume to a Server.
+   * Attaches a volume to a server. The server must be in the same location as
+   * the volume.
    *
-   * @param id - ID of the Volume
-   * @param params - Server to attach to
-   * @returns Promise resolving to the action
+   * @param id - ID of the volume
+   * @param params - Server to attach the volume to
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#volumes-attach-volume-to-a-server
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.volumes.attachToServer(12345, {
-   *   server: 67890,
-   *   automount: true
+   * const { action } = await client.volumes.attachToServer(12345, {
+   *   server: 42,
+   *   automount: true,
    * });
+   * await client.actions.waitFor(action);
    * ```
    */
-  async attachToServer(
+  attachToServer(
     id: number,
     params: AttachVolumeToServerParams,
+    options?: RequestOptions,
   ): Promise<AttachVolumeToServerResponse> {
-    const validatedParams = validate(attachVolumeToServerRequestSchema, params, {
-      context: "Attach volume to server request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/volumes/${id}/actions/attach`,
-      validatedParams,
+    return this._post(
+      path`/volumes/${id}/actions/attach`,
+      actionResponseSchema,
+      params,
+      attachVolumeToServerRequestSchema,
+      options,
     );
-
-    return validate(attachVolumeToServerResponseSchema, response, {
-      context: "Attach volume to server response",
-      detailed: true,
-    });
   }
 
   /**
-   * Detaches a Volume from a Server.
+   * Detaches a volume from the server it is attached to. It can be attached to
+   * a server again later.
    *
-   * @param id - ID of the Volume
-   * @returns Promise resolving to the action
+   * @param id - ID of the volume
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#volumes-detach-volume
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.volumes.detach(12345);
+   * const { action } = await client.volumes.detach(12345);
+   * await client.actions.waitFor(action);
    * ```
    */
-  async detach(id: number): Promise<DetachVolumeResponse> {
-    const response = await this.client.post<unknown>(`/volumes/${id}/actions/detach`, {});
-
-    return validate(detachVolumeResponseSchema, response, {
-      context: "Detach volume response",
-      detailed: true,
-    });
+  detach(id: number, options?: RequestOptions): Promise<DetachVolumeResponse> {
+    return this._post(
+      path`/volumes/${id}/actions/detach`,
+      actionResponseSchema,
+      undefined,
+      undefined,
+      options,
+    );
   }
 
   /**
-   * Resizes a Volume.
+   * Changes the size of a volume. Downsizing a volume is not possible.
    *
-   * @param id - ID of the Volume
-   * @param params - New size (in GB)
-   * @returns Promise resolving to the action
+   * @param id - ID of the volume
+   * @param params - New size in GB
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#volumes-resize-volume
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.volumes.resize(12345, {
-   *   size: 200
-   * });
+   * const { action } = await client.volumes.resize(12345, { size: 100 });
+   * await client.actions.waitFor(action);
    * ```
    */
-  async resize(id: number, params: ResizeVolumeParams): Promise<ResizeVolumeResponse> {
-    const validatedParams = validate(resizeVolumeRequestSchema, params, {
-      context: "Resize volume request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/volumes/${id}/actions/resize`,
-      validatedParams,
+  resize(
+    id: number,
+    params: ResizeVolumeParams,
+    options?: RequestOptions,
+  ): Promise<ResizeVolumeResponse> {
+    return this._post(
+      path`/volumes/${id}/actions/resize`,
+      actionResponseSchema,
+      params,
+      resizeVolumeRequestSchema,
+      options,
     );
-
-    return validate(resizeVolumeResponseSchema, response, {
-      context: "Resize volume response",
-      detailed: true,
-    });
   }
 
   /**
-   * Changes the Protection configuration of a Volume.
+   * Changes the protection configuration of a volume.
    *
-   * @param id - ID of the Volume
+   * @param id - ID of the volume
    * @param params - Protection configuration
-   * @returns Promise resolving to the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#volumes-change-volume-protection
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Enable delete protection
-   * const result = await client.volumes.changeProtection(12345, {
-   *   delete: true
-   * });
+   * const { action } = await client.volumes.changeProtection(12345, { delete: true });
    * ```
    */
-  async changeProtection(
+  changeProtection(
     id: number,
     params: ChangeVolumeProtectionParams,
+    options?: RequestOptions,
   ): Promise<ChangeVolumeProtectionResponse> {
-    const validatedParams = validate(changeVolumeProtectionRequestSchema, params, {
-      context: "Change volume protection request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/volumes/${id}/actions/change_protection`,
-      validatedParams,
+    return this._post(
+      path`/volumes/${id}/actions/change_protection`,
+      actionResponseSchema,
+      params,
+      changeVolumeProtectionRequestSchema,
+      options,
     );
-
-    return validate(changeVolumeProtectionResponseSchema, response, {
-      context: "Change volume protection response",
-      detailed: true,
-    });
   }
 }

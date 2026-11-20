@@ -4,13 +4,8 @@
  */
 
 import { z } from "zod";
-import { actionSchema, actionResourceSchema } from "../../apis/actions/schemas";
-import { paginationMetaSchema } from "../../apis/common/schemas";
-
-/**
- * Certificate status schema
- */
-export const certificateStatusSchema = z.enum(["ready", "verification_process", "pending_deletion"]);
+import { actionSchema } from "../actions/schemas";
+import { labelsSchema, metaSchema } from "../common/schemas";
 
 /**
  * Certificate type schema
@@ -18,31 +13,50 @@ export const certificateStatusSchema = z.enum(["ready", "verification_process", 
 export const certificateTypeSchema = z.enum(["uploaded", "managed"]);
 
 /**
- * Certificate schema
+ * Error of a failed issuance or renewal of a managed Certificate
  */
-export const certificateSchema = z
-  .object({
-    id: z.number(),
-    name: z.string(),
-    labels: z.record(z.string(), z.string()),
-    type: certificateTypeSchema,
-    certificate: z.string().nullable(),
-    created: z.string(),
-    not_valid_before: z.string(),
-    not_valid_after: z.string(),
-    domain_names: z.array(z.string()),
-    fingerprint: z.string().nullable(),
-    status: certificateStatusSchema.optional(),
-    used_by: z
-      .array(
-        z.object({
-          id: z.number(),
-          type: z.string(),
-        }),
-      )
-      .optional(),
-  })
-  .passthrough();
+export const certificateStatusErrorSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+});
+
+/**
+ * Issuance and renewal status of a managed Certificate
+ */
+export const certificateStatusSchema = z.object({
+  issuance: z.enum(["pending", "completed", "failed"]).optional(),
+  renewal: z.enum(["scheduled", "pending", "failed", "unavailable"]).optional(),
+  error: certificateStatusErrorSchema.nullable().optional(),
+});
+
+/**
+ * Resource using a Certificate
+ */
+export const certificateUsedBySchema = z.object({
+  id: z.number(),
+  type: z.string(),
+});
+
+/**
+ * Certificate schema
+ *
+ * `status` is only set for managed Certificates. While a managed Certificate
+ * is being issued, `certificate`, `fingerprint` and the validity period are `null`.
+ */
+export const certificateSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  labels: labelsSchema,
+  type: certificateTypeSchema,
+  certificate: z.string().nullable(),
+  created: z.string(),
+  not_valid_before: z.string().nullable(),
+  not_valid_after: z.string().nullable(),
+  domain_names: z.array(z.string()),
+  fingerprint: z.string().nullable(),
+  status: certificateStatusSchema.nullable().optional(),
+  used_by: z.array(certificateUsedBySchema).optional(),
+});
 
 /**
  * List Certificates response schema
@@ -50,32 +64,55 @@ export const certificateSchema = z
  */
 export const listCertificatesResponseSchema = z.object({
   certificates: z.array(certificateSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+  meta: metaSchema.optional(),
 });
 
 /**
- * Create Certificate request schema
+ * Create uploaded Certificate request schema
  * @see https://docs.hetzner.cloud/reference/cloud#certificates-create-a-certificate
  */
-export const createCertificateRequestSchema = z.object({
+export const createUploadedCertificateRequestSchema = z.object({
   name: z.string().min(1),
-  type: certificateTypeSchema.optional(),
-  certificate: z.string().optional(),
-  private_key: z.string().optional(),
-  domain_names: z.array(z.string()).optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  type: z.literal("uploaded").optional(),
+  certificate: z.string().min(1),
+  private_key: z.string().min(1),
+  labels: labelsSchema.optional(),
 });
 
 /**
- * Create Certificate response schema
+ * Create managed Certificate request schema
+ * @see https://docs.hetzner.cloud/reference/cloud#certificates-create-a-certificate
+ */
+export const createManagedCertificateRequestSchema = z.object({
+  name: z.string().min(1),
+  type: z.literal("managed"),
+  domain_names: z.array(z.string().min(1)).min(1),
+  labels: labelsSchema.optional(),
+});
+
+/**
+ * Create Certificate request schema: an uploaded (default) or a managed Certificate
+ * @see https://docs.hetzner.cloud/reference/cloud#certificates-create-a-certificate
+ */
+export const createCertificateRequestSchema = z.discriminatedUnion("type", [
+  createUploadedCertificateRequestSchema,
+  createManagedCertificateRequestSchema,
+]);
+
+/**
+ * Create Certificate response schema. `action` is only present for managed Certificates.
  */
 export const createCertificateResponseSchema = z.object({
   certificate: certificateSchema,
-  action: actionSchema.nullable(),
+  action: actionSchema.nullable().optional(),
+});
+
+/**
+ * Create managed Certificate response schema
+ */
+export const createManagedCertificateResponseSchema = z.object({
+  certificate: certificateSchema,
+  action: actionSchema,
 });
 
 /**
@@ -92,7 +129,7 @@ export const getCertificateResponseSchema = z.object({
  */
 export const updateCertificateRequestSchema = z.object({
   name: z.string().min(1).optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
@@ -100,41 +137,4 @@ export const updateCertificateRequestSchema = z.object({
  */
 export const updateCertificateResponseSchema = z.object({
   certificate: certificateSchema,
-});
-
-/**
- * Delete Certificate response schema
- * @see https://docs.hetzner.cloud/reference/cloud#certificates-delete-a-certificate
- */
-export const deleteCertificateResponseSchema = z.object({
-  action: actionSchema,
-});
-
-/**
- * List Certificate Actions response schema
- * @see https://docs.hetzner.cloud/reference/cloud#certificates-list-actions-for-a-certificate
- */
-export const listCertificateActionsResponseSchema = z.object({
-  actions: z.array(actionSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
-});
-
-/**
- * Get Certificate Action response schema
- * @see https://docs.hetzner.cloud/reference/cloud#certificates-get-an-action-for-a-certificate
- */
-export const getCertificateActionResponseSchema = z.object({
-  action: actionSchema,
-});
-
-/**
- * Retry Certificate Issuance/Renewal response schema
- * @see https://docs.hetzner.cloud/reference/cloud#certificates-retry-issuance-or-renewal
- */
-export const retryCertificateIssuanceResponseSchema = z.object({
-  action: actionSchema,
 });

@@ -1,0 +1,64 @@
+---
+title: Datacenters
+description: Deprecated - use locations instead
+---
+
+<Callout type="warn">
+  Hetzner deprecated the Datacenters API and removes it after 2026-10-01. From then on, requests
+  fail with `410 Gone`. Use [`client.locations`](/docs/API/locations) instead. See the [Hetzner
+  changelog](https://docs.hetzner.cloud/changelog#2026-06-02-datacenters-deprecated).
+</Callout>
+
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
+```
+
+## Migrating
+
+| Before                                       | After                                                                         |
+| -------------------------------------------- | ----------------------------------------------------------------------------- |
+| `client.datacenters.list()`                  | `client.locations.list()`                                                     |
+| `datacenter.location`                        | The location itself                                                           |
+| `datacenter.server_types.available`          | `server_type.locations[].available` of [server types](/docs/API/server-types) |
+| `server.datacenter`, `primary_ip.datacenter` | `server.location`, `primary_ip.location`                                      |
+
+## `list(params?)`
+
+`GET /datacenters`
+
+```typescript
+const { datacenters, recommendation } = await client.datacenters.list({ sort: "name:asc" });
+```
+
+| Parameter          | Description                              |
+| ------------------ | ---------------------------------------- |
+| `name`             | Exact name                               |
+| `sort`             | `id`, `name`, each with `:asc` / `:desc` |
+| `page`, `per_page` | Pagination                               |
+
+`recommendation` is the ID of the datacenter recommended for new resources.
+
+Pagination helpers: `listAll()`, `iterate()`, `iteratePages()`, `first()`.
+
+```typescript
+const all = await client.datacenters.listAll();
+```
+
+## `get(id)`
+
+`GET /datacenters/{id}`
+
+```typescript
+const { datacenter } = await client.datacenters.get(4);
+console.log(datacenter.name, datacenter.location.name);
+```
+
+## `getByName(name)`
+
+Returns the datacenter or `undefined`.
+
+```typescript
+const datacenter = await client.datacenters.getByName("fsn1-dc14");
+```

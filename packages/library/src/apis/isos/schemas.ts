@@ -1,10 +1,11 @@
 /**
  * Zod schemas for Hetzner Cloud ISOs API
- * @see https://docs.hetzner.cloud/reference/cloud#isos-list-isos
+ * @see https://docs.hetzner.cloud/reference/cloud#isos
  */
 
 import { z } from "zod";
-import { paginationMetaSchema } from "../../apis/common/schemas";
+import { deprecationInfoSchema, metaSchema } from "../common/schemas";
+import { cpuArchitectureSchema } from "../server-types/schemas";
 
 /**
  * ISO type schema
@@ -16,9 +17,18 @@ export const isoTypeSchema = z.enum(["public", "private"]);
  */
 export const isoSchema = z.object({
   id: z.number(),
-  name: z.string(),
+  /** Unique identifier of the ISO. Only set for public ISOs. */
+  name: z.string().nullable(),
   description: z.string(),
-  type: isoTypeSchema,
+  type: isoTypeSchema.nullable(),
+  /** CPU architecture the ISO is compatible with. `null` if the compatibility is unknown. */
+  architecture: cpuArchitectureSchema.nullable().optional(),
+  /** Deprecation of the ISO, `null` if it is not deprecated. */
+  deprecation: deprecationInfoSchema.nullable().optional(),
+  /**
+   * @deprecated Removed from the API by Hetzner. Use `deprecation.unavailable_after` instead.
+   */
+  deprecated: z.string().nullable().optional(),
 });
 
 /**
@@ -27,11 +37,7 @@ export const isoSchema = z.object({
  */
 export const listISOsResponseSchema = z.object({
   isos: z.array(isoSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+  meta: metaSchema.optional(),
 });
 
 /**

@@ -1,54 +1,87 @@
-# Contributing to @nilovonjs/hcloud-js
+# Contributing to hcloud-js
 
-Thank you for your interest in contributing to @nilovonjs/hcloud-js! This document provides guidelines and instructions for contributing.
+Thanks for your interest in contributing!
 
-## Getting Started
-
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/your-username/hcloud-js.git`
-3. Create a branch: `git checkout -b feature/your-feature-name`
-4. Make your changes
-5. Test your changes
-6. Submit a pull request
-
-## Development Setup
+## Setup
 
 ```bash
-# Install dependencies
+git clone https://github.com/Nilovon/hcloud-js.git
+cd hcloud-js
 bun install
-
-# Run type checking
-bun run check-types
-
-# Run linting and formatting
-bun run check
 ```
 
-## Code Style
+Requires [Bun](https://bun.sh) 1.4 or later.
 
-- Follow TypeScript best practices
-- Use Zod for schema validation
-- Maintain type safety throughout
-- Add JSDoc comments for public APIs
-- Follow the existing code structure
+## Workflow
 
-## Pull Request Process
+```bash
+bun run test          # unit tests
+bun run check-types   # TypeScript
+bun run lint          # oxlint
+bun run format        # oxfmt (writes)
+bun run ci            # everything the CI runs
+```
 
-1. Ensure your code passes all checks
-2. Update documentation if needed
-3. Add tests if applicable
-4. Update CHANGELOG.md with your changes
-5. Submit PR with a clear description
+Run a single test file from `packages/library`:
 
-## Reporting Issues
+```bash
+bun test test/apis/servers.test.ts
+```
 
-Please use the GitHub issue tracker to report bugs or suggest features. Include:
-- Description of the issue
-- Steps to reproduce
-- Expected behavior
-- Actual behavior
-- Environment details
+## How the SDK is structured
+
+```
+packages/library/
+├── src/
+│   ├── client.ts            # HCloudClient: wires up all resource clients
+│   ├── core/
+│   │   ├── base-client.ts   # request pipeline: auth, retries, timeouts, hooks
+│   │   ├── http.ts          # URL building, backoff, error mapping
+│   │   ├── errors.ts        # error classes
+│   │   ├── resource.ts      # ApiResource / ListableResource / NamedResource
+│   │   ├── pagination.ts    # page iteration
+│   │   └── validation.ts    # Zod helpers
+│   ├── apis/<resource>/
+│   │   ├── schemas.ts       # Zod schemas (entities, requests, responses)
+│   │   ├── types.ts         # types inferred from the schemas
+│   │   └── index.ts         # the resource client
+│   └── utils/               # label selectors, metrics, type guards
+└── test/
+    ├── helpers.ts           # mockClient(): a client backed by a fake fetch
+    ├── core/                # tests for the request pipeline
+    └── apis/                # one test file per resource
+```
+
+### Adding or changing an endpoint
+
+`src/apis/ssh-keys` is the smallest complete example.
+
+1. **Schema** (`schemas.ts`): describe the request body and the response with
+   Zod. Response schemas are checks only - no transforms or defaults - and
+   should be tolerant (`.optional()` / `.nullable()`) where the API is.
+2. **Types** (`types.ts`): `z.input<...>` for request params, `z.infer<...>` for
+   responses. List params are interfaces extending `PageParams`.
+3. **Client** (`index.ts`): add a method using `this._get` / `this._post` /
+   `this._put` / `this._delete` and the `path` template tag. Every method takes
+   `options?: RequestOptions` as its last parameter.
+4. **Test** (`test/apis/<resource>.test.ts`): assert method, path, query/body
+   and that a realistic response fixture passes validation.
+5. **Docs** (`apps/docs/content/docs/API/<resource>.mdx`).
+
+Exported names must be unique across the SDK, because `src/index.ts`
+re-exports every module with `export *`.
+
+## Pull requests
+
+- Keep changes focused and add tests.
+- Add an entry to `CHANGELOG.md` for user-facing changes.
+- Make sure `bun run ci` passes.
+
+## Reporting issues
+
+Please include the SDK version, runtime (Node.js/Bun/Deno + version), a minimal
+reproduction and, for API errors, the `requestId` of the error.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions are licensed under the MIT License.

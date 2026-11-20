@@ -1,75 +1,89 @@
 ---
-title: Placement Groups API
-description: Manage server placement groups
+title: Placement Groups
+description: Control how servers are distributed across physical hosts
 ---
 
-# Placement Groups API
-
-The Placement Groups API allows you to manage server placement groups.
-
-## List Placement Groups
-
-Returns all Placement Group objects.
-
 ```typescript
-const placementGroups = await client.placementGroups.list();
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
 ```
 
-## Get Placement Group
+## `list(params?)`
 
-Returns a specific Placement Group object.
-
-```typescript
-const placementGroup = await client.placementGroups.get(12345);
-```
-
-## Create Placement Group
-
-Creates a new Placement Group.
+`GET /placement_groups`
 
 ```typescript
-const placementGroup = await client.placementGroups.create({
-  name: 'my-placement-group',
-  type: 'spread',
-  labels: { environment: 'production' }
+const { placement_groups, meta } = await client.placementGroups.list({
+  label_selector: "environment=production",
+  sort: "name:asc",
 });
 ```
 
-### Placement Group Types
+| Parameter          | Description                                         |
+| ------------------ | --------------------------------------------------- |
+| `name`             | Exact name                                          |
+| `label_selector`   | [Label selector](/docs/pagination#label-selectors)  |
+| `type`             | `spread`                                            |
+| `sort`             | `id`, `name`, `created`, each with `:asc` / `:desc` |
+| `page`, `per_page` | Pagination                                          |
 
-- `spread`: Spreads servers across different physical servers
-- `pack`: Packs servers onto the same physical server
-
-## Update Placement Group
-
-Updates a Placement Group.
+Pagination helpers: `listAll()`, `iterate()`, `iteratePages()`, `first()`.
 
 ```typescript
-const updated = await client.placementGroups.update(12345, {
-  name: 'new-name',
-  labels: { environment: 'production' }
+const all = await client.placementGroups.listAll();
+```
+
+## `get(id)`
+
+`GET /placement_groups/{id}`
+
+```typescript
+const { placement_group } = await client.placementGroups.get(897);
+console.log(placement_group.servers); // IDs of the assigned servers
+```
+
+## `getByName(name)`
+
+Returns the placement group or `undefined`.
+
+```typescript
+const group = await client.placementGroups.getByName("web");
+```
+
+## `create(params)`
+
+`POST /placement_groups`
+
+```typescript
+const { placement_group } = await client.placementGroups.create({
+  name: "web",
+  type: "spread",
+  labels: { environment: "production" },
 });
 ```
 
-## Delete Placement Group
+The response may contain an `action`. If it does, wait for it with
+`await client.actions.waitFor(action)`.
 
-Deletes a Placement Group.
+Assign servers with `placement_group` in `client.servers.create()` or with
+`client.servers.addToPlacementGroup()`.
+
+## `update(id, params)`
+
+`PUT /placement_groups/{id}` - updates `name` and/or `labels`.
 
 ```typescript
-await client.placementGroups.delete(12345);
+const { placement_group } = await client.placementGroups.update(897, {
+  name: "web-eu",
+  labels: { environment: "production" },
+});
 ```
 
-## Types
+## `delete(id)`
+
+`DELETE /placement_groups/{id}` - resolves without a value.
 
 ```typescript
-type PlacementGroupType = 'spread' | 'pack';
-
-interface PlacementGroup {
-  id: number;
-  name: string;
-  labels: Record<string, string>;
-  created: string;
-  servers: number[];
-  type: PlacementGroupType;
-}
+await client.placementGroups.delete(897);
 ```

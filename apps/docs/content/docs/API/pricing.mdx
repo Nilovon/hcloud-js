@@ -1,78 +1,44 @@
 ---
-title: Pricing API
-description: Get pricing information
+title: Pricing
+description: Get the prices of all resources
 ---
 
-# Pricing API
-
-The Pricing API allows you to retrieve pricing information for all resources.
-
-## Get All Prices
-
-Returns all prices for all resources.
-
 ```typescript
-const pricing = await client.pricing.getAll();
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
 ```
 
-### Example
+## `getAll()`
+
+`GET /pricing`
 
 ```typescript
-const pricing = await client.pricing.getAll();
-
-console.log(`Currency: ${pricing.currency}`);
-console.log(`VAT Rate: ${pricing.vat_rate}`);
-
-// Server type pricing
-pricing.server_types.forEach(serverType => {
-  console.log(`Server Type: ${serverType.name}`);
-  serverType.prices.forEach(price => {
-    console.log(`  Location: ${price.location}`);
-    console.log(`  Hourly: ${price.price_hourly.net}`);
-    console.log(`  Monthly: ${price.price_monthly.net}`);
-  });
-});
-
-// Volume pricing
-console.log(`Volume price per GB/month: ${pricing.volume.price_per_gb_month.net}`);
-
-// Floating IP pricing
-console.log(`Floating IP monthly: ${pricing.floating_ip.price_monthly.net}`);
-
-// Traffic pricing
-console.log(`Traffic price per TB: ${pricing.traffic.price_per_tb.net}`);
+const { pricing } = await client.pricing.getAll();
+console.log(pricing.currency, pricing.vat_rate);
 ```
 
-## Types
+Prices are objects with a `net` and a `gross` amount, encoded as decimal strings.
+
+| Field                   | Description                                |
+| ----------------------- | ------------------------------------------ |
+| `currency`, `vat_rate`  | Currency and VAT rate of the project owner |
+| `server_types[]`        | `id`, `name` and `prices[]` per location   |
+| `load_balancer_types[]` | `id`, `name` and `prices[]` per location   |
+| `primary_ips[]`         | `type` and `prices[]` per location         |
+| `floating_ips[]`        | `type` and `prices[]` per location         |
+| `image`                 | `price_per_gb_month`                       |
+| `volume`                | `price_per_gb_month`                       |
+| `server_backup`         | `percentage` of the server price           |
+
+`prices[]` entries contain `location` and, depending on the resource, `price_hourly`,
+`price_monthly`, `included_traffic` and `price_per_tb_traffic`. All fields except `currency` and
+`vat_rate` may be missing.
 
 ```typescript
-interface GetPricingResponse {
-  currency: string;
-  vat_rate: string;
-  image: ImagePricing;
-  floating_ip: FloatingIpPricing;
-  floating_ip_price_monthly: Price;
-  primary_ips?: PrimaryIpPricing[];
-  server_types: ServerTypePricing[];
-  load_balancer_types?: LoadBalancerTypePricing[];
-  volume: VolumePricing;
-  traffic: TrafficPricing;
-}
+const { pricing } = await client.pricing.getAll();
 
-interface Price {
-  net: string;
-  gross: string;
-}
-
-interface PricingLocation {
-  location: string;
-  price_hourly: Price;
-  price_monthly: Price;
-}
-
-interface ServerTypePricing {
-  id: number;
-  name: string;
-  prices: PricingLocation[];
-}
+const cpx22 = pricing.server_types?.find((serverType) => serverType.name === "cpx22");
+const inFalkenstein = cpx22?.prices.find((price) => price.location === "fsn1");
+console.log(inFalkenstein?.price_monthly?.gross, pricing.currency);
 ```

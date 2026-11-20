@@ -3,464 +3,374 @@
  * @see https://docs.hetzner.cloud/reference/cloud#floating-ips
  */
 
-import type { HCloudClient } from "../../client/index";
-import type {
-  ListFloatingIPsParams,
-  ListFloatingIPsResponse,
-  CreateFloatingIPParams,
-  CreateFloatingIPResponse,
-  GetFloatingIPResponse,
-  UpdateFloatingIPParams,
-  UpdateFloatingIPResponse,
-  DeleteFloatingIPResponse,
-  ListFloatingIPActionsParams,
-  ListFloatingIPActionsResponse,
-  GetFloatingIPActionResponse,
-  AssignFloatingIPToServerParams,
-  AssignFloatingIPToServerResponse,
-  ChangeFloatingIPReverseDNSParams,
-  ChangeFloatingIPReverseDNSResponse,
-  ChangeFloatingIPProtectionParams,
-  ChangeFloatingIPProtectionResponse,
-  UnassignFloatingIPResponse,
-} from "../../apis/floating-ips/types";
-import { validate } from "../../validation/index";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { ResourceActionsClient } from "../actions/index";
 import {
-  listFloatingIPsResponseSchema,
+  actionResponseSchema,
+  getActionResponseSchema,
+  listActionsResponseSchema,
+} from "../actions/schemas";
+import {
+  assignFloatingIPToServerRequestSchema,
+  changeFloatingIPProtectionRequestSchema,
+  changeFloatingIPReverseDNSRequestSchema,
   createFloatingIPRequestSchema,
   createFloatingIPResponseSchema,
   getFloatingIPResponseSchema,
+  listFloatingIPsResponseSchema,
   updateFloatingIPRequestSchema,
   updateFloatingIPResponseSchema,
-  deleteFloatingIPResponseSchema,
-  listFloatingIPActionsResponseSchema,
-  getFloatingIPActionResponseSchema,
-  assignFloatingIPToServerRequestSchema,
-  assignFloatingIPToServerResponseSchema,
-  changeFloatingIPReverseDNSRequestSchema,
-  changeFloatingIPReverseDNSResponseSchema,
-  changeFloatingIPProtectionRequestSchema,
-  changeFloatingIPProtectionResponseSchema,
-  unassignFloatingIPRequestSchema,
-  unassignFloatingIPResponseSchema,
-} from "../../apis/floating-ips/schemas";
+} from "./schemas";
+import type {
+  AssignFloatingIPToServerParams,
+  AssignFloatingIPToServerResponse,
+  ChangeFloatingIPProtectionParams,
+  ChangeFloatingIPProtectionResponse,
+  ChangeFloatingIPReverseDNSParams,
+  ChangeFloatingIPReverseDNSResponse,
+  CreateFloatingIPParams,
+  CreateFloatingIPResponse,
+  FloatingIP,
+  GetFloatingIPActionResponse,
+  GetFloatingIPResponse,
+  ListFloatingIPActionsParams,
+  ListFloatingIPActionsResponse,
+  ListFloatingIPsParams,
+  ListFloatingIPsResponse,
+  UnassignFloatingIPResponse,
+  UpdateFloatingIPParams,
+  UpdateFloatingIPResponse,
+} from "./types";
 
 /**
  * Floating IPs API client
+ *
+ * Floating IPs are additional public IPs that can be moved between servers of
+ * the same network zone.
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#floating-ips
  */
-export class FloatingIPsClient {
-  constructor(private readonly client: HCloudClient) {}
+export class FloatingIPsClient extends NamedResource<
+  FloatingIP,
+  ListFloatingIPsParams,
+  "floating_ips"
+> {
+  protected readonly itemsKey = "floating_ips";
 
   /**
-   * Returns all Floating IP objects.
+   * Actions of all Floating IPs (`GET /floating_ips/actions`), including
+   * `waitFor()` and `waitForAll()`.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of floating IPs with pagination metadata
+   * @example
+   * ```typescript
+   * const { actions } = await client.floatingIPs.actions.list({ status: "running" });
+   * ```
+   */
+  public readonly actions = new ResourceActionsClient(this.client, "/floating_ips");
+
+  /**
+   * Returns a page of Floating IPs.
+   *
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-list-floating-ips
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all floating IPs
-   * const result = await client.floatingIPs.list();
-   *
-   * // List floating IPs with filters
-   * const floatingIPs = await client.floatingIPs.list({
-   *   name: 'my-floating-ip',
-   *   label_selector: 'environment=production',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
+   * const { floating_ips } = await client.floatingIPs.list({
+   *   label_selector: "environment=production",
+   *   sort: "created:desc",
    * });
+   *
+   * // All Floating IPs across all pages
+   * const all = await client.floatingIPs.listAll();
    * ```
    */
-  async list(params?: ListFloatingIPsParams): Promise<ListFloatingIPsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/floating_ips", queryParams);
-
-    return validate(listFloatingIPsResponseSchema, response, {
-      context: "List floating IPs response",
-      detailed: true,
-    });
+  list(params?: ListFloatingIPsParams, options?: RequestOptions): Promise<ListFloatingIPsResponse> {
+    return this._get("/floating_ips", listFloatingIPsResponseSchema, params, options);
   }
 
   /**
-   * Creates a new Floating IP.
-   *
-   * @param params - Parameters for creating the floating IP
-   * @returns Promise resolving to the created floating IP and action
-   * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-create-a-floating-ip
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Create an IPv4 floating IP in a location
-   * const floatingIP = await client.floatingIPs.create({
-   *   type: 'ipv4',
-   *   location: 'nbg1',
-   *   name: 'my-floating-ip'
-   * });
-   *
-   * // Create an IPv4 floating IP and assign to a server
-   * const floatingIP = await client.floatingIPs.create({
-   *   type: 'ipv4',
-   *   server: 12345,
-   *   name: 'my-floating-ip'
-   * });
-   * ```
-   */
-  async create(params: CreateFloatingIPParams): Promise<CreateFloatingIPResponse> {
-    const validatedParams = validate(createFloatingIPRequestSchema, params, {
-      context: "Create floating IP request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>("/floating_ips", validatedParams);
-
-    return validate(createFloatingIPResponseSchema, response, {
-      context: "Create floating IP response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Returns a specific Floating IP object.
+   * Returns a specific Floating IP.
    *
    * @param id - ID of the Floating IP
-   * @returns Promise resolving to the floating IP
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-get-a-floating-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a floating IP by ID
-   * const floatingIP = await client.floatingIPs.get(12345);
-   * console.log(floatingIP.floating_ip.ip);
+   * const { floating_ip } = await client.floatingIPs.get(12345);
+   * console.log(floating_ip.ip, floating_ip.home_location.name);
    * ```
    */
-  async get(id: number): Promise<GetFloatingIPResponse> {
-    const response = await this.client.get<unknown>(`/floating_ips/${id}`);
-
-    return validate(getFloatingIPResponseSchema, response, {
-      context: "Get floating IP response",
-      detailed: true,
-    });
+  get(id: number, options?: RequestOptions): Promise<GetFloatingIPResponse> {
+    return this._get(path`/floating_ips/${id}`, getFloatingIPResponseSchema, undefined, options);
   }
 
   /**
-   * Updates the Floating IP.
+   * Finds a Floating IP by its IP address.
    *
-   * You can update a Floating IP's name and labels.
+   * The API has no filter for the address, so all Floating IPs are fetched page
+   * by page until a match is found. IPv6 Floating IPs are matched by their
+   * network, e.g. `2001:db8::/64`.
+   *
+   * @param ip - IP address (IPv4) or network (IPv6) of the Floating IP
+   * @param options - Request options
+   * @returns The Floating IP, or `undefined` if none matches
+   *
+   * @example
+   * ```typescript
+   * const floatingIP = await client.floatingIPs.getByIP("131.232.99.1");
+   * ```
+   */
+  async getByIP(ip: string, options?: RequestOptions): Promise<FloatingIP | undefined> {
+    for await (const floatingIP of this.iterate(undefined, options)) {
+      if (floatingIP.ip === ip) return floatingIP;
+    }
+    return undefined;
+  }
+
+  /**
+   * Creates a new Floating IP, optionally assigned to a server.
+   *
+   * The returned `action` is only set if the Floating IP is assigned to a
+   * server on creation.
+   *
+   * @param params - Type and either `home_location` or `server`
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-create-a-floating-ip
+   *
+   * @example
+   * ```typescript
+   * const { floating_ip } = await client.floatingIPs.create({
+   *   type: "ipv4",
+   *   home_location: "fsn1",
+   *   name: "web-frontend",
+   * });
+   * ```
+   */
+  create(
+    params: CreateFloatingIPParams,
+    options?: RequestOptions,
+  ): Promise<CreateFloatingIPResponse> {
+    return this._post(
+      "/floating_ips",
+      createFloatingIPResponseSchema,
+      params,
+      createFloatingIPRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Updates the name, description and/or labels of a Floating IP.
    *
    * @param id - ID of the Floating IP
-   * @param params - Parameters to update (name, description, and/or labels)
-   * @returns Promise resolving to the updated floating IP
+   * @param params - Fields to update
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-update-a-floating-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Update floating IP name
-   * const updated = await client.floatingIPs.update(12345, {
-   *   name: 'new-floating-ip-name'
-   * });
-   *
-   * // Update labels
-   * const updated = await client.floatingIPs.update(12345, {
-   *   labels: { environment: 'production', team: 'backend' }
+   * const { floating_ip } = await client.floatingIPs.update(12345, {
+   *   description: "Web Frontend",
+   *   labels: { environment: "production" },
    * });
    * ```
    */
-  async update(
+  update(
     id: number,
     params: UpdateFloatingIPParams,
+    options?: RequestOptions,
   ): Promise<UpdateFloatingIPResponse> {
-    const validatedParams = validate(updateFloatingIPRequestSchema, params, {
-      context: "Update floating IP request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(`/floating_ips/${id}`, validatedParams);
-
-    return validate(updateFloatingIPResponseSchema, response, {
-      context: "Update floating IP response",
-      detailed: true,
-    });
+    return this._put(
+      path`/floating_ips/${id}`,
+      updateFloatingIPResponseSchema,
+      params,
+      updateFloatingIPRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Deletes a Floating IP.
+   * Deletes a Floating IP. If it is assigned to a server, it is unassigned first.
    *
    * @param id - ID of the Floating IP
-   * @returns Promise resolving to the delete action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-delete-a-floating-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Delete a floating IP
-   * const result = await client.floatingIPs.delete(12345);
-   * if (result.action) {
-   *   console.log(`Delete action ID: ${result.action.id}`);
-   * }
+   * await client.floatingIPs.delete(12345);
    * ```
    */
-  async delete(id: number): Promise<DeleteFloatingIPResponse> {
-    const response = await this.client.delete<unknown>(`/floating_ips/${id}`);
-
-    return validate(deleteFloatingIPResponseSchema, response, {
-      context: "Delete floating IP response",
-      detailed: true,
-    });
+  delete(id: number, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/floating_ips/${id}`, null, options);
   }
 
   /**
-   * Returns all Action objects for a Floating IP.
+   * Returns a page of actions of a Floating IP.
    *
    * @param id - ID of the Floating IP
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of actions with pagination metadata
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-list-actions-for-a-floating-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all actions for a floating IP
-   * const actions = await client.floatingIPs.listActions(12345);
-   *
-   * // List actions with filters
-   * const runningActions = await client.floatingIPs.listActions(12345, {
-   *   status: ['running'],
-   *   sort: ['started:desc']
+   * const { actions } = await client.floatingIPs.listActions(12345, {
+   *   status: "running",
+   *   sort: "started:desc",
    * });
    * ```
    */
-  async listActions(
+  listActions(
     id: number,
     params?: ListFloatingIPActionsParams,
+    options?: RequestOptions,
   ): Promise<ListFloatingIPActionsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.status) {
-      queryParams.status = Array.isArray(params.status) ? params.status : [params.status];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>(`/floating_ips/${id}/actions`, queryParams);
-
-    return validate(listFloatingIPActionsResponseSchema, response, {
-      context: "List floating IP actions response",
-      detailed: true,
-    });
+    return this._get(path`/floating_ips/${id}/actions`, listActionsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific Action object for a Floating IP.
+   * Returns a specific action of a Floating IP.
    *
    * @param id - ID of the Floating IP
-   * @param actionId - ID of the Action
-   * @returns Promise resolving to the action
+   * @param actionId - ID of the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-get-an-action-for-a-floating-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get an action by ID
-   * const action = await client.floatingIPs.getAction(12345, 67890);
-   * console.log(action.action.command);
+   * const { action } = await client.floatingIPs.getAction(12345, 67890);
+   * console.log(action.status);
    * ```
    */
-  async getAction(id: number, actionId: number): Promise<GetFloatingIPActionResponse> {
-    const response = await this.client.get<unknown>(`/floating_ips/${id}/actions/${actionId}`);
-
-    return validate(getFloatingIPActionResponseSchema, response, {
-      context: "Get floating IP action response",
-      detailed: true,
-    });
+  getAction(
+    id: number,
+    actionId: number,
+    options?: RequestOptions,
+  ): Promise<GetFloatingIPActionResponse> {
+    return this._get(
+      path`/floating_ips/${id}/actions/${actionId}`,
+      getActionResponseSchema,
+      undefined,
+      options,
+    );
   }
 
   /**
-   * Assigns a Floating IP to a Server.
+   * Assigns a Floating IP to a server.
    *
    * @param id - ID of the Floating IP
-   * @param params - Server ID to assign the floating IP to
-   * @returns Promise resolving to the action
+   * @param params - Server to assign the Floating IP to
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-assign-a-floating-ip-to-a-server
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Assign floating IP to a server
-   * const result = await client.floatingIPs.assignToServer(12345, {
-   *   assignee_id: 67890
-   * });
-   * console.log(`Action ID: ${result.action.id}`);
+   * const { action } = await client.floatingIPs.assignToServer(12345, { server: 42 });
+   * await client.actions.waitFor(action);
    * ```
    */
-  async assignToServer(
+  assignToServer(
     id: number,
     params: AssignFloatingIPToServerParams,
+    options?: RequestOptions,
   ): Promise<AssignFloatingIPToServerResponse> {
-    const validatedParams = validate(assignFloatingIPToServerRequestSchema, params, {
-      context: "Assign floating IP to server request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/floating_ips/${id}/actions/assign`,
-      validatedParams,
+    return this._post(
+      path`/floating_ips/${id}/actions/assign`,
+      actionResponseSchema,
+      params,
+      assignFloatingIPToServerRequestSchema,
+      options,
     );
-
-    return validate(assignFloatingIPToServerResponseSchema, response, {
-      context: "Assign floating IP to server response",
-      detailed: true,
-    });
   }
 
   /**
-   * Changes the hostname that will appear when getting the hostname belonging to this Floating IP.
+   * Unassigns a Floating IP, making it unreachable. It can be assigned to a
+   * server again later.
    *
    * @param id - ID of the Floating IP
-   * @param params - Reverse DNS configuration
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-change-reverse-dns-records-for-a-floating-ip
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Change reverse DNS
-   * const result = await client.floatingIPs.changeReverseDNS(12345, {
-   *   ip: '1.2.3.4',
-   *   dns_ptr: 'server.example.com'
-   * });
-   * console.log(`Action ID: ${result.action.id}`);
-   * ```
-   */
-  async changeReverseDNS(
-    id: number,
-    params: ChangeFloatingIPReverseDNSParams,
-  ): Promise<ChangeFloatingIPReverseDNSResponse> {
-    const validatedParams = validate(changeFloatingIPReverseDNSRequestSchema, params, {
-      context: "Change floating IP reverse DNS request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/floating_ips/${id}/actions/change_dns_ptr`,
-      validatedParams,
-    );
-
-    return validate(changeFloatingIPReverseDNSResponseSchema, response, {
-      context: "Change floating IP reverse DNS response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Changes the Protection configuration of a Floating IP.
-   *
-   * @param id - ID of the Floating IP
-   * @param params - Protection configuration
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-change-floating-ip-protection
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Enable delete protection
-   * const result = await client.floatingIPs.changeProtection(12345, {
-   *   delete: true
-   * });
-   * console.log(`Action ID: ${result.action.id}`);
-   * ```
-   */
-  async changeProtection(
-    id: number,
-    params: ChangeFloatingIPProtectionParams,
-  ): Promise<ChangeFloatingIPProtectionResponse> {
-    const validatedParams = validate(changeFloatingIPProtectionRequestSchema, params, {
-      context: "Change floating IP protection request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/floating_ips/${id}/actions/change_protection`,
-      validatedParams,
-    );
-
-    return validate(changeFloatingIPProtectionResponseSchema, response, {
-      context: "Change floating IP protection response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Unassigns a Floating IP, resulting in it being unreachable.
-   *
-   * @param id - ID of the Floating IP
-   * @returns Promise resolving to the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-unassign-a-floating-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Unassign floating IP
-   * const result = await client.floatingIPs.unassign(12345);
-   * console.log(`Action ID: ${result.action.id}`);
+   * const { action } = await client.floatingIPs.unassign(12345);
+   * await client.actions.waitFor(action);
    * ```
    */
-  async unassign(id: number): Promise<UnassignFloatingIPResponse> {
-    const response = await this.client.post<unknown>(
-      `/floating_ips/${id}/actions/unassign`,
-      {},
+  unassign(id: number, options?: RequestOptions): Promise<UnassignFloatingIPResponse> {
+    return this._post(
+      path`/floating_ips/${id}/actions/unassign`,
+      actionResponseSchema,
+      undefined,
+      undefined,
+      options,
     );
+  }
 
-    return validate(unassignFloatingIPResponseSchema, response, {
-      context: "Unassign floating IP response",
-      detailed: true,
-    });
+  /**
+   * Changes the hostname that appears when resolving the reverse DNS entry of
+   * a Floating IP.
+   *
+   * @param id - ID of the Floating IP
+   * @param params - IP address and hostname. A `dns_ptr` of `null` resets the entry to its default.
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-change-reverse-dns-records-for-a-floating-ip
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.floatingIPs.changeReverseDNS(12345, {
+   *   ip: "131.232.99.1",
+   *   dns_ptr: "server.example.com",
+   * });
+   * ```
+   */
+  changeReverseDNS(
+    id: number,
+    params: ChangeFloatingIPReverseDNSParams,
+    options?: RequestOptions,
+  ): Promise<ChangeFloatingIPReverseDNSResponse> {
+    return this._post(
+      path`/floating_ips/${id}/actions/change_dns_ptr`,
+      actionResponseSchema,
+      params,
+      changeFloatingIPReverseDNSRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Changes the protection configuration of a Floating IP.
+   *
+   * @param id - ID of the Floating IP
+   * @param params - Protection configuration
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#floating-ips-change-floating-ip-protection
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.floatingIPs.changeProtection(12345, { delete: true });
+   * ```
+   */
+  changeProtection(
+    id: number,
+    params: ChangeFloatingIPProtectionParams,
+    options?: RequestOptions,
+  ): Promise<ChangeFloatingIPProtectionResponse> {
+    return this._post(
+      path`/floating_ips/${id}/actions/change_protection`,
+      actionResponseSchema,
+      params,
+      changeFloatingIPProtectionRequestSchema,
+      options,
+    );
   }
 }

@@ -1,21 +1,24 @@
 /**
  * Types for Hetzner Cloud Images API
- * Types are inferred from Zod schemas
- * @see https://docs.hetzner.cloud/reference/cloud#images-list-images
+ * @see https://docs.hetzner.cloud/reference/cloud#images
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
+import type { z } from "zod";
+import type { ActionResponse } from "../actions/types";
+import type { OneOrMany, PageParams, SortParam } from "../common/types";
+import type { CpuArchitecture } from "../server-types/types";
+import type {
+  changeImageProtectionRequestSchema,
+  getImageResponseSchema,
+  imageCreatedFromSchema,
+  imageProtectionSchema,
+  imageSchema,
   imageStatusSchema,
   imageTypeSchema,
   listImagesResponseSchema,
   updateImageRequestSchema,
-  getImageResponseSchema,
   updateImageResponseSchema,
-  deleteImageResponseSchema,
 } from "./schemas";
-import { imageSchema } from "./schemas";
-import type { z } from "zod";
 
 /**
  * Image status values
@@ -28,69 +31,67 @@ export type ImageStatus = z.infer<typeof imageStatusSchema>;
 export type ImageType = z.infer<typeof imageTypeSchema>;
 
 /**
+ * Server an image was created from
+ */
+export type ImageCreatedFrom = z.infer<typeof imageCreatedFromSchema>;
+
+/**
+ * Image protection configuration
+ */
+export type ImageProtection = z.infer<typeof imageProtectionSchema>;
+
+/**
  * Hetzner Cloud Image
- * @see https://docs.hetzner.cloud/reference/cloud#images-list-images
+ * @see https://docs.hetzner.cloud/reference/cloud#images
  */
 export type Image = z.infer<typeof imageSchema>;
 
 /**
- * Pagination metadata
- * @see https://docs.hetzner.cloud/reference/cloud#pagination
- * Re-exported from servers module for consistency
+ * Fields images can be sorted by
  */
-export type { PaginationMeta } from "../servers/types";
+export type ImageSort = SortParam<"id" | "name" | "created">;
 
 /**
  * List Images query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#images-list-images
  */
-export interface ListImagesParams {
+export interface ListImagesParams extends PageParams {
   /**
-   * Can be used multiple times. The response will only contain Images matching the type.
-   * Choices: system, app, snapshot, backup
+   * Only return images of the given types.
    */
-  type?: ImageType | ImageType[];
+  type?: OneOrMany<ImageType>;
   /**
-   * Can be used multiple times. The response will only contain Images matching the status.
-   * Choices: available, creating, unavailable
+   * Only return images with the given status.
    */
-  status?: ImageStatus | ImageStatus[];
+  status?: OneOrMany<ImageStatus>;
   /**
-   * Can be used to filter Images by their name. The response will only contain the Image matching the specified name.
+   * Only return images with this exact name. System images share their name
+   * across architectures, so combine it with `architecture`.
    */
   name?: string;
   /**
-   * Can be used to filter Images by labels. The response will only contain Images matching the label selector.
+   * Only return images matching the label selector.
    * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, created, created:asc, created:desc, type, type:asc, type:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
+   * Only return images compatible with the given architectures.
    */
-  sort?: string | string[];
+  architecture?: OneOrMany<CpuArchitecture>;
   /**
-   * Can be used multiple times, the response will only contain Images matching the specified architecture.
-   * Choices: x86, arm
+   * Only return images bound to the servers with the given IDs. Only
+   * available for images of type `backup`.
    */
-  architecture?: "x86" | "arm" | ("x86" | "arm")[];
+  bound_to?: OneOrMany<number | string>;
   /**
-   * Can be used to filter Images by their bound server. The response will only contain the Image matching the specified server ID.
-   */
-  bound_to?: number;
-  /**
-   * Can be used to filter Images by their include_deprecated status.
-   * If set to true, deprecated Images are included in the response. If set to false, deprecated Images are excluded from the response.
+   * Include deprecated images in the response. Default: `false`.
    */
   include_deprecated?: boolean;
   /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Sort the result.
+   * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
+  sort?: OneOrMany<ImageSort>;
 }
 
 /**
@@ -100,16 +101,26 @@ export interface ListImagesParams {
 export type ListImagesResponse = z.infer<typeof listImagesResponseSchema>;
 
 /**
- * Update Image request parameters
- * @see https://docs.hetzner.cloud/reference/cloud#images-update-an-image
- */
-export type UpdateImageParams = z.infer<typeof updateImageRequestSchema>;
-
-/**
  * Get Image response
  * @see https://docs.hetzner.cloud/reference/cloud#images-get-an-image
  */
 export type GetImageResponse = z.infer<typeof getImageResponseSchema>;
+
+/**
+ * Additional filters for `client.images.getByNameAndArchitecture()`
+ */
+export interface GetImageByNameAndArchitectureParams {
+  /**
+   * Also find deprecated images. Default: `false`.
+   */
+  include_deprecated?: boolean;
+}
+
+/**
+ * Update Image request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#images-update-an-image
+ */
+export type UpdateImageParams = z.input<typeof updateImageRequestSchema>;
 
 /**
  * Update Image response
@@ -118,7 +129,13 @@ export type GetImageResponse = z.infer<typeof getImageResponseSchema>;
 export type UpdateImageResponse = z.infer<typeof updateImageResponseSchema>;
 
 /**
- * Delete Image response
- * @see https://docs.hetzner.cloud/reference/cloud#images-delete-an-image
+ * Change Image Protection request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#images-change-image-protection
  */
-export type DeleteImageResponse = z.infer<typeof deleteImageResponseSchema>;
+export type ChangeImageProtectionParams = z.input<typeof changeImageProtectionRequestSchema>;
+
+/**
+ * Change Image Protection response
+ * @see https://docs.hetzner.cloud/reference/cloud#images-change-image-protection
+ */
+export type ChangeImageProtectionResponse = ActionResponse;

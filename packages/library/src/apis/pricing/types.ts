@@ -1,31 +1,24 @@
 /**
  * Types for Hetzner Cloud Pricing API
- * Types are inferred from Zod schemas
  * @see https://docs.hetzner.cloud/reference/cloud#pricing
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  getPricingResponseSchema,
-  priceSchema,
-  pricingLocationSchema,
-  serverTypePricingSchema,
-  loadBalancerTypePricingSchema,
-  volumePricingSchema,
-  floatingIpPricingSchema,
-  primaryIpPricingSchema,
-  trafficPricingSchema,
-  imagePricingSchema,
-} from "@/apis/pricing/schemas";
 import type { z } from "zod";
+import type {
+  floatingIpPricingSchema,
+  getPricingResponseSchema,
+  imagePricingSchema,
+  loadBalancerTypePricingSchema,
+  pricingLocationSchema,
+  pricingSchema,
+  primaryIpPricingSchema,
+  serverTypePricingSchema,
+  trafficPricingSchema,
+  volumePricingSchema,
+} from "./schemas";
 
 /**
- * Price
- */
-export type Price = z.infer<typeof priceSchema>;
-
-/**
- * Pricing location
+ * Price of a resource type in a location
  */
 export type PricingLocation = z.infer<typeof pricingLocationSchema>;
 
@@ -63,6 +56,12 @@ export type TrafficPricing = z.infer<typeof trafficPricingSchema>;
  * Image pricing
  */
 export type ImagePricing = z.infer<typeof imagePricingSchema>;
+
+/**
+ * Prices of all resources
+ * @see https://docs.hetzner.cloud/reference/cloud#pricing
+ */
+export type Pricing = z.infer<typeof pricingSchema>;
 
 /**
  * Get Pricing response

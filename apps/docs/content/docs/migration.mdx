@@ -1,0 +1,240 @@
+---
+title: Migrating from v1
+description: What changed in v2 and how to upgrade
+---
+
+v2 is a rewrite of the SDK core. Most code keeps working: resource clients,
+method names and response envelopes are largely the same. This page lists
+everything that is not.
+
+<Callout>
+  v1 modelled several endpoints incorrectly (wrong URLs, request bodies or response shapes). Those
+  were verified against the current Hetzner API and fixed, which is where most of the per-resource
+  changes below come from.
+</Callout>
+
+## Upgrade checklist
+
+1. Update the package: `npm install @nilovonjs/hcloud-js@2`. Node.js 20 or later is required.
+2. Fix compile errors. TypeScript will point at nearly everything on this page.
+3. Replace `pollAction()` with `client.actions.waitFor()` (optional, the old helpers still work).
+4. Review your `delete()` calls: several now resolve to `undefined` instead of an action.
+5. If you call `client.get()` / `client.post()` directly, switch to the new signatures.
+
+## Package
+
+|                              | v1                 | v2                                             |
+| ---------------------------- | ------------------ | ---------------------------------------------- |
+| Distribution                 | TypeScript sources | Compiled ESM + CommonJS with type declarations |
+| Node.js                      | 18+                | 20+                                            |
+| Zod                          | v3                 | v4                                             |
+| `typescript` peer dependency | required           | none                                           |
+
+The package no longer requires a bundler or runtime that understands
+TypeScript, so it now works with plain Node.js and `require()`.
+
+## Client
+
+### Token
+
+`HCLOUD_TOKEN` is read automatically, so `new HCloudClient()` works. Passing
+`{ token }` is unchanged. `createAuthHeader()` was removed.
+
+### Response validation defaults to `"warn"`
+
+v1 threw whenever a response did not match the SDK's schemas, which broke
+applications each time Hetzner added an enum value or removed a deprecated
+field. v2 logs a warning and returns the response unchanged. To restore the
+old behaviour:
+
+```typescript
+new HCloudClient({ responseValidation: "throw" });
+```
+
+Responses are returned exactly as the API sent them. Unknown fields are
+preserved, and response types no longer carry an index signature, so typos
+like `server.nmae` are compile errors now.
+
+### Retries are on by default
+
+Rate limits, conflicts and gateway errors are retried up to 5 times with
+exponential backoff. Disable with `retry: false`.
+See [Configuration](/docs/configuration#retries).
+
+### Low-level requests
+
+```typescript
+// v1
+await client.get("/servers", { name: "web" }, { "X-Custom": "1" });
+await client.post("/servers", body, params, headers);
+await client.request({ method: "GET", path: "/servers", params: { name: "web" } });
+
+// v2
+await client.get("/servers", { query: { name: "web" }, headers: { "X-Custom": "1" } });
+await client.post("/servers", body, { query, headers });
+await client.request({ method: "GET", path: "/servers", query: { name: "web" } });
+```
+
+The `RequestOptions` type now describes per-call options (`signal`, `timeout`,
+`retry`, `headers`). The v1 type of that name is `RequestConfig`.
+
+## Errors
+
+`HCloudError` and its properties (`code`, `statusCode`, `details`,
+`hasFieldErrors()`, `getFieldErrors()`) are unchanged, so existing `catch`
+blocks keep working. New subclasses allow more precise handling, see
+[Error Handling](/docs/error-handling).
+
+| Situation                      | v1 `code`                     | v2 class / `code`                                                      |
+| ------------------------------ | ----------------------------- | ---------------------------------------------------------------------- |
+| Action failed                  | action code or `ACTION_ERROR` | `HCloudActionError`, action code or `action_failed`                    |
+| Action timed out               | `TIMEOUT`                     | `HCloudActionTimeoutError`, `ACTION_TIMEOUT`                           |
+| Request aborted by your signal | `TIMEOUT` / `NETWORK_ERROR`   | `HCloudAbortError`, `ABORTED`                                          |
+| Schema validation              | `VALIDATION_ERROR`            | `HCloudValidationError`, `VALIDATION_ERROR` (issues in `error.issues`) |
+
+Validation error messages are now prefixed with the request
+(`POST /servers request validation failed: name: ...`).
+
+## Waiting for actions
+
+```typescript
+// v1
+import { pollAction, pollActions } from "@nilovonjs/hcloud-js";
+const result = await client.servers.powerOn(42);
+await pollAction(client, result.action.id, { interval: 1000 });
+
+// v2
+await client.actions.waitFor(await client.servers.powerOn(42));
+```
+
+`pollAction`, `pollActions`, `createAndWaitForServer`, `findServerByName`,
+`findImageByName` and `findFloatingIPByIP` still exist as deprecated wrappers.
+The default poll interval changed from a fixed 1s to a backoff from 0.5s to 5s;
+the `interval` option was renamed to `pollInterval` (the old name still works).
+
+## Pagination
+
+`paginate()` and `getAllPages()` keep their signatures. Prefer the new
+built-in helpers:
+
+```typescript
+// v1
+const servers = await getAllPages<Server>((params) => client.servers.list(params), "servers");
+
+// v2
+const servers = await client.servers.listAll();
+```
+
+`PaginationMeta.last_page` and `total_entries` are now `number | null`, as in
+the API.
+
+## Types and schemas
+
+- Request parameter types for list endpoints are stricter: `sort` is a union
+  of the supported fields (`"name:asc"`), filters like `status` are typed.
+- Schemas that only wrapped an action (`powerOnServerResponseSchema`,
+  `attachVolumeToServerResponseSchema`, ...) were removed. Use
+  `actionResponseSchema` (`{ action }`) or `actionsResponseSchema`
+  (`{ actions }`). The matching **types** (`PowerOnServerResponse`, ...) still
+  exist as aliases.
+- Entities are exported once, from the module that owns them. `servers` no
+  longer re-exports `ServerType`, `Location`, `Datacenter`, `Network`, `ISO` or
+  its own `ServerImage` (use `Image`).
+- Renamed: `PublicNet` → `ServerPublicNet`, `PrivateNet` → `ServerPrivateNet`,
+  `floatingIp*Schema` → `floatingIP*Schema`, `primaryIp*Schema` → `primaryIP*Schema`.
+
+## Resource changes
+
+### Servers
+
+- `server.datacenter` is optional and deprecated (Hetzner removed it). Use the new `server.location`.
+- `server.backup_window` is a string (`"22-02"`) or `null`; `server.image` can be `null`.
+- `create()`: the `datacenter` parameter was removed, use `location`. `firewalls` and `placement_group` are supported now.
+- `enableBackups(id)` and `requestConsole(id)` take no parameters anymore (the API accepts none).
+- `changeType()`: `upgrade_disk` is required.
+- `getMetrics()`: `start` and `end` also accept `Date`.
+- New: `createAndWait()`, `waitForStatus()`, `getByName()`, `client.servers.actions`.
+
+### Images, placement groups
+
+- `delete()` resolves to `undefined` (the API returns no action).
+- `image.name` can be `null`; `image.architecture` was added; `image.deprecated` is optional (removed by Hetzner).
+- New on images: `changeProtection()`, `listActions()`, `getAction()`, `getByNameAndArchitecture()`, `client.images.actions`.
+
+### Server types, locations, ISOs
+
+- `get()` only accepts numeric IDs. Use `getByName()` for names.
+- Server types have `category` and `locations[]` (with per-location deprecation); the top-level `deprecated`, `deprecation` and `included_traffic` are optional and deprecated.
+- ISO list: `sort` was removed, `architecture` and `include_architecture_wildcard` were added.
+
+### Datacenters
+
+Hetzner deprecated the datacenters API (removal announced for after
+2026-10-01). It is available as `client.datacenters`, marked deprecated.
+`client.locations.listDataCenters()` / `getDataCenter()` still work as
+deprecated delegates. Prefer locations.
+
+### Pricing
+
+`client.pricing.getAll()` returns `{ pricing }`, matching the API. v1 expected
+a flat object.
+
+### Volumes, floating IPs, primary IPs
+
+- `delete()` resolves to `undefined`.
+- Floating IPs: `location` → `home_location` (entity and `create()`), `assignToServer(id, { server })` instead of `{ assignee_id }`.
+- Primary IPs: `location` was added and replaces `datacenter` (entity and `create()`); `assignToResource()` requires `assignee_type`.
+- Volumes: `create()` requires exactly one of `location` and `server`; the response always contains `next_actions`.
+- New: `getByIP()` on floating and primary IPs, `status` filter for volumes.
+
+### Networks
+
+- `delete()` resolves to `undefined`; `create()` returns `{ network }` without an action.
+- Routes are `{ destination: string, gateway: string }`.
+- The `sort` list parameter was removed.
+- New: `listMembers()`, `listAllMembers()`, `iterateMembers()`.
+
+### Firewalls
+
+- Rules are a flat array with a `direction` field, in requests and responses (v1: `{ inbound, outbound }`).
+- `create()` returns `{ firewall, actions }` (v1: `action`); `delete()` resolves to `undefined`.
+- Rules and resources returned by the API can be passed back unchanged, e.g. `setRules(id, { rules: [...firewall.rules, newRule] })`.
+
+### Load balancers and certificates
+
+- `loadBalancers.delete()` returns `{ action }` (Hetzner changed the endpoint in October 2026). Wait for it like any other action.
+- `updateService()` uses the correct endpoint now (v1 sent `PUT`, the API expects `POST`).
+- Targets passed to `create()`, `addTarget()` and `removeTarget()` are a discriminated union on `type` (`server`, `label_selector`, `ip`).
+- Service parameters: only `protocol` is required; `http`, `health_check` and certificates are optional.
+- `create()` accepts `public_net: { ipv4, ipv6 }` to use existing Primary IPs.
+- `getMetrics()`: `type` is a typed union, `start` and `end` also accept `Date`.
+- Target health status is `healthy | unhealthy | unknown` and carries diagnostic `detail`.
+- `certificates.delete()` resolves to `undefined`.
+- `certificate.status` is an object (`{ issuance, renewal, error }`), `CreateCertificateParams` is a union of uploaded and managed certificates.
+- New: `certificates.createManaged()`, `client.loadBalancers.actions`, `client.certificates.actions`.
+
+### DNS
+
+The DNS module was rewritten against the current Zones API; v1 did not match it.
+
+- Zones and RRSets have new shapes: `zone.id` is a number, `zone.mode`,
+  `zone.protection`, `zone.primary_nameservers`, `zone.authoritative_nameservers`;
+  `rrset.zone`, `rrset.protection.change`. `ZoneStatus` is `"ok" | "updating" | "error"`.
+- `createZone()` requires `mode`. `updateZone()` and `updateRRSet()` only change labels.
+  Use `changeZoneDefaultTTL()`, `changeRRSetTTL()` and `setRRSetRecords()` for the rest.
+- `deleteZone()` and `deleteRRSet()` return `{ action }`.
+- `exportZone()` returns `{ zonefile }`; `importZoneFile()` takes `{ zonefile }`.
+- `changeZonePrimaryNameservers()` takes `{ primary_nameservers: [{ address, port? }] }`.
+- `changeRRSetProtection()` takes `{ change }`.
+- Zones can be addressed by ID or name everywhere.
+- New: `listAllZones()`, `iterateZones()`, `listAllRRSets()`, `iterateRRSets()`, `client.dns.actions`.
+
+## New in v2
+
+- Storage Boxes: [`client.storageBoxes`](/docs/API/storage-boxes) and [`client.storageBoxTypes`](/docs/API/storage-box-types)
+- [`client.loadBalancerTypes`](/docs/API/load-balancer-types)
+- `listAll()`, `iterate()`, `iteratePages()`, `first()`, `getByName()` on every listable resource
+- `client.<resource>.actions` for the actions of a resource type
+- Request options (`signal`, `timeout`, `retry`, `headers`) on every method
+- Hooks, debug logging, rate limit state, custom `fetch`, token providers
+- `labelSelector()`, `parseTimeSeries()`, `BaseClient` for smaller bundles

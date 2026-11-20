@@ -1,0 +1,145 @@
+---
+title: Waiting for Actions
+description: Track asynchronous operations until they have finished
+---
+
+Most changes in the Hetzner Cloud are asynchronous. Powering on a server,
+attaching a volume or creating a snapshot returns immediately with an
+[action](https://docs.hetzner.cloud/reference/cloud#actions) in status
+`running`. The change is only applied once the action reaches `success`.
+
+```typescript
+const { action } = await client.servers.powerOn(42);
+console.log(action.status); // "running"
+```
+
+## `waitFor()`
+
+`client.actions.waitFor()` polls an action until it has finished and returns
+the final action. It accepts an action, an action ID or any response
+containing an `action`, so you can pass results straight through:
+
+```typescript
+const action = await client.actions.waitFor(await client.servers.powerOn(42));
+console.log(action.status); // "success"
+
+// Equivalent
+const { action: started } = await client.servers.powerOn(42);
+await client.actions.waitFor(started);
+await client.actions.waitFor(started.id);
+```
+
+If the action fails, a [`HCloudActionError`](/docs/error-handling) is thrown. If
+it does not finish in time, a `HCloudActionTimeoutError` is thrown.
+
+## `waitForAll()`
+
+Waits for several actions at once. All pending actions are polled together in a
+**single request per poll**, which keeps you well below the rate limit.
+
+It accepts a list of actions or IDs, or a response containing `action`,
+`actions` and/or `next_actions`:
+
+```typescript
+// Creating a server returns `action` and `next_actions`
+const created = await client.servers.create({
+  name: "web-1",
+  server_type: "cx22",
+  image: "ubuntu-24.04",
+  volumes: [volume.id],
+});
+await client.actions.waitForAll(created);
+
+// Several independent operations
+const responses = await Promise.all([1, 2, 3].map((id) => client.servers.reboot(id)));
+await client.actions.waitForAll(responses.map((response) => response.action));
+
+// Firewall changes return `actions`
+await client.actions.waitForAll(await client.firewalls.setRules(7, { rules }));
+```
+
+The result contains the finished actions in the order they were passed.
+
+## Options
+
+```typescript
+await client.actions.waitFor(action, {
+  timeout: 120_000,
+  pollInterval: 2_000,
+  onProgress: (action) => console.log(`${action.command}: ${action.progress}%`),
+  signal: controller.signal,
+  throwOnError: true,
+});
+```
+
+| Option         | Default                  | Description                                                            |
+| -------------- | ------------------------ | ---------------------------------------------------------------------- |
+| `pollInterval` | backoff from 500ms to 5s | Delay between polls in milliseconds, or a function `(attempt) => ms`   |
+| `timeout`      | `300000` (5 minutes)     | Maximum time to wait                                                   |
+| `throwOnError` | `true`                   | Throw when an action fails. With `false`, failed actions are returned. |
+| `onProgress`   | -                        | Called with the current action after every poll                        |
+| `signal`       | -                        | `AbortSignal` to stop waiting                                          |
+
+Change the defaults for the whole client:
+
+```typescript
+const client = new HCloudClient({
+  actions: { pollInterval: 1_000, timeout: 600_000 },
+});
+```
+
+## Handling failures
+
+```typescript
+import { HCloudActionError, HCloudActionTimeoutError } from "@nilovonjs/hcloud-js";
+
+try {
+  await client.actions.waitFor(
+    await client.servers.changeType(42, { server_type: "cx32", upgrade_disk: false }),
+  );
+} catch (error) {
+  if (error instanceof HCloudActionError) {
+    console.error(`${error.action.command} failed: ${error.code} - ${error.message}`);
+  } else if (error instanceof HCloudActionTimeoutError) {
+    console.error(`Still running after ${error.timeout}ms: actions ${error.actionIds.join(", ")}`);
+  } else {
+    throw error;
+  }
+}
+```
+
+## Shortcuts
+
+Some resources bundle the common "do it and wait" flows:
+
+```typescript
+// Create a server, wait for all of its actions and return the fresh server
+const { server, root_password } = await client.servers.createAndWait({
+  name: "web-1",
+  server_type: "cx22",
+  image: "ubuntu-24.04",
+});
+
+// Wait until a server reaches a status. Useful after a graceful shutdown,
+// where the action finishes before the server is actually off.
+await client.actions.waitFor(await client.servers.shutdown(server.id));
+await client.servers.waitForStatus(server.id, "off");
+```
+
+## Actions of a resource type
+
+Every resource with actions exposes an `actions` sub-client for listing and
+fetching the actions of that resource type:
+
+```typescript
+const { actions } = await client.servers.actions.list({ status: "running" });
+const running = await client.volumes.actions.listAll({ status: "running" });
+
+// Actions of one specific resource
+const { actions: history } = await client.servers.listActions(42, { sort: "started:desc" });
+```
+
+<Callout>
+  Storage Boxes are served by a different API host. Wait for their actions with
+  `client.storageBoxes.actions.waitFor(...)` instead of `client.actions.waitFor(...)`.
+</Callout>

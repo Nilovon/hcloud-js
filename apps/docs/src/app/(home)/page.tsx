@@ -2,7 +2,18 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Code2, Zap, Shield, Server, Cloud, BookOpen, ArrowRight, CheckCircle2, Copy, Check } from "lucide-react";
+import {
+  Code2,
+  Zap,
+  Shield,
+  Server,
+  Cloud,
+  BookOpen,
+  ArrowRight,
+  CheckCircle2,
+  Copy,
+  Check,
+} from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 
 export default function HomePage() {
@@ -25,13 +36,25 @@ export default function HomePage() {
         {/* Advanced Background Decoration */}
         <div className="absolute inset-0 -z-10">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-full blur-3xl animate-pulse-slow" />
-          <div className="absolute bottom-0 right-0 w-[700px] h-[700px] bg-gradient-to-tl from-blue-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-0 w-[500px] h-[500px] bg-gradient-to-r from-green-500/5 to-transparent rounded-full blur-2xl animate-pulse-slow" style={{ animationDelay: '2s' }} />
-          
+          <div
+            className="absolute bottom-0 right-0 w-[700px] h-[700px] bg-gradient-to-tl from-blue-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl animate-pulse-slow"
+            style={{ animationDelay: "1s" }}
+          />
+          <div
+            className="absolute top-1/2 left-0 w-[500px] h-[500px] bg-gradient-to-r from-green-500/5 to-transparent rounded-full blur-2xl animate-pulse-slow"
+            style={{ animationDelay: "2s" }}
+          />
+
           {/* Floating particles */}
           <div className="absolute top-20 left-[20%] w-2 h-2 bg-primary/30 rounded-full animate-float" />
-          <div className="absolute top-40 right-[30%] w-3 h-3 bg-blue-500/20 rounded-full animate-float" style={{ animationDelay: '1.5s' }} />
-          <div className="absolute bottom-32 left-[70%] w-2 h-2 bg-purple-500/30 rounded-full animate-float" style={{ animationDelay: '0.8s' }} />
+          <div
+            className="absolute top-40 right-[30%] w-3 h-3 bg-blue-500/20 rounded-full animate-float"
+            style={{ animationDelay: "1.5s" }}
+          />
+          <div
+            className="absolute bottom-32 left-[70%] w-2 h-2 bg-purple-500/30 rounded-full animate-float"
+            style={{ animationDelay: "0.8s" }}
+          />
         </div>
 
         {/* Premium Badge */}
@@ -41,21 +64,21 @@ export default function HomePage() {
             Hetzner Cloud SDK
           </span>
         </div>
-        
+
         {/* Hero Title with Enhanced Gradient */}
         <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
           <span className="bg-gradient-to-br from-foreground via-primary to-foreground bg-clip-text text-transparent hover:scale-105 inline-block transition-transform duration-300 cursor-default">
             hcloud-js
           </span>
         </h1>
-        
+
         <p className="text-2xl md:text-3xl font-semibold text-muted-foreground max-w-2xl mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
           Hetzner Cloud, done right
         </p>
-        
+
         <p className="text-lg md:text-xl text-muted-foreground/80 max-w-3xl mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 leading-relaxed">
-          A modern TypeScript SDK that manages your Hetzner Cloud infrastructure with 
-          full type safety and built-in validation – simple, secure, and intuitive.
+          A modern TypeScript SDK for your Hetzner Cloud infrastructure: fully typed and validated,
+          with auto-pagination, action waiting, retries and typed errors built in.
         </p>
 
         {/* Enhanced Install Command with Working Copy Button */}
@@ -101,18 +124,20 @@ export default function HomePage() {
         {/* Subtle Trust Badge */}
         <div className="text-sm text-muted-foreground/60 animate-in fade-in duration-700 delay-450 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-green-500/70" />
-          <span>Zero dependencies • MIT Licensed • Production ready</span>
+          <span>ESM + CommonJS • Node.js, Bun, Deno, Edge • MIT Licensed</span>
         </div>
 
         {/* Enhanced Stats */}
         <div className="mt-16 grid grid-cols-3 gap-8 md:gap-20 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
           {[
-            { value: "17+", label: "API Endpoints", color: "from-blue-500 to-blue-600" },
+            { value: "21", label: "API Resources", color: "from-blue-500 to-blue-600" },
             { value: "100%", label: "Type Safe", color: "from-purple-500 to-purple-600" },
-            { value: "0", label: "Extra Dependencies", color: "from-green-500 to-green-600" }
+            { value: "1", label: "Dependency (Zod)", color: "from-green-500 to-green-600" },
           ].map((stat, i) => (
             <div key={i} className="group text-center cursor-default">
-              <div className={`text-4xl md:text-5xl font-bold bg-gradient-to-br ${stat.color} bg-clip-text text-transparent group-hover:scale-110 transition-transform duration-300`}>
+              <div
+                className={`text-4xl md:text-5xl font-bold bg-gradient-to-br ${stat.color} bg-clip-text text-transparent group-hover:scale-110 transition-transform duration-300`}
+              >
                 {stat.value}
               </div>
               <div className="text-sm md:text-base text-muted-foreground mt-2 group-hover:text-foreground transition-colors font-medium">
@@ -133,67 +158,75 @@ export default function HomePage() {
             Everything you need to build and manage your Hetzner Cloud infrastructure
           </p>
         </div>
-        
+
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             {
               icon: Code2,
-              title: "Fully Typed",
-              description: "Complete TypeScript types for all API endpoints ensuring type safety and excellent IDE support with autocomplete.",
+              title: "Fully Typed & Validated",
+              description:
+                "Parameters and responses are inferred from Zod schemas. Invalid input fails fast, before a request is sent.",
               gradient: "from-blue-500/20 to-blue-500/10",
-              iconColor: "text-blue-500"
+              iconColor: "text-blue-500",
             },
             {
               icon: Zap,
-              title: "Easy to Use",
-              description: "Simple, intuitive API following modern JavaScript/TypeScript patterns. Get started in minutes with comprehensive docs.",
+              title: "Auto-Pagination",
+              description:
+                "listAll(), iterate(), first() and getByName() on every list endpoint. No more page bookkeeping.",
               gradient: "from-yellow-500/20 to-yellow-500/10",
-              iconColor: "text-yellow-500"
-            },
-            {
-              icon: Shield,
-              title: "Validated",
-              description: "Built-in validation using Zod schemas. All responses and requests are validated to prevent runtime errors.",
-              gradient: "from-green-500/20 to-green-500/10",
-              iconColor: "text-green-500"
+              iconColor: "text-yellow-500",
             },
             {
               icon: Server,
-              title: "Complete Coverage",
-              description: "All Hetzner Cloud API endpoints supported: Servers, Networks, Load Balancers, DNS, and more.",
+              title: "Action Waiting",
+              description:
+                "Pass any response to actions.waitFor(). Batched polling with backoff, progress callbacks and timeouts.",
               gradient: "from-purple-500/20 to-purple-500/10",
-              iconColor: "text-purple-500"
+              iconColor: "text-purple-500",
+            },
+            {
+              icon: Shield,
+              title: "Resilient by Default",
+              description:
+                "Automatic retries with exponential backoff, Retry-After and rate limit tracking. Typed errors for everything else.",
+              gradient: "from-green-500/20 to-green-500/10",
+              iconColor: "text-green-500",
             },
             {
               icon: Cloud,
-              title: "Modern Stack",
-              description: "Built with Bun, TypeScript, and Zod. Works seamlessly in Node.js, Bun, and modern browsers.",
+              title: "Runs Everywhere",
+              description:
+                "Node.js, Bun, Deno, browsers and edge runtimes. ESM and CommonJS builds, tree-shakeable resource clients.",
               gradient: "from-pink-500/20 to-pink-500/10",
-              iconColor: "text-pink-500"
+              iconColor: "text-pink-500",
             },
             {
               icon: BookOpen,
-              title: "Well Documented",
-              description: "Comprehensive documentation with examples for every API endpoint and feature. Always up to date.",
+              title: "Observable",
+              description:
+                "Request, response and retry hooks, a debug logger that never leaks your token, AbortSignal on every call.",
               gradient: "from-orange-500/20 to-orange-500/10",
-              iconColor: "text-orange-500"
-            }
+              iconColor: "text-orange-500",
+            },
           ].map((feature, i) => (
             <div
               key={i}
               className="group relative p-8 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2"
             >
-              <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+              <div
+                className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
+              />
               <div className="relative">
-                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg`}>
+                <div
+                  className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg`}
+                >
                   <feature.icon className={`w-7 h-7 ${feature.iconColor}`} />
                 </div>
                 <h3 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors duration-300">
                   {feature.title}
                 </h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  {feature.description}
-                </p>
+                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
               </div>
             </div>
           ))}
@@ -204,36 +237,33 @@ export default function HomePage() {
       <div className="container mx-auto px-4 py-24 border-t bg-gradient-to-b from-background to-muted/20">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Get Started in Seconds
-            </h2>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Get Started in Seconds</h2>
             <p className="text-xl text-muted-foreground">
               Install the package and start managing your infrastructure
             </p>
           </div>
-          
-          <CodeBlock
-            code={`import { HCloudClient } from '@nilovonjs/hcloud-js';
 
-const client = new HCloudClient({
-  token: 'your-api-token'
+          <CodeBlock
+            code={`import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+// Reads the token from the HCLOUD_TOKEN environment variable
+const client = new HCloudClient();
+
+// Create a server and wait until it is ready
+const { server } = await client.servers.createAndWait({
+  name: "web-1",
+  server_type: "cx22",
+  image: "ubuntu-24.04",
+  location: "nbg1",
 });
 
-// List all servers
-const servers = await client.servers.list();
-console.log(\`Found: \${servers.servers.length} servers\`);
+// Iterate over all servers - pages are fetched on demand
+for await (const s of client.servers.iterate({ label_selector: "env=production" })) {
+  console.log(s.name, s.status);
+}
 
-// Get a specific server
-const server = await client.servers.get(12345);
-console.log(server.server.name);
-
-// Create a new server
-const newServer = await client.servers.create({
-  name: 'my-server',
-  server_type: 'cpx11',
-  image: 'ubuntu-22.04',
-  location: 'nbg1'
-});`}
+// Every mutating call returns an action you can wait for
+await client.actions.waitFor(await client.servers.reboot(server.id));`}
             language="typescript"
           />
 
@@ -252,20 +282,34 @@ const newServer = await client.servers.create({
       {/* API Coverage Section - Bento Grid Style */}
       <div className="container mx-auto px-4 py-24 border-t">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Complete API Coverage
-          </h2>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">Complete API Coverage</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            All Hetzner Cloud endpoints with full TypeScript support
+            Every Hetzner Cloud resource, plus DNS zones and Storage Boxes
           </p>
         </div>
-        
+
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-6xl mx-auto">
           {[
-            "Servers", "Images", "Actions", "Certificates", "SSH Keys",
-            "Locations", "Firewalls", "Floating IPs", "ISOs", "Placement Groups",
-            "Primary IPs", "Server Types", "Load Balancers", "Networks",
-            "Pricing", "Volumes", "DNS Zones"
+            "Servers",
+            "Server Types",
+            "Images",
+            "ISOs",
+            "Placement Groups",
+            "SSH Keys",
+            "Volumes",
+            "Networks",
+            "Firewalls",
+            "Floating IPs",
+            "Primary IPs",
+            "Load Balancers",
+            "Load Balancer Types",
+            "Certificates",
+            "DNS Zones",
+            "Storage Boxes",
+            "Storage Box Types",
+            "Locations",
+            "Pricing",
+            "Actions",
           ].map((api) => (
             <div
               key={api}

@@ -1,126 +1,188 @@
 ---
-title: Volumes API
-description: Manage block storage volumes
+title: Volumes
+description: Manage block storage volumes and attach them to servers
 ---
 
-# Volumes API
+`client.volumes` manages volumes: block storage devices that can be attached to a server in the
+same location.
 
-The Volumes API allows you to create and manage block storage volumes.
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
+```
+
+Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+
+| Method                                                                               | Endpoint                                            |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| `list(params?)`                                                                      | `GET /volumes`                                      |
+| `get(id)`                                                                            | `GET /volumes/{id}`                                 |
+| `getByName(name)`                                                                    | `GET /volumes?name=`                                |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /volumes` (all pages)                          |
+| `create(params)`                                                                     | `POST /volumes`                                     |
+| `update(id, params)`                                                                 | `PUT /volumes/{id}`                                 |
+| `delete(id)`                                                                         | `DELETE /volumes/{id}`                              |
+| `attachToServer(id, params)`                                                         | `POST /volumes/{id}/actions/attach`                 |
+| `detach(id)`                                                                         | `POST /volumes/{id}/actions/detach`                 |
+| `resize(id, params)`                                                                 | `POST /volumes/{id}/actions/resize`                 |
+| `changeProtection(id, params)`                                                       | `POST /volumes/{id}/actions/change_protection`      |
+| `listActions(id, params?)`                                                           | `GET /volumes/{id}/actions`                         |
+| `getAction(id, actionId)`                                                            | `GET /volumes/{id}/actions/{action_id}`             |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /volumes/actions`, `GET /volumes/actions/{id}` |
 
 ## List Volumes
 
-Returns all Volume objects.
+Returns one page of volumes. Filters: `name`, `label_selector`, `status` (`available`, `creating`),
+`sort` (`id`, `name`, `created`), `page`, `per_page`.
 
 ```typescript
-const volumes = await client.volumes.list();
-```
-
-## Get Volume
-
-Returns a specific Volume object.
-
-```typescript
-const volume = await client.volumes.get(12345);
-```
-
-## Create Volume
-
-Creates a new Volume.
-
-```typescript
-const volume = await client.volumes.create({
-  name: 'my-volume',
-  size: 100,
-  location: 'nbg1',
-  format: 'ext4',
-  labels: { environment: 'production' }
-});
-
-// Create and attach to a server
-const volume = await client.volumes.create({
-  name: 'my-volume',
-  size: 100,
-  server: 12345,
-  automount: true
+const { volumes, meta } = await client.volumes.list({
+  status: "available",
+  label_selector: "environment=production",
+  sort: "name:asc",
 });
 ```
 
-## Update Volume
-
-Updates a Volume.
+## Get a Volume
 
 ```typescript
-const updated = await client.volumes.update(12345, {
-  name: 'new-name',
-  labels: { environment: 'production' }
+const { volume } = await client.volumes.get(12345);
+console.log(volume.size, volume.linux_device, volume.server);
+```
+
+## Find by name
+
+`getByName()` returns the volume or `undefined`.
+
+```typescript
+const volume = await client.volumes.getByName("database-storage");
+```
+
+## All Volumes
+
+`iterate()`, `iteratePages()` and `listAll()` follow the pagination for you, `first()` returns the
+first match or `undefined`.
+
+```typescript
+const all = await client.volumes.listAll({ status: ["available"] });
+
+for await (const volume of client.volumes.iterate()) {
+  console.log(volume.name, volume.size);
+}
+
+const newest = await client.volumes.first({ sort: "created:desc" });
+```
+
+## Create a Volume
+
+Pass `name`, `size` (in GB) and exactly one of `location` and `server`. Optional: `format`
+(`"xfs"` or `"ext4"`), `automount` (requires `server`) and `labels`.
+
+The response contains the `volume`, the `action` tracking its creation and `next_actions`, e.g. for
+attaching it to the server. `client.actions.waitForAll()` waits for all of them.
+
+```typescript
+// In a location
+const { volume, action } = await client.volumes.create({
+  name: "database-storage",
+  size: 50,
+  location: "fsn1",
+  format: "ext4",
+});
+await client.actions.waitFor(action);
+
+// Attached to a server
+const created = await client.volumes.create({
+  name: "database-storage",
+  size: 50,
+  server: 42,
+  format: "ext4",
+  automount: true,
+});
+await client.actions.waitForAll(created);
+```
+
+## Update a Volume
+
+Updates `name` and/or `labels`.
+
+```typescript
+const { volume } = await client.volumes.update(12345, {
+  name: "new-name",
+  labels: { environment: "production" },
 });
 ```
 
-## Delete Volume
+## Delete a Volume
 
-Deletes a Volume.
+Resolves without a value. All data is destroyed. The volume must be detached and must not have
+delete protection enabled.
 
 ```typescript
 await client.volumes.delete(12345);
 ```
 
-## Volume Actions
+## Actions
 
-### Attach to Server
+These methods return `{ action }`. Wait for the action with `client.actions.waitFor()`.
 
-Attaches a Volume to a Server.
+### Attach to a server
 
 ```typescript
-await client.volumes.attachToServer(12345, {
-  server: 67890,
-  automount: true
-});
+const { action } = await client.volumes.attachToServer(12345, { server: 42, automount: true });
+await client.actions.waitFor(action);
 ```
 
 ### Detach
 
-Detaches a Volume from a Server.
-
 ```typescript
-await client.volumes.detach(12345);
+await client.actions.waitFor(await client.volumes.detach(12345));
 ```
 
 ### Resize
 
-Resizes a Volume.
+The new size in GB must be greater than the current size.
 
 ```typescript
-await client.volumes.resize(12345, {
-  size: 200
-});
+const { action } = await client.volumes.resize(12345, { size: 100 });
+await client.actions.waitFor(action);
 ```
 
-### Change Protection
-
-Changes the Protection configuration.
+### Change protection
 
 ```typescript
-await client.volumes.changeProtection(12345, {
-  delete: true
-});
+await client.volumes.changeProtection(12345, { delete: true });
+```
+
+## Listing actions
+
+```typescript
+// Actions of one volume
+const { actions } = await client.volumes.listActions(12345, { status: "running" });
+const { action } = await client.volumes.getAction(12345, 67890);
+
+// Actions of all volumes
+const running = await client.volumes.actions.listAll({ status: "running" });
+const one = await client.volumes.actions.get(67890);
 ```
 
 ## Types
 
 ```typescript
-type VolumeStatus = 'creating' | 'available' | 'deleting';
+import type { Volume, CreateVolumeParams } from "@nilovonjs/hcloud-js";
 
 interface Volume {
   id: number;
   name: string;
-  status: VolumeStatus;
-  server: number | null;
+  status: "creating" | "available";
+  server: number | null; // ID of the server the volume is attached to
   location: Location;
-  size: number;
+  size: number; // GB
   linux_device: string;
   format: string | null;
+  protection: { delete: boolean };
   labels: Record<string, string>;
-  protection: VolumeProtection;
   created: string;
 }
 ```

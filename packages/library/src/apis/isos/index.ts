@@ -3,89 +3,59 @@
  * @see https://docs.hetzner.cloud/reference/cloud#isos
  */
 
-import type { HCloudClient } from "../../client/index";
-import type { ListISOsParams, ListISOsResponse, GetISOResponse } from "../../apis/isos/types";
-import { validate } from "../../validation/index";
-import { listISOsResponseSchema, getISOResponseSchema } from "../../apis/isos/schemas";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { getISOResponseSchema, listISOsResponseSchema } from "./schemas";
+import type { GetISOResponse, ISO, ListISOsParams, ListISOsResponse } from "./types";
 
 /**
  * ISOs API client
+ *
+ * ISOs are read-only images of DVDs that can be attached to servers. Besides
+ * the public ISOs, custom (private) ISOs can be requested from Hetzner support.
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#isos
  */
-export class ISOsClient {
-  constructor(private readonly client: HCloudClient) {}
+export class ISOsClient extends NamedResource<ISO, ListISOsParams, "isos"> {
+  protected readonly itemsKey = "isos";
 
   /**
-   * Returns all available ISO objects.
+   * Returns a page of ISOs.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of ISOs with pagination metadata
+   * @param params - Filters and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#isos-list-isos
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all ISOs
-   * const result = await client.isos.list();
-   *
-   * // List ISOs with filters
-   * const isos = await client.isos.list({
-   *   name: 'debian',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
+   * const { isos } = await client.isos.list({
+   *   architecture: "arm",
+   *   include_architecture_wildcard: true,
    * });
    * ```
    */
-  async list(params?: ListISOsParams): Promise<ListISOsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/isos", queryParams);
-
-    return validate(listISOsResponseSchema, response, {
-      context: "List ISOs response",
-      detailed: true,
-    });
+  list(params?: ListISOsParams, options?: RequestOptions): Promise<ListISOsResponse> {
+    return this._get("/isos", listISOsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific ISO object.
+   * Returns a specific ISO.
    *
    * @param id - ID of the ISO
-   * @returns Promise resolving to the ISO
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#isos-get-an-iso
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get an ISO by ID
-   * const iso = await client.isos.get(12345);
-   * console.log(iso.iso.name);
+   * const { iso } = await client.isos.get(4711);
+   * console.log(iso.name, iso.architecture);
    * ```
    */
-  async get(id: number): Promise<GetISOResponse> {
-    const response = await this.client.get<unknown>(`/isos/${id}`);
-
-    return validate(getISOResponseSchema, response, {
-      context: "Get ISO response",
-      detailed: true,
-    });
+  get(id: number, options?: RequestOptions): Promise<GetISOResponse> {
+    return this._get(path`/isos/${id}`, getISOResponseSchema, undefined, options);
   }
 }

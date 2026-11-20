@@ -1,829 +1,170 @@
 /**
- * Hetzner Cloud TypeScript SDK
+ * @nilovonjs/hcloud-js - TypeScript SDK for the Hetzner Cloud API
  * @see https://docs.hetzner.cloud/reference/cloud
+ * @packageDocumentation
  */
 
-// Main client
-export { HCloudClient } from "./client/index";
-
-// Error handling
-export { HCloudError } from "./errors/index";
-
-// Types
-export type { RequestOptions, ApiErrorResponse, ErrorDetailsField } from "./types/index";
-
-export type { ClientOptions } from "./config/index";
-
-// Configuration
-export { HCLOUD_API_BASE_URL, DEFAULT_TIMEOUT_MS } from "./config/index";
-
-// Auth utilities
-export { createAuthHeader } from "./auth/index";
-
-// Validation utilities
-export { validate, safeValidate } from "./validation/index";
-export type { ValidateOptions } from "./validation/index";
-
-// Common Zod Schemas
-export { paginationMetaSchema } from "./apis/common/schemas";
-
-// Utility functions
+// Client
+export { HCloudClient, createClient } from "./client";
 export {
-  paginate,
+  BaseClient,
+  DEFAULT_ACTION_TIMEOUT_MS,
+  defaultPollInterval,
+  type LowLevelRequestOptions,
+  type ResolvedClientConfig,
+} from "./core/base-client";
+export { VERSION } from "./version";
+
+// Configuration and request types
+export {
+  DEFAULT_TIMEOUT_MS,
+  HCLOUD_API_BASE_URL,
+  HETZNER_API_BASE_URL,
+  TOKEN_ENV_VAR,
+  type ActionPollingOptions,
+  type ApiResponse,
+  type ApiTarget,
+  type ClientHooks,
+  type ClientOptions,
+  type ErrorContext,
+  type FetchLike,
+  type HttpMethod,
+  type Logger,
+  type QueryParams,
+  type QueryPrimitive,
+  type QueryValue,
+  type RateLimitInfo,
+  type RequestConfig,
+  type RequestContext,
+  type RequestOptions,
+  type ResponseContext,
+  type ResponseValidationMode,
+  type RetryContext,
+  type RetryDecisionContext,
+  type RetryOptions,
+} from "./core/types";
+
+// Errors
+export {
+  ErrorCode,
+  HCloudAbortError,
+  HCloudActionError,
+  HCloudActionTimeoutError,
+  HCloudApiError,
+  HCloudConflictError,
+  HCloudConnectionError,
+  HCloudError,
+  HCloudForbiddenError,
+  HCloudInvalidInputError,
+  HCloudNotFoundError,
+  HCloudRateLimitError,
+  HCloudServerError,
+  HCloudTimeoutError,
+  HCloudUnauthorizedError,
+  HCloudValidationError,
+  isHCloudError,
+  type ApiErrorInit,
+  type ApiErrorResponse,
+  type ErrorDetails,
+  type ErrorDetailsField,
+  type HCloudErrorCode,
+  type KnownErrorCode,
+  type ValidationIssue,
+} from "./core/errors";
+
+// Resource base classes (for building custom resource clients)
+export {
+  ApiResource,
+  ListableResource,
+  NamedResource,
+  path,
+  type ListResponse,
+} from "./core/resource";
+
+// Pagination
+export {
+  MAX_PER_PAGE,
   getAllPages,
+  paginate,
+  type PaginatedList,
   type PaginationIteratorOptions,
-  type PaginatedResult,
-} from "./utils/pagination";
-export {
-  pollAction,
-  pollActions,
-  type PollActionOptions,
-} from "./utils/actions";
-export {
-  isActionCompleted,
-  isActionSuccessful,
-  isActionFailed,
-  isServerRunning,
-  isServerStopped,
-  isImageAvailable,
-  isSnapshot,
-  isBackup,
-  isSystemImage,
-} from "./utils/type-guards";
-export {
-  createAndWaitForServer,
-  findServerByName,
-  findImageByName,
-  findFloatingIPByIP,
-} from "./utils/helpers";
+} from "./core/pagination";
 
-// Servers API
-export { ServersClient } from "./apis/servers/index";
-export type {
-  Server,
-  ServerStatus,
-  ListServersParams,
-  ListServersResponse,
-  CreateServerParams,
-  CreateServerResponse,
-  GetServerResponse,
-  UpdateServerParams,
-  UpdateServerResponse,
-  DeleteServerResponse,
-  GetServerMetricsParams,
-  GetServerMetricsResponse,
-  ServerMetrics,
-  ServerMetricsTimeSeriesValue,
-  PaginationMeta,
-  ServerType,
-  Location,
-  Datacenter,
-  PublicNet,
-  PrivateNet,
-  ServerAction,
-  BackupWindow,
-  ServerProtection,
-  ServerImage,
-  ListServerActionsParams,
-  ListServerActionsResponse,
-  GetServerActionResponse,
-  PowerOnServerResponse,
-  PowerOffServerResponse,
-  RebootServerResponse,
-  ResetServerResponse,
-  ShutdownServerResponse,
-  AttachISOToServerParams,
-  AttachISOToServerResponse,
-  DetachISOFromServerResponse,
-  EnableRescueModeParams,
-  EnableRescueModeResponse,
-  DisableRescueModeResponse,
-  CreateImageFromServerParams,
-  CreateImageFromServerResponse,
-  RebuildServerFromImageParams,
-  RebuildServerFromImageResponse,
-  ChangeServerProtectionParams,
-  ChangeServerProtectionResponse,
-  ChangeServerTypeParams,
-  ChangeServerTypeResponse,
-  EnableBackupsParams,
-  EnableBackupsResponse,
-  DisableBackupsResponse,
-  AttachServerToNetworkParams,
-  AttachServerToNetworkResponse,
-  DetachServerFromNetworkParams,
-  DetachServerFromNetworkResponse,
-  ChangeAliasIPsOfNetworkParams,
-  ChangeAliasIPsOfNetworkResponse,
-  ChangeServerReverseDNSParams,
-  ChangeServerReverseDNSResponse,
-  RequestConsoleForServerParams,
-  RequestConsoleForServerResponse,
-  ResetRootPasswordResponse,
-  AddServerToPlacementGroupParams,
-  AddServerToPlacementGroupResponse,
-  RemoveServerFromPlacementGroupResponse,
-} from "./apis/servers/types";
+// Validation
+export { safeValidate, validate, type ValidateOptions } from "./core/validation";
 
-// Servers Zod Schemas
-export {
-  serverStatusSchema,
-  serverSchema,
-  serverTypeSchema,
-  locationSchema,
-  datacenterSchema, 
-  publicNetSchema,
-  privateNetSchema,
-  backupWindowSchema,
-  serverProtectionSchema,
-  listServersResponseSchema,
-  createServerRequestSchema,
-  createServerResponseSchema,
-  getServerResponseSchema,
-  updateServerRequestSchema,
-  updateServerResponseSchema,
-  deleteServerResponseSchema,
-  getServerMetricsResponseSchema,
-  serverMetricsSchema,
-  serverMetricsTimeSeriesValueSchema,
-  serverActionSchema,
-  listServerActionsResponseSchema,
-  getServerActionResponseSchema,
-  powerOnServerResponseSchema,
-  powerOffServerResponseSchema,
-  rebootServerResponseSchema,
-  resetServerResponseSchema,
-  shutdownServerResponseSchema,
-  attachISOToServerRequestSchema,
-  attachISOToServerResponseSchema,
-  detachISOFromServerResponseSchema,
-  enableRescueModeRequestSchema,
-  enableRescueModeResponseSchema,
-  disableRescueModeResponseSchema,
-  createImageFromServerRequestSchema,
-  createImageFromServerResponseSchema,
-  rebuildServerFromImageRequestSchema,
-  rebuildServerFromImageResponseSchema,
-  changeServerProtectionRequestSchema,
-  changeServerProtectionResponseSchema,
-  changeServerTypeRequestSchema,
-  changeServerTypeResponseSchema,
-  enableBackupsRequestSchema,
-  enableBackupsResponseSchema,
-  disableBackupsResponseSchema,
-  attachServerToNetworkRequestSchema,
-  attachServerToNetworkResponseSchema,
-  detachServerFromNetworkRequestSchema,
-  detachServerFromNetworkResponseSchema,
-  changeAliasIPsOfNetworkRequestSchema,
-  changeAliasIPsOfNetworkResponseSchema,
-  changeServerReverseDNSRequestSchema,
-  changeServerReverseDNSResponseSchema,
-  requestConsoleForServerRequestSchema,
-  requestConsoleForServerResponseSchema,
-  resetRootPasswordResponseSchema,
-  addServerToPlacementGroupRequestSchema,
-  addServerToPlacementGroupResponseSchema,
-  removeServerFromPlacementGroupRequestSchema,
-  removeServerFromPlacementGroupResponseSchema,
-} from "./apis/servers/schemas";
+// Utilities
+export { labelSelector, type LabelCondition } from "./utils/label-selector";
+export { parseTimeSeries, type MetricPoint, type RawTimeSeries } from "./utils/metrics";
+export * from "./utils/type-guards";
+export * from "./utils/actions";
+export * from "./utils/helpers";
 
-// Images API
-export { ImagesClient } from "./apis/images/index";
-export type {
-  ImageStatus,
-  ImageType,
-  Image,
-  ListImagesParams,
-  ListImagesResponse,
-  GetImageResponse,
-  UpdateImageParams,
-  UpdateImageResponse,
-  DeleteImageResponse,
-} from "./apis/images/types";
+// Shared schemas and types
+export * from "./apis/common/schemas";
+export * from "./apis/common/types";
 
-// Images Zod Schemas
-export {
-  imageStatusSchema,
-  imageTypeSchema,
-  imageSchema,
-  imageCreatedFromSchema,
-  imageProtectionSchema,
-  imageDeprecationSchema,
-  listImagesResponseSchema,
-  updateImageRequestSchema,
-  getImageResponseSchema,
-  updateImageResponseSchema,
-  deleteImageResponseSchema,
-} from "./apis/images/schemas";
-
-// Actions API
-export { ActionsClient } from "./apis/actions/index";
-export type {
-  Action,
-  ActionStatus,
-  ActionResource,
-  ListActionsParams,
-  ListActionsResponse,
-  GetActionResponse,
-} from "./apis/actions/types";
-
-// Actions Zod Schemas
-export {
-  actionSchema,
-  actionResourceSchema,
-  listActionsResponseSchema,
-  getActionResponseSchema,
-} from "./apis/actions/schemas";
-
-// Certificates API
-export { CertificatesClient } from "./apis/certificates/index";
-export type {
-  Certificate,
-  CertificateStatus,
-  CertificateType,
-  ListCertificatesParams,
-  ListCertificatesResponse,
-  CreateCertificateParams,
-  CreateCertificateResponse,
-  GetCertificateResponse,
-  UpdateCertificateParams,
-  UpdateCertificateResponse,
-  DeleteCertificateResponse,
-  ListCertificateActionsParams,
-  ListCertificateActionsResponse,
-  GetCertificateActionResponse,
-  RetryCertificateIssuanceResponse,
-} from "./apis/certificates/types";
-
-// Certificates Zod Schemas
-export {
-  certificateStatusSchema,
-  certificateTypeSchema,
-  certificateSchema,
-  listCertificatesResponseSchema,
-  createCertificateRequestSchema,
-  createCertificateResponseSchema,
-  getCertificateResponseSchema,
-  updateCertificateRequestSchema,
-  updateCertificateResponseSchema,
-  deleteCertificateResponseSchema,
-  listCertificateActionsResponseSchema,
-  getCertificateActionResponseSchema,
-  retryCertificateIssuanceResponseSchema,
-} from "./apis/certificates/schemas";
-
-// SSH Keys API
-export { SSHKeysClient } from "./apis/ssh-keys/index";
-export type {
-  SSHKey,
-  ListSSHKeysParams,
-  ListSSHKeysResponse,
-  CreateSSHKeyParams,
-  CreateSSHKeyResponse,
-  GetSSHKeyResponse,
-  UpdateSSHKeyParams,
-  UpdateSSHKeyResponse,
-  DeleteSSHKeyResponse,
-} from "./apis/ssh-keys/types";
-
-// SSH Keys Zod Schemas
-export {
-  sshKeySchema,
-  listSSHKeysResponseSchema,
-  createSSHKeyRequestSchema,
-  createSSHKeyResponseSchema,
-  getSSHKeyResponseSchema,
-  updateSSHKeyRequestSchema,
-  updateSSHKeyResponseSchema,
-  deleteSSHKeyResponseSchema,
-} from "./apis/ssh-keys/schemas";
-
-// Firewalls API
-export { FirewallsClient } from "./apis/firewalls/index";
-export type {
-  Firewall,
-  FirewallRule,
-  FirewallRuleDirection,
-  FirewallRuleProtocol,
-  FirewallAppliedToResource,
-  ListFirewallsParams,
-  ListFirewallsResponse,
-  CreateFirewallParams,
-  CreateFirewallResponse,
-  GetFirewallResponse,
-  UpdateFirewallParams,
-  UpdateFirewallResponse,
-  DeleteFirewallResponse,
-  ListFirewallActionsParams,
-  ListFirewallActionsResponse,
-  GetFirewallActionResponse,
-  ApplyFirewallToResourcesParams,
-  ApplyFirewallToResourcesResponse,
-  RemoveFirewallFromResourcesParams,
-  RemoveFirewallFromResourcesResponse,
-  SetFirewallRulesParams,
-  SetFirewallRulesResponse,
-} from "./apis/firewalls/types";
-
-// Firewalls Zod Schemas
-export {
-  firewallSchema,
-  firewallRuleSchema,
-  firewallRuleDirectionSchema,
-  firewallRuleProtocolSchema,
-  firewallAppliedToResourceSchema,
-  listFirewallsResponseSchema,
-  createFirewallRequestSchema,
-  createFirewallResponseSchema,
-  getFirewallResponseSchema,
-  updateFirewallRequestSchema,
-  updateFirewallResponseSchema,
-  deleteFirewallResponseSchema,
-  listFirewallActionsResponseSchema,
-  getFirewallActionResponseSchema,
-  applyFirewallToResourcesRequestSchema,
-  applyFirewallToResourcesResponseSchema,
-  removeFirewallFromResourcesRequestSchema,
-  removeFirewallFromResourcesResponseSchema,
-  setFirewallRulesRequestSchema,
-  setFirewallRulesResponseSchema,
-} from "./apis/firewalls/schemas";
-
-// Floating IPs API
-export { FloatingIPsClient } from "./apis/floating-ips/index";
-export type {
-  FloatingIP,
-  FloatingIPType,
-  FloatingIPDnsPointer,
-  FloatingIPProtection,
-  ListFloatingIPsParams,
-  ListFloatingIPsResponse,
-  CreateFloatingIPParams,
-  CreateFloatingIPResponse,
-  GetFloatingIPResponse,
-  UpdateFloatingIPParams,
-  UpdateFloatingIPResponse,
-  DeleteFloatingIPResponse,
-  ListFloatingIPActionsParams,
-  ListFloatingIPActionsResponse,
-  GetFloatingIPActionResponse,
-  AssignFloatingIPToServerParams,
-  AssignFloatingIPToServerResponse,
-  ChangeFloatingIPReverseDNSParams,
-  ChangeFloatingIPReverseDNSResponse,
-  ChangeFloatingIPProtectionParams,
-  ChangeFloatingIPProtectionResponse,
-  UnassignFloatingIPResponse,
-} from "./apis/floating-ips/types";
-
-// Floating IPs Zod Schemas
-export {
-  floatingIpSchema,
-  floatingIpTypeSchema,
-  floatingIpDnsPointerSchema,
-  floatingIpProtectionSchema,
-  listFloatingIPsResponseSchema,
-  createFloatingIPRequestSchema,
-  createFloatingIPResponseSchema,
-  getFloatingIPResponseSchema,
-  updateFloatingIPRequestSchema,
-  updateFloatingIPResponseSchema,
-  deleteFloatingIPResponseSchema,
-  listFloatingIPActionsResponseSchema,
-  getFloatingIPActionResponseSchema,
-  assignFloatingIPToServerRequestSchema,
-  assignFloatingIPToServerResponseSchema,
-  changeFloatingIPReverseDNSRequestSchema,
-  changeFloatingIPReverseDNSResponseSchema,
-  changeFloatingIPProtectionRequestSchema,
-  changeFloatingIPProtectionResponseSchema,
-  unassignFloatingIPRequestSchema,
-  unassignFloatingIPResponseSchema,
-} from "./apis/floating-ips/schemas";
-
-// ISOs API
-export { ISOsClient } from "./apis/isos/index";
-export type {
-  ISO,
-  ISOType,
-  ListISOsParams,
-  ListISOsResponse,
-  GetISOResponse,
-} from "./apis/isos/types";
-export {
-  isoSchema,
-  isoTypeSchema,
-  listISOsResponseSchema,
-  getISOResponseSchema,
-} from "./apis/isos/schemas";
-
-// Placement Groups API
-export { PlacementGroupsClient } from "./apis/placement-groups/index";
-export type {
-  PlacementGroup,
-  PlacementGroupType,
-  ListPlacementGroupsParams,
-  ListPlacementGroupsResponse,
-  CreatePlacementGroupParams,
-  CreatePlacementGroupResponse,
-  GetPlacementGroupResponse,
-  UpdatePlacementGroupParams,
-  UpdatePlacementGroupResponse,
-  DeletePlacementGroupResponse,
-} from "./apis/placement-groups/types";
-export {
-  placementGroupSchema,
-  placementGroupTypeSchema,
-  listPlacementGroupsResponseSchema,
-  createPlacementGroupRequestSchema,
-  createPlacementGroupResponseSchema,
-  getPlacementGroupResponseSchema,
-  updatePlacementGroupRequestSchema,
-  updatePlacementGroupResponseSchema,
-  deletePlacementGroupResponseSchema,
-} from "./apis/placement-groups/schemas";
-
-// Primary IPs API
-export { PrimaryIPsClient } from "./apis/primary-ips/index";
-export type {
-  PrimaryIP,
-  PrimaryIPType,
-  PrimaryIPDnsPointer,
-  PrimaryIPProtection,
-  PrimaryIPAssigneeType,
-  ListPrimaryIPsParams,
-  ListPrimaryIPsResponse,
-  CreatePrimaryIPParams,
-  CreatePrimaryIPResponse,
-  GetPrimaryIPResponse,
-  UpdatePrimaryIPParams,
-  UpdatePrimaryIPResponse,
-  DeletePrimaryIPResponse,
-  ListPrimaryIPActionsParams,
-  ListPrimaryIPActionsResponse,
-  GetPrimaryIPActionResponse,
-  AssignPrimaryIPToResourceParams,
-  AssignPrimaryIPToResourceResponse,
-  ChangePrimaryIPReverseDNSParams,
-  ChangePrimaryIPReverseDNSResponse,
-  ChangePrimaryIPProtectionParams,
-  ChangePrimaryIPProtectionResponse,
-  UnassignPrimaryIPResponse,
-} from "./apis/primary-ips/types";
-export {
-  primaryIpSchema,
-  primaryIpTypeSchema,
-  primaryIpDnsPointerSchema,
-  primaryIpProtectionSchema,
-  primaryIpAssigneeTypeSchema,
-  listPrimaryIPsResponseSchema,
-  createPrimaryIPRequestSchema,
-  createPrimaryIPResponseSchema,
-  getPrimaryIPResponseSchema,
-  updatePrimaryIPRequestSchema,
-  updatePrimaryIPResponseSchema,
-  deletePrimaryIPResponseSchema,
-  listPrimaryIPActionsResponseSchema,
-  getPrimaryIPActionResponseSchema,
-  assignPrimaryIPToResourceRequestSchema,
-  assignPrimaryIPToResourceResponseSchema,
-  changePrimaryIPReverseDNSRequestSchema,
-  changePrimaryIPReverseDNSResponseSchema,
-  changePrimaryIPProtectionRequestSchema,
-  changePrimaryIPProtectionResponseSchema,
-  unassignPrimaryIPRequestSchema,
-  unassignPrimaryIPResponseSchema,
-} from "./apis/primary-ips/schemas";
-
-// Server Types API
-export { ServerTypesClient } from "./apis/server-types/index";
-export type {
-  ListServerTypesParams,
-  ListServerTypesResponse,
-  GetServerTypeResponse,
-} from "./apis/server-types/types";
-export {
-  listServerTypesResponseSchema,
-  getServerTypeResponseSchema,
-} from "./apis/server-types/schemas";
-
-// Load Balancers API
-export { LoadBalancersClient } from "./apis/load-balancers/index";
-export type {
-  LoadBalancer,
-  LoadBalancerAlgorithmType,
-  LoadBalancerServiceProtocol,
-  LoadBalancerTargetType,
-  LoadBalancerServiceHealthCheckProtocol,
-  ListLoadBalancersParams,
-  ListLoadBalancersResponse,
-  CreateLoadBalancerParams,
-  CreateLoadBalancerResponse,
-  GetLoadBalancerResponse,
-  UpdateLoadBalancerParams,
-  UpdateLoadBalancerResponse,
-  DeleteLoadBalancerResponse,
-  ListLoadBalancerActionsParams,
-  ListLoadBalancerActionsResponse,
-  GetLoadBalancerActionResponse,
-  AddLoadBalancerServiceParams,
-  AddLoadBalancerServiceResponse,
-  UpdateLoadBalancerServiceParams,
-  UpdateLoadBalancerServiceResponse,
-  DeleteLoadBalancerServiceResponse,
-  AddLoadBalancerTargetParams,
-  AddLoadBalancerTargetResponse,
-  RemoveLoadBalancerTargetParams,
-  RemoveLoadBalancerTargetResponse,
-  ChangeLoadBalancerAlgorithmParams,
-  ChangeLoadBalancerAlgorithmResponse,
-  ChangeLoadBalancerReverseDNSParams,
-  ChangeLoadBalancerReverseDNSResponse,
-  ChangeLoadBalancerProtectionParams,
-  ChangeLoadBalancerProtectionResponse,
-  ChangeLoadBalancerTypeParams,
-  ChangeLoadBalancerTypeResponse,
-  AttachLoadBalancerToNetworkParams,
-  AttachLoadBalancerToNetworkResponse,
-  DetachLoadBalancerFromNetworkResponse,
-  EnableLoadBalancerPublicInterfaceResponse,
-  DisableLoadBalancerPublicInterfaceResponse,
-  GetLoadBalancerMetricsParams,
-  GetLoadBalancerMetricsResponse,
-} from "./apis/load-balancers/types";
-export {
-  loadBalancerSchema,
-  loadBalancerAlgorithmTypeSchema,
-  loadBalancerServiceProtocolSchema,
-  loadBalancerTargetTypeSchema,
-  listLoadBalancersResponseSchema,
-  createLoadBalancerRequestSchema,
-  createLoadBalancerResponseSchema,
-  getLoadBalancerResponseSchema,
-  updateLoadBalancerRequestSchema,
-  updateLoadBalancerResponseSchema,
-  deleteLoadBalancerResponseSchema,
-  listLoadBalancerActionsResponseSchema,
-  getLoadBalancerActionResponseSchema,
-  addLoadBalancerServiceRequestSchema,
-  addLoadBalancerServiceResponseSchema,
-  updateLoadBalancerServiceRequestSchema,
-  updateLoadBalancerServiceResponseSchema,
-  deleteLoadBalancerServiceRequestSchema,
-  deleteLoadBalancerServiceResponseSchema,
-  addLoadBalancerTargetRequestSchema,
-  addLoadBalancerTargetResponseSchema,
-  removeLoadBalancerTargetRequestSchema,
-  removeLoadBalancerTargetResponseSchema,
-  changeLoadBalancerAlgorithmRequestSchema,
-  changeLoadBalancerAlgorithmResponseSchema,
-  changeLoadBalancerReverseDNSRequestSchema,
-  changeLoadBalancerReverseDNSResponseSchema,
-  changeLoadBalancerProtectionRequestSchema,
-  changeLoadBalancerProtectionResponseSchema,
-  changeLoadBalancerTypeRequestSchema,
-  changeLoadBalancerTypeResponseSchema,
-  attachLoadBalancerToNetworkRequestSchema,
-  attachLoadBalancerToNetworkResponseSchema,
-  detachLoadBalancerFromNetworkRequestSchema,
-  detachLoadBalancerFromNetworkResponseSchema,
-  enableLoadBalancerPublicInterfaceRequestSchema,
-  enableLoadBalancerPublicInterfaceResponseSchema,
-  disableLoadBalancerPublicInterfaceRequestSchema,
-  disableLoadBalancerPublicInterfaceResponseSchema,
-  getLoadBalancerMetricsRequestSchema,
-  getLoadBalancerMetricsResponseSchema,
-} from "./apis/load-balancers/schemas";
-
-// Networks API
-export { NetworksClient } from "./apis/networks/index";
-export type {
-  Network,
-  NetworkSubnetType,
-  NetworkRoute,
-  NetworkSubnet,
-  NetworkProtection,
-  ListNetworksParams,
-  ListNetworksResponse,
-  CreateNetworkParams,
-  CreateNetworkResponse,
-  GetNetworkResponse,
-  UpdateNetworkParams,
-  UpdateNetworkResponse,
-  DeleteNetworkResponse,
-  ListNetworkActionsParams,
-  ListNetworkActionsResponse,
-  GetNetworkActionResponse,
-  AddNetworkRouteParams,
-  AddNetworkRouteResponse,
-  DeleteNetworkRouteParams,
-  DeleteNetworkRouteResponse,
-  AddNetworkSubnetParams,
-  AddNetworkSubnetResponse,
-  DeleteNetworkSubnetParams,
-  DeleteNetworkSubnetResponse,
-  ChangeNetworkIpRangeParams,
-  ChangeNetworkIpRangeResponse,
-  ChangeNetworkProtectionParams,
-  ChangeNetworkProtectionResponse,
-} from "./apis/networks/types";
-export {
-  networkSchema,
-  networkSubnetTypeSchema,
-  networkRouteSchema,
-  networkSubnetSchema,
-  networkProtectionSchema,
-  listNetworksResponseSchema,
-  createNetworkRequestSchema,
-  createNetworkResponseSchema,
-  getNetworkResponseSchema,
-  updateNetworkRequestSchema,
-  updateNetworkResponseSchema,
-  deleteNetworkResponseSchema,
-  listNetworkActionsResponseSchema,
-  getNetworkActionResponseSchema,
-  addNetworkRouteRequestSchema,
-  addNetworkRouteResponseSchema,
-  deleteNetworkRouteRequestSchema,
-  deleteNetworkRouteResponseSchema,
-  addNetworkSubnetRequestSchema,
-  addNetworkSubnetResponseSchema,
-  deleteNetworkSubnetRequestSchema,
-  deleteNetworkSubnetResponseSchema,
-  changeNetworkIpRangeRequestSchema,
-  changeNetworkIpRangeResponseSchema,
-  changeNetworkProtectionRequestSchema,
-  changeNetworkProtectionResponseSchema,
-} from "./apis/networks/schemas";
-
-// Pricing API
-export { PricingClient } from "./apis/pricing/index";
-export type {
-  Price,
-  PricingLocation,
-  ServerTypePricing,
-  LoadBalancerTypePricing,
-  VolumePricing,
-  FloatingIpPricing,
-  PrimaryIpPricing,
-  TrafficPricing,
-  ImagePricing,
-  GetPricingResponse,
-} from "./apis/pricing/types";
-export {
-  priceSchema,
-  pricingLocationSchema,
-  serverTypePricingSchema,
-  loadBalancerTypePricingSchema,
-  volumePricingSchema,
-  floatingIpPricingSchema,
-  primaryIpPricingSchema,
-  trafficPricingSchema,
-  imagePricingSchema,
-  getPricingResponseSchema,
-} from "./apis/pricing/schemas";
-
-// Volumes API
-export { VolumesClient } from "./apis/volumes/index";
-export type {
-  Volume,
-  VolumeStatus,
-  VolumeProtection,
-  ListVolumesParams,
-  ListVolumesResponse,
-  CreateVolumeParams,
-  CreateVolumeResponse,
-  GetVolumeResponse,
-  UpdateVolumeParams,
-  UpdateVolumeResponse,
-  DeleteVolumeResponse,
-  ListVolumeActionsParams,
-  ListVolumeActionsResponse,
-  GetVolumeActionResponse,
-  AttachVolumeToServerParams,
-  AttachVolumeToServerResponse,
-  DetachVolumeResponse,
-  ResizeVolumeParams,
-  ResizeVolumeResponse,
-  ChangeVolumeProtectionParams,
-  ChangeVolumeProtectionResponse,
-} from "./apis/volumes/types";
-export {
-  volumeSchema,
-  volumeStatusSchema,
-  volumeProtectionSchema,
-  listVolumesResponseSchema,
-  createVolumeRequestSchema,
-  createVolumeResponseSchema,
-  getVolumeResponseSchema,
-  updateVolumeRequestSchema,
-  updateVolumeResponseSchema,
-  deleteVolumeResponseSchema,
-  listVolumeActionsResponseSchema,
-  getVolumeActionResponseSchema,
-  attachVolumeToServerRequestSchema,
-  attachVolumeToServerResponseSchema,
-  detachVolumeRequestSchema,
-  detachVolumeResponseSchema,
-  resizeVolumeRequestSchema,
-  resizeVolumeResponseSchema,
-  changeVolumeProtectionRequestSchema,
-  changeVolumeProtectionResponseSchema,
-} from "./apis/volumes/schemas";
-
-// DNS (Zones) API
-export { DNSClient } from "./apis/dns/index";
-export type {
-  Zone,
-  ZoneStatus,
-  ZoneProtection,
-  RRSet,
-  RRSetRecord,
-  RRSetProtection,
-  ListZonesParams,
-  ListZonesResponse,
-  CreateZoneParams,
-  CreateZoneResponse,
-  GetZoneResponse,
-  UpdateZoneParams,
-  UpdateZoneResponse,
-  DeleteZoneResponse,
-  ExportZoneResponse,
-  ListZoneActionsParams,
-  ListZoneActionsResponse,
-  GetZoneActionResponse,
-  ChangeZonePrimaryNameserversParams,
-  ChangeZonePrimaryNameserversResponse,
-  ChangeZoneProtectionParams,
-  ChangeZoneProtectionResponse,
-  ChangeZoneDefaultTTLParams,
-  ChangeZoneDefaultTTLResponse,
-  ImportZoneFileParams,
-  ImportZoneFileResponse,
-  ListRRSetsParams,
-  ListRRSetsResponse,
-  GetRRSetResponse,
-  CreateRRSetParams,
-  CreateRRSetResponse,
-  UpdateRRSetParams,
-  UpdateRRSetResponse,
-  DeleteRRSetResponse,
-  ChangeRRSetProtectionParams,
-  ChangeRRSetProtectionResponse,
-  ChangeRRSetTTLParams,
-  ChangeRRSetTTLResponse,
-  SetRRSetRecordsParams,
-  SetRRSetRecordsResponse,
-  AddRRSetRecordsParams,
-  AddRRSetRecordsResponse,
-  RemoveRRSetRecordsParams,
-  RemoveRRSetRecordsResponse,
-  UpdateRRSetRecordsParams,
-  UpdateRRSetRecordsResponse,
-} from "./apis/dns/types";
-export {
-  zoneSchema,
-  zoneStatusSchema,
-  zoneProtectionSchema,
-  rrsetSchema,
-  rrsetRecordSchema,
-  rrsetProtectionSchema,
-  listZonesResponseSchema,
-  createZoneRequestSchema,
-  createZoneResponseSchema,
-  getZoneResponseSchema,
-  updateZoneRequestSchema,
-  updateZoneResponseSchema,
-  deleteZoneResponseSchema,
-  exportZoneResponseSchema,
-  listZoneActionsResponseSchema,
-  getZoneActionResponseSchema,
-  changeZonePrimaryNameserversRequestSchema,
-  changeZonePrimaryNameserversResponseSchema,
-  changeZoneProtectionRequestSchema,
-  changeZoneProtectionResponseSchema,
-  changeZoneDefaultTTLRequestSchema,
-  changeZoneDefaultTTLResponseSchema,
-  importZoneFileRequestSchema,
-  importZoneFileResponseSchema,
-  listRRSetsResponseSchema,
-  getRRSetResponseSchema,
-  createRRSetRequestSchema,
-  createRRSetResponseSchema,
-  updateRRSetRequestSchema,
-  updateRRSetResponseSchema,
-  deleteRRSetResponseSchema,
-  changeRRSetProtectionRequestSchema,
-  changeRRSetProtectionResponseSchema,
-  changeRRSetTTLRequestSchema,
-  changeRRSetTTLResponseSchema,
-  setRRSetRecordsRequestSchema,
-  setRRSetRecordsResponseSchema,
-  addRRSetRecordsRequestSchema,
-  addRRSetRecordsResponseSchema,
-  removeRRSetRecordsRequestSchema,
-  removeRRSetRecordsResponseSchema,
-  updateRRSetRecordsRequestSchema,
-  updateRRSetRecordsResponseSchema,
-} from "./apis/dns/schemas";
+// API modules: clients, Zod schemas and types
+export * from "./apis/actions/index";
+export * from "./apis/actions/schemas";
+export * from "./apis/actions/types";
+export * from "./apis/certificates/index";
+export * from "./apis/certificates/schemas";
+export * from "./apis/certificates/types";
+export * from "./apis/datacenters/index";
+export * from "./apis/datacenters/schemas";
+export * from "./apis/datacenters/types";
+export * from "./apis/dns/index";
+export * from "./apis/dns/schemas";
+export * from "./apis/dns/types";
+export * from "./apis/firewalls/index";
+export * from "./apis/firewalls/schemas";
+export * from "./apis/firewalls/types";
+export * from "./apis/floating-ips/index";
+export * from "./apis/floating-ips/schemas";
+export * from "./apis/floating-ips/types";
+export * from "./apis/images/index";
+export * from "./apis/images/schemas";
+export * from "./apis/images/types";
+export * from "./apis/isos/index";
+export * from "./apis/isos/schemas";
+export * from "./apis/isos/types";
+export * from "./apis/load-balancer-types/index";
+export * from "./apis/load-balancer-types/schemas";
+export * from "./apis/load-balancer-types/types";
+export * from "./apis/load-balancers/index";
+export * from "./apis/load-balancers/schemas";
+export * from "./apis/load-balancers/types";
+export * from "./apis/locations/index";
+export * from "./apis/locations/schemas";
+export * from "./apis/locations/types";
+export * from "./apis/networks/index";
+export * from "./apis/networks/schemas";
+export * from "./apis/networks/types";
+export * from "./apis/placement-groups/index";
+export * from "./apis/placement-groups/schemas";
+export * from "./apis/placement-groups/types";
+export * from "./apis/pricing/index";
+export * from "./apis/pricing/schemas";
+export * from "./apis/pricing/types";
+export * from "./apis/primary-ips/index";
+export * from "./apis/primary-ips/schemas";
+export * from "./apis/primary-ips/types";
+export * from "./apis/server-types/index";
+export * from "./apis/server-types/schemas";
+export * from "./apis/server-types/types";
+export * from "./apis/servers/index";
+export * from "./apis/servers/schemas";
+export * from "./apis/servers/types";
+export * from "./apis/ssh-keys/index";
+export * from "./apis/ssh-keys/schemas";
+export * from "./apis/ssh-keys/types";
+export * from "./apis/storage-box-types/index";
+export * from "./apis/storage-box-types/schemas";
+export * from "./apis/storage-box-types/types";
+export * from "./apis/storage-boxes/index";
+export * from "./apis/storage-boxes/schemas";
+export * from "./apis/storage-boxes/types";
+export * from "./apis/volumes/index";
+export * from "./apis/volumes/schemas";
+export * from "./apis/volumes/types";

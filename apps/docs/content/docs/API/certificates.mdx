@@ -1,100 +1,185 @@
 ---
-title: Certificates API
-description: Manage SSL/TLS certificates
+title: Certificates
+description: Manage TLS/SSL certificates for Load Balancers
 ---
 
-# Certificates API
+`client.certificates` manages TLS/SSL Certificates, which Load Balancers use to terminate HTTPS.
+A Certificate is either `uploaded` (you provide certificate and private key) or `managed` (issued
+and renewed by Hetzner via Let's Encrypt for domains that use Hetzner DNS).
 
-The Certificates API allows you to manage SSL/TLS certificates for load balancers.
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
+```
+
+Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+
+| Method                                                                               | Endpoint                                                      |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `list(params?)`                                                                      | `GET /certificates`                                           |
+| `get(id)`                                                                            | `GET /certificates/{id}`                                      |
+| `getByName(name)`                                                                    | `GET /certificates?name=`                                     |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /certificates` (all pages)                               |
+| `create(params)`                                                                     | `POST /certificates`                                          |
+| `createManaged(params)`                                                              | `POST /certificates` (`type: "managed"`)                      |
+| `update(id, params)`                                                                 | `PUT /certificates/{id}`                                      |
+| `delete(id)`                                                                         | `DELETE /certificates/{id}`                                   |
+| `retryIssuance(id)`                                                                  | `POST /certificates/{id}/actions/retry`                       |
+| `listActions(id, params?)`                                                           | `GET /certificates/{id}/actions`                              |
+| `getAction(id, actionId)`                                                            | `GET /certificates/{id}/actions/{action_id}`                  |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /certificates/actions`, `GET /certificates/actions/{id}` |
 
 ## List Certificates
 
-Returns all Certificate objects.
+Returns one page of Certificates. Filters: `name`, `label_selector`, `type` (`uploaded`,
+`managed`), `sort` (`id`, `name`, `created`), `page`, `per_page`.
 
 ```typescript
-const certificates = await client.certificates.list();
-```
-
-## Get Certificate
-
-Returns a specific Certificate object.
-
-```typescript
-const certificate = await client.certificates.get(12345);
-```
-
-## Create Certificate
-
-Creates a new Certificate.
-
-```typescript
-// Uploaded certificate
-const cert = await client.certificates.create({
-  name: 'my-cert',
-  certificate: '-----BEGIN CERTIFICATE-----...',
-  private_key: '-----BEGIN PRIVATE KEY-----...',
-  labels: { environment: 'production' }
-});
-
-// Let's Encrypt certificate
-const cert = await client.certificates.create({
-  name: 'my-cert',
-  type: 'managed',
-  domain_names: ['example.com', 'www.example.com'],
-  labels: { environment: 'production' }
+const { certificates, meta } = await client.certificates.list({
+  type: "managed",
+  label_selector: "environment=production",
+  sort: "name:asc",
 });
 ```
 
-## Update Certificate
-
-Updates a Certificate.
+## Get a Certificate
 
 ```typescript
-const updated = await client.certificates.update(12345, {
-  name: 'new-name',
-  labels: { environment: 'production' }
+const { certificate } = await client.certificates.get(12345);
+console.log(certificate.domain_names, certificate.not_valid_after);
+```
+
+## Find by name
+
+Returns the Certificate or `undefined`.
+
+```typescript
+const certificate = await client.certificates.getByName("my-certificate");
+```
+
+## All Certificates
+
+`iterate()`, `iteratePages()` and `listAll()` follow the pagination for you, `first()` returns the
+first match or `undefined`.
+
+```typescript
+const all = await client.certificates.listAll({ label_selector: "environment=production" });
+
+for await (const certificate of client.certificates.iterate({ type: "uploaded" })) {
+  console.log(certificate.name, certificate.not_valid_after);
+}
+
+const newest = await client.certificates.first({ sort: "created:desc" });
+```
+
+## Create a Certificate
+
+### Uploaded
+
+Pass `certificate` (the certificate and its chain in PEM format) and `private_key`. `type` defaults
+to `"uploaded"`.
+
+```typescript
+const { certificate } = await client.certificates.create({
+  name: "my-certificate",
+  certificate: "-----BEGIN CERTIFICATE-----\n...",
+  private_key: "-----BEGIN PRIVATE KEY-----\n...",
+  labels: { environment: "production" },
 });
 ```
 
-## Delete Certificate
+### Managed
 
-Deletes a Certificate.
+`createManaged()` requests a Certificate for `domain_names` and returns the issuance `action`.
+
+```typescript
+const { certificate, action } = await client.certificates.createManaged({
+  name: "my-managed-certificate",
+  domain_names: ["example.com", "www.example.com"],
+});
+await client.actions.waitFor(action);
+```
+
+`create({ type: "managed", ... })` sends the same request. Its return type covers both kinds of
+Certificates, so `action` is optional there.
+
+```typescript
+const created = await client.certificates.create({
+  name: "my-managed-certificate",
+  type: "managed",
+  domain_names: ["example.com"],
+});
+if (created.action) await client.actions.waitFor(created.action);
+```
+
+## Update a Certificate
+
+Updates `name` and/or `labels`.
+
+```typescript
+const { certificate } = await client.certificates.update(12345, {
+  name: "new-name",
+  labels: { environment: "production" },
+});
+```
+
+## Delete a Certificate
+
+Resolves without a value. A Certificate that is in use by a Load Balancer cannot be deleted.
 
 ```typescript
 await client.certificates.delete(12345);
 ```
 
-## Certificate Actions
+## Retry issuance or renewal
 
-### Retry Issuance
-
-Retries the issuance process for a managed certificate.
+Retries a failed issuance or renewal of a managed Certificate. Returns `{ action }`.
 
 ```typescript
-await client.certificates.retryIssuance(12345);
+const { certificate } = await client.certificates.get(12345);
+
+if (certificate.status?.issuance === "failed" || certificate.status?.renewal === "failed") {
+  console.log(certificate.status.error?.message);
+  await client.actions.waitFor(await client.certificates.retryIssuance(12345));
+}
+```
+
+## Listing actions
+
+```typescript
+// Actions of one Certificate
+const { actions } = await client.certificates.listActions(12345, { status: "running" });
+const { action } = await client.certificates.getAction(12345, 67890);
+
+// Actions of all Certificates
+const running = await client.certificates.actions.listAll({ status: "running" });
+const one = await client.certificates.actions.get(67890);
 ```
 
 ## Types
 
 ```typescript
-type CertificateType = 'uploaded' | 'managed';
-type CertificateStatus = 'pending' | 'issued' | 'failed';
+import type { Certificate, CertificateStatus, CreateCertificateParams } from "@nilovonjs/hcloud-js";
 
 interface Certificate {
   id: number;
   name: string;
-  type: CertificateType;
-  status: CertificateStatus;
-  certificate: string | null;
-  created: string;
-  not_valid_before: string;
-  not_valid_after: string;
-  domain_names: string[];
-  fingerprint: string | null;
+  type: "uploaded" | "managed";
   labels: Record<string, string>;
-  used_by: Array<{
-    id: number;
-    type: 'load_balancer';
-  }>;
+  certificate: string | null; // null while a managed Certificate is being issued
+  fingerprint: string | null;
+  not_valid_before: string | null;
+  not_valid_after: string | null;
+  domain_names: string[];
+  created: string;
+  status?: CertificateStatus | null; // only set for managed Certificates
+  used_by?: { id: number; type: string }[];
+}
+
+interface CertificateStatus {
+  issuance?: "pending" | "completed" | "failed";
+  renewal?: "scheduled" | "pending" | "failed" | "unavailable";
+  error?: { code: string; message: string } | null;
 }
 ```

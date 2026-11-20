@@ -4,8 +4,8 @@
  */
 
 import { z } from "zod";
-import { actionSchema } from "../../apis/actions/schemas";
-import { paginationMetaSchema } from "../../apis/common/schemas";
+import { actionSchema } from "../actions/schemas";
+import { labelsSchema, metaSchema } from "../common/schemas";
 
 /**
  * Placement Group type schema
@@ -15,16 +15,15 @@ export const placementGroupTypeSchema = z.enum(["spread"]);
 /**
  * Placement Group schema
  */
-export const placementGroupSchema = z
-  .object({
-    id: z.number(),
-    name: z.string(),
-    labels: z.record(z.string(), z.string()),
-    created: z.string(),
-    servers: z.array(z.number()),
-    type: placementGroupTypeSchema,
-  })
-  .passthrough();
+export const placementGroupSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  labels: labelsSchema,
+  created: z.string(),
+  /** IDs of the servers assigned to the placement group. */
+  servers: z.array(z.number()),
+  type: placementGroupTypeSchema,
+});
 
 /**
  * List Placement Groups response schema
@@ -32,11 +31,7 @@ export const placementGroupSchema = z
  */
 export const listPlacementGroupsResponseSchema = z.object({
   placement_groups: z.array(placementGroupSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+  meta: metaSchema.optional(),
 });
 
 /**
@@ -44,9 +39,9 @@ export const listPlacementGroupsResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#placement-groups-create-a-placement-group
  */
 export const createPlacementGroupRequestSchema = z.object({
-  name: z.string(),
+  name: z.string().min(1),
   type: placementGroupTypeSchema,
-  labels: z.record(z.string(), z.string()).optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
@@ -55,7 +50,7 @@ export const createPlacementGroupRequestSchema = z.object({
  */
 export const createPlacementGroupResponseSchema = z.object({
   placement_group: placementGroupSchema,
-  action: actionSchema.optional(),
+  action: actionSchema.nullable().optional(),
 });
 
 /**
@@ -71,8 +66,8 @@ export const getPlacementGroupResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#placement-groups-update-a-placement-group
  */
 export const updatePlacementGroupRequestSchema = z.object({
-  name: z.string().optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  name: z.string().min(1).optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
@@ -82,9 +77,3 @@ export const updatePlacementGroupRequestSchema = z.object({
 export const updatePlacementGroupResponseSchema = z.object({
   placement_group: placementGroupSchema,
 });
-
-/**
- * Delete Placement Group response schema
- * @see https://docs.hetzner.cloud/reference/cloud#placement-groups-delete-a-placement-group
- */
-export const deletePlacementGroupResponseSchema = z.object({});

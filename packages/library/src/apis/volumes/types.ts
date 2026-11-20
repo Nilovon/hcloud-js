@@ -1,33 +1,31 @@
 /**
  * Types for Hetzner Cloud Volumes API
- * Types are inferred from Zod schemas
  * @see https://docs.hetzner.cloud/reference/cloud#volumes
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  listVolumesResponseSchema,
+import type { z } from "zod";
+import type {
+  ActionResponse,
+  GetActionResponse,
+  ListActionsParams,
+  ListActionsResponse,
+} from "../actions/types";
+import type { OneOrMany, PageParams, SortParam } from "../common/types";
+import type {
+  attachVolumeToServerRequestSchema,
+  changeVolumeProtectionRequestSchema,
   createVolumeRequestSchema,
   createVolumeResponseSchema,
   getVolumeResponseSchema,
+  listVolumesResponseSchema,
+  resizeVolumeRequestSchema,
   updateVolumeRequestSchema,
   updateVolumeResponseSchema,
-  deleteVolumeResponseSchema,
-  listVolumeActionsResponseSchema,
-  getVolumeActionResponseSchema,
-  attachVolumeToServerRequestSchema,
-  attachVolumeToServerResponseSchema,
-  detachVolumeRequestSchema,
-  detachVolumeResponseSchema,
-  resizeVolumeRequestSchema,
-  resizeVolumeResponseSchema,
-  changeVolumeProtectionRequestSchema,
-  changeVolumeProtectionResponseSchema,
+  volumeFormatSchema,
+  volumeProtectionSchema,
   volumeSchema,
   volumeStatusSchema,
-  volumeProtectionSchema,
-} from "../../apis/volumes/schemas";
-import type { z } from "zod";
+} from "./schemas";
 
 /**
  * Volume status
@@ -35,41 +33,49 @@ import type { z } from "zod";
 export type VolumeStatus = z.infer<typeof volumeStatusSchema>;
 
 /**
+ * Filesystems a volume can be formatted with on creation
+ */
+export type VolumeFormat = z.infer<typeof volumeFormatSchema>;
+
+/**
  * Volume protection
  */
 export type VolumeProtection = z.infer<typeof volumeProtectionSchema>;
 
 /**
- * Volume
+ * Hetzner Cloud Volume
+ * @see https://docs.hetzner.cloud/reference/cloud#volumes
  */
 export type Volume = z.infer<typeof volumeSchema>;
+
+/**
+ * Fields volumes can be sorted by
+ */
+export type VolumeSort = SortParam<"id" | "name" | "created">;
 
 /**
  * List Volumes query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-list-volumes
  */
-export interface ListVolumesParams {
+export interface ListVolumesParams extends PageParams {
   /**
-   * Can be used to filter resources by their name. The response will only contain the resources matching the specified name.
+   * Only return the volume with this exact name.
    */
   name?: string;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, created, created:asc, created:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter resources by labels. The response will only contain resources matching the label selector.
+   * Only return volumes matching the label selector.
+   * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
   /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Only return volumes with the given status.
    */
-  page?: number;
+  status?: OneOrMany<VolumeStatus>;
   /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Sort the result.
+   * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  per_page?: number;
+  sort?: OneOrMany<VolumeSort>;
 }
 
 /**
@@ -79,10 +85,10 @@ export interface ListVolumesParams {
 export type ListVolumesResponse = z.infer<typeof listVolumesResponseSchema>;
 
 /**
- * Create Volume parameters
+ * Create Volume request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-create-a-volume
  */
-export type CreateVolumeParams = z.infer<typeof createVolumeRequestSchema>;
+export type CreateVolumeParams = z.input<typeof createVolumeRequestSchema>;
 
 /**
  * Create Volume response
@@ -97,10 +103,10 @@ export type CreateVolumeResponse = z.infer<typeof createVolumeResponseSchema>;
 export type GetVolumeResponse = z.infer<typeof getVolumeResponseSchema>;
 
 /**
- * Update Volume parameters
+ * Update Volume request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-update-a-volume
  */
-export type UpdateVolumeParams = z.infer<typeof updateVolumeRequestSchema>;
+export type UpdateVolumeParams = z.input<typeof updateVolumeRequestSchema>;
 
 /**
  * Update Volume response
@@ -109,89 +115,61 @@ export type UpdateVolumeParams = z.infer<typeof updateVolumeRequestSchema>;
 export type UpdateVolumeResponse = z.infer<typeof updateVolumeResponseSchema>;
 
 /**
- * Delete Volume response
- * @see https://docs.hetzner.cloud/reference/cloud#volumes-delete-a-volume
- */
-export type DeleteVolumeResponse = z.infer<typeof deleteVolumeResponseSchema>;
-
-/**
  * List Volume Actions query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-list-actions-for-a-volume
  */
-export interface ListVolumeActionsParams {
-  /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, command, command:asc, command:desc, status, status:asc, status:desc, progress, progress:asc, progress:desc, started, started:asc, started:desc, finished, finished:asc, finished:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter Actions by status. The response will only contain Actions matching the status.
-   */
-  status?: string | string[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
-}
+export type ListVolumeActionsParams = ListActionsParams;
 
 /**
  * List Volume Actions response
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-list-actions-for-a-volume
  */
-export type ListVolumeActionsResponse = z.infer<typeof listVolumeActionsResponseSchema>;
+export type ListVolumeActionsResponse = ListActionsResponse;
 
 /**
  * Get Volume Action response
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-get-an-action-for-a-volume
  */
-export type GetVolumeActionResponse = z.infer<typeof getVolumeActionResponseSchema>;
+export type GetVolumeActionResponse = GetActionResponse;
 
 /**
- * Attach Volume to Server parameters
+ * Attach Volume to Server request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-attach-volume-to-a-server
  */
-export type AttachVolumeToServerParams = z.infer<typeof attachVolumeToServerRequestSchema>;
+export type AttachVolumeToServerParams = z.input<typeof attachVolumeToServerRequestSchema>;
 
 /**
  * Attach Volume to Server response
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-attach-volume-to-a-server
  */
-export type AttachVolumeToServerResponse = z.infer<typeof attachVolumeToServerResponseSchema>;
+export type AttachVolumeToServerResponse = ActionResponse;
 
 /**
  * Detach Volume response
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-detach-volume
  */
-export type DetachVolumeResponse = z.infer<typeof detachVolumeResponseSchema>;
+export type DetachVolumeResponse = ActionResponse;
 
 /**
- * Resize Volume parameters
+ * Resize Volume request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-resize-volume
  */
-export type ResizeVolumeParams = z.infer<typeof resizeVolumeRequestSchema>;
+export type ResizeVolumeParams = z.input<typeof resizeVolumeRequestSchema>;
 
 /**
  * Resize Volume response
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-resize-volume
  */
-export type ResizeVolumeResponse = z.infer<typeof resizeVolumeResponseSchema>;
+export type ResizeVolumeResponse = ActionResponse;
 
 /**
- * Change Volume Protection parameters
+ * Change Volume Protection request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-change-volume-protection
  */
-export type ChangeVolumeProtectionParams = z.infer<
-  typeof changeVolumeProtectionRequestSchema
->;
+export type ChangeVolumeProtectionParams = z.input<typeof changeVolumeProtectionRequestSchema>;
 
 /**
  * Change Volume Protection response
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-change-volume-protection
  */
-export type ChangeVolumeProtectionResponse = z.infer<
-  typeof changeVolumeProtectionResponseSchema
->;
+export type ChangeVolumeProtectionResponse = ActionResponse;

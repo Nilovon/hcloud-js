@@ -1,224 +1,370 @@
 ---
-title: DNS API
-description: Manage DNS zones and records
+title: DNS
+description: Manage DNS zones and resource record sets (RRSets)
 ---
 
-# DNS API
+`client.dns` manages DNS zones and their resource record sets (RRSets). Hetzner calls this the
+[Zones API](https://docs.hetzner.cloud/reference/cloud#zones).
 
-The DNS API allows you to manage DNS zones and record sets (RRSets).
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
+```
+
+- **Zones** are addressed by ID or name: `42` or `"example.com"`.
+- **RRSets** are addressed by name and type: `"www"`, `"A"`. The RRSet at the zone apex is named `"@"`.
+  Identifiers are URI-encoded for you.
+- Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+- Most mutating calls return an `action`. Wait for it with `client.actions.waitFor()`.
+
+| Method                                                          | Endpoint                                                |
+| --------------------------------------------------------------- | ------------------------------------------------------- |
+| `listZones(params?)`                                            | `GET /zones`                                            |
+| `iterateZones(params?)` / `listAllZones(params?)`               | `GET /zones` (all pages)                                |
+| `createZone(params)`                                            | `POST /zones`                                           |
+| `getZone(zone)`                                                 | `GET /zones/{zone}`                                     |
+| `updateZone(zone, params)`                                      | `PUT /zones/{zone}`                                     |
+| `deleteZone(zone)`                                              | `DELETE /zones/{zone}`                                  |
+| `exportZone(zone)`                                              | `GET /zones/{zone}/zonefile`                            |
+| `importZoneFile(zone, params)`                                  | `POST /zones/{zone}/actions/import_zonefile`            |
+| `changeZoneProtection(zone, params)`                            | `POST /zones/{zone}/actions/change_protection`          |
+| `changeZoneDefaultTTL(zone, params)`                            | `POST /zones/{zone}/actions/change_ttl`                 |
+| `changeZonePrimaryNameservers(zone, params)`                    | `POST /zones/{zone}/actions/change_primary_nameservers` |
+| `listZoneActions(zone, params?)`                                | `GET /zones/{zone}/actions`                             |
+| `getZoneAction(zone, actionId)`                                 | `GET /zones/{zone}/actions/{action_id}`                 |
+| `actions.list(params?)` / `actions.get(id)`                     | `GET /zones/actions`, `GET /zones/actions/{id}`         |
+| `listRRSets(zone, params?)`                                     | `GET /zones/{zone}/rrsets`                              |
+| `iterateRRSets(zone, params?)` / `listAllRRSets(zone, params?)` | `GET /zones/{zone}/rrsets` (all pages)                  |
+| `createRRSet(zone, params)`                                     | `POST /zones/{zone}/rrsets`                             |
+| `getRRSet(zone, name, type)`                                    | `GET /zones/{zone}/rrsets/{name}/{type}`                |
+| `updateRRSet(zone, name, type, params)`                         | `PUT /zones/{zone}/rrsets/{name}/{type}`                |
+| `deleteRRSet(zone, name, type)`                                 | `DELETE /zones/{zone}/rrsets/{name}/{type}`             |
+| `setRRSetRecords(zone, name, type, params)`                     | `POST .../actions/set_records`                          |
+| `addRRSetRecords(zone, name, type, params)`                     | `POST .../actions/add_records`                          |
+| `removeRRSetRecords(zone, name, type, params)`                  | `POST .../actions/remove_records`                       |
+| `updateRRSetRecords(zone, name, type, params)`                  | `POST .../actions/update_records`                       |
+| `changeRRSetTTL(zone, name, type, params)`                      | `POST .../actions/change_ttl`                           |
+| `changeRRSetProtection(zone, name, type, params)`               | `POST .../actions/change_protection`                    |
 
 ## Zones
 
-### List Zones
+### List zones
 
-Returns all Zone objects.
+Returns one page of zones. Filters: `name`, `mode`, `label_selector`, `sort`, `page`, `per_page`.
 
 ```typescript
-const zones = await client.dns.listZones();
+const { zones, meta } = await client.dns.listZones({
+  mode: "primary",
+  label_selector: "environment=production",
+  sort: "name:asc",
+});
 ```
 
-### Get Zone
+### All zones
 
-Returns a specific Zone object.
+`iterateZones()` and `listAllZones()` follow the pagination for you and accept the same filters.
 
 ```typescript
-const zone = await client.dns.getZone('example.com');
+for await (const zone of client.dns.iterateZones({ mode: "primary" })) {
+  console.log(zone.name, zone.status);
+}
+
+const zones = await client.dns.listAllZones();
 ```
 
-### Create Zone
-
-Creates a new Zone.
+### Get a zone
 
 ```typescript
-const zone = await client.dns.createZone({
-  name: 'example.com',
+const { zone } = await client.dns.getZone("example.com"); // or by ID: getZone(42)
+console.log(zone.authoritative_nameservers.assigned);
+```
+
+### Create a zone
+
+`mode` is required: `"primary"` (records are managed via the API) or `"secondary"` (records are
+transferred from your `primary_nameservers`). RRSets can be passed inline or as a `zonefile`.
+
+```typescript
+const { zone, action } = await client.dns.createZone({
+  name: "example.com",
+  mode: "primary",
   ttl: 3600,
-  labels: { environment: 'production' }
+  labels: { environment: "production" },
+  rrsets: [
+    { name: "@", type: "A", records: [{ value: "198.51.100.1" }] },
+    { name: "www", type: "CNAME", records: [{ value: "example.com." }] },
+  ],
 });
+await client.actions.waitFor(action);
 ```
-
-### Update Zone
-
-Updates a Zone.
 
 ```typescript
-const updated = await client.dns.updateZone('example.com', {
-  ttl: 7200,
-  labels: { environment: 'production' }
+// Secondary zone
+await client.dns.createZone({
+  name: "example.org",
+  mode: "secondary",
+  primary_nameservers: [{ address: "198.51.100.1", port: 53 }],
 });
 ```
 
-### Delete Zone
+### Update a zone
 
-Deletes a Zone.
+Only the labels can be updated. Use [`changeZoneDefaultTTL`](#change-the-default-ttl) for the TTL.
 
 ```typescript
-await client.dns.deleteZone('example.com');
+const { zone } = await client.dns.updateZone("example.com", {
+  labels: { environment: "staging" },
+});
 ```
 
-### Export Zone
-
-Exports a Zone file.
+### Delete a zone
 
 ```typescript
-const exported = await client.dns.exportZone('example.com');
-console.log(exported.zone_file);
+const { action } = await client.dns.deleteZone("example.com");
+await client.actions.waitFor(action);
 ```
 
-### Import Zone
+### Export a zone file
 
-Imports a Zone file.
+Returns the zone in BIND (RFC 1034/1035) format.
 
 ```typescript
-const result = await client.dns.importZoneFile('example.com', {
-  zone_file: '$ORIGIN example.com.\n$TTL 3600\n...'
-});
+const { zonefile } = await client.dns.exportZone("example.com");
 ```
 
-### Zone Actions
+### Import a zone file
+
+Replaces **all** RRSets of the zone.
 
 ```typescript
-// Change primary nameservers
-await client.dns.changeZonePrimaryNameservers('example.com', {
-  nameservers: ['ns1.example.com', 'ns2.example.com']
+const { action } = await client.dns.importZoneFile("example.com", {
+  zonefile: "$ORIGIN example.com.\n$TTL 3600\n@ IN A 198.51.100.1\n",
 });
+await client.actions.waitFor(action);
+```
 
-// Change protection
-await client.dns.changeZoneProtection('example.com', {
-  delete: true
-});
+### Change the protection
 
-// Change default TTL
-await client.dns.changeZoneDefaultTTL('example.com', {
-  ttl: 7200
+```typescript
+const { action } = await client.dns.changeZoneProtection("example.com", { delete: true });
+```
+
+### Change the default TTL
+
+```typescript
+const { action } = await client.dns.changeZoneDefaultTTL("example.com", { ttl: 7200 });
+```
+
+### Change the primary nameservers
+
+For zones in secondary mode.
+
+```typescript
+const { action } = await client.dns.changeZonePrimaryNameservers("example.org", {
+  primary_nameservers: [
+    { address: "198.51.100.1", port: 53 },
+    { address: "203.0.113.1", tsig_algorithm: "hmac-sha256", tsig_key: "c2VjcmV0" },
+  ],
 });
 ```
 
-## RRSets (Record Sets)
+## RRSets
 
 ### List RRSets
 
-Returns all RRSet objects for a Zone.
+Returns one page of RRSets of a zone. Filters: `name`, `type` (one or many), `label_selector`,
+`sort`, `page`, `per_page`.
 
 ```typescript
-const rrsets = await client.dns.listRRSets('example.com', {
-  type: 'A',
-  name: 'www'
+const { rrsets } = await client.dns.listRRSets("example.com", {
+  type: ["A", "AAAA"],
+  sort: "name:asc",
 });
 ```
 
-### Get RRSet
-
-Returns a specific RRSet object.
+### All RRSets
 
 ```typescript
-const rrset = await client.dns.getRRSet('example.com', 'www', 'A');
+for await (const rrset of client.dns.iterateRRSets("example.com", { type: "TXT" })) {
+  console.log(
+    rrset.name,
+    rrset.records.map((record) => record.value),
+  );
+}
+
+const rrsets = await client.dns.listAllRRSets("example.com");
 ```
 
-### Create RRSet
-
-Creates a new RRSet.
+### Get an RRSet
 
 ```typescript
-const rrset = await client.dns.createRRSet('example.com', {
-  name: 'www',
-  type: 'A',
+const { rrset } = await client.dns.getRRSet("example.com", "www", "A");
+const { rrset: apex } = await client.dns.getRRSet("example.com", "@", "A");
+```
+
+### Create an RRSet
+
+Omit `ttl` (or pass `null`) to use the default TTL of the zone.
+
+```typescript
+const { rrset, action } = await client.dns.createRRSet("example.com", {
+  name: "www",
+  type: "A",
   ttl: 3600,
-  records: [
-    { value: '1.2.3.4', comment: 'Web server' }
-  ]
+  records: [{ value: "198.51.100.1", comment: "web server" }],
+});
+await client.actions.waitFor(action);
+```
+
+### Update an RRSet
+
+Only the labels can be updated. Records and TTL are changed with the actions below.
+
+```typescript
+const { rrset } = await client.dns.updateRRSet("example.com", "www", "A", {
+  labels: { environment: "production" },
 });
 ```
 
-### Update RRSet
-
-Updates an RRSet.
+### Delete an RRSet
 
 ```typescript
-const updated = await client.dns.updateRRSet('example.com', 'www', 'A', {
-  ttl: 7200,
-  records: [
-    { value: '5.6.7.8', comment: 'Updated web server' }
-  ]
-});
+const { action } = await client.dns.deleteRRSet("example.com", "www", "A");
 ```
 
-### Delete RRSet
-
-Deletes an RRSet.
+### Manage records
 
 ```typescript
-await client.dns.deleteRRSet('example.com', 'www', 'A');
-```
-
-### Record Management
-
-```typescript
-// Set all records
-await client.dns.setRRSetRecords('example.com', 'www', 'A', {
-  records: [{ value: '1.2.3.4' }],
-  ttl: 3600
+// Replace all records
+await client.dns.setRRSetRecords("example.com", "www", "A", {
+  records: [{ value: "198.51.100.1" }, { value: "198.51.100.2" }],
 });
 
-// Add records
-await client.dns.addRRSetRecords('example.com', 'www', 'A', {
-  records: [{ value: '5.6.7.8' }]
+// Add records (optionally setting the TTL of the RRSet)
+await client.dns.addRRSetRecords("example.com", "www", "A", {
+  records: [{ value: "198.51.100.3", comment: "web server 3" }],
+  ttl: 300,
 });
 
 // Remove records
-await client.dns.removeRRSetRecords('example.com', 'www', 'A', {
-  records: [{ value: '1.2.3.4' }]
+await client.dns.removeRRSetRecords("example.com", "www", "A", {
+  records: [{ value: "198.51.100.3" }],
 });
 
-// Update records
-await client.dns.updateRRSetRecords('example.com', 'www', 'A', {
-  records: [{ value: '1.2.3.4', comment: 'Updated' }]
-});
-```
-
-### Change Protection
-
-```typescript
-await client.dns.changeRRSetProtection('example.com', 'www', 'A', {
-  delete: true
+// Update the comment of existing records (matched by value)
+await client.dns.updateRRSetRecords("example.com", "www", "A", {
+  records: [{ value: "198.51.100.1", comment: "primary web server" }],
 });
 ```
 
-### Change TTL
+All four return `{ action }`.
+
+### Change the TTL
+
+Pass `null` to fall back to the default TTL of the zone.
 
 ```typescript
-await client.dns.changeRRSetTTL('example.com', 'www', 'A', {
-  ttl: 7200
+const { action } = await client.dns.changeRRSetTTL("example.com", "www", "A", { ttl: 300 });
+await client.dns.changeRRSetTTL("example.com", "www", "A", { ttl: null });
+```
+
+### Change the protection
+
+`change: true` prevents the RRSet from being changed or deleted.
+
+```typescript
+const { action } = await client.dns.changeRRSetProtection("example.com", "www", "A", {
+  change: true,
 });
+```
+
+## Actions
+
+```typescript
+// Actions of one zone
+const { actions } = await client.dns.listZoneActions("example.com", { status: "running" });
+const { action } = await client.dns.getZoneAction("example.com", 12345);
+
+// Actions of all zones
+const running = await client.dns.actions.listAll({ status: "running" });
+const { action: byId } = await client.dns.actions.get(12345);
+```
+
+### Waiting for actions
+
+`waitFor` accepts an action, an action ID or any response containing an `action`.
+
+```typescript
+const action = await client.actions.waitFor(
+  await client.dns.addRRSetRecords("example.com", "www", "A", {
+    records: [{ value: "198.51.100.4" }],
+  }),
+);
+console.log(action.status); // "success"
 ```
 
 ## Types
 
 ```typescript
-type ZoneStatus = 'verified' | 'pending' | 'unknown';
+import type { RRSet, RRSetType, Zone } from "@nilovonjs/hcloud-js";
 
 interface Zone {
-  id: string;
+  id: number;
   name: string;
-  ttl: number;
-  nameservers: string[];
-  status: ZoneStatus;
   created: string;
-  modified: string;
-  records_count: number;
+  mode: "primary" | "secondary";
+  status: "ok" | "updating" | "error";
+  ttl: number;
   labels: Record<string, string>;
+  protection: { delete: boolean };
+  record_count: number;
+  registrar: "hetzner" | "other" | "unknown";
+  primary_nameservers?: Array<{
+    address: string;
+    port?: number;
+    tsig_algorithm?: "hmac-md5" | "hmac-sha1" | "hmac-sha256" | null;
+    tsig_key?: string | null;
+  }> | null;
+  authoritative_nameservers: {
+    assigned: string[];
+    delegated: string[];
+    delegation_last_check: string | null;
+    delegation_status:
+      "valid" | "partially-valid" | "invalid" | "lame" | "unregistered" | "unknown";
+  };
 }
 
 interface RRSet {
-  type: string;
-  id: string;
+  id: string; // "<name>/<type>", e.g. "www/A"
   name: string;
-  zone_id: string;
-  ttl: number | null;
-  records: Array<{
-    value: string;
-    comment: string | null;
-  }>;
+  type: RRSetType;
+  ttl: number | null; // null: default TTL of the zone
   labels: Record<string, string>;
+  protection: { change: boolean };
+  records: Array<{ value: string; comment?: string | null }>;
+  zone: number; // ID of the zone
 }
+
+// Well-known types, any other string is accepted as well
+type RRSetType =
+  | "A"
+  | "AAAA"
+  | "CAA"
+  | "CNAME"
+  | "DS"
+  | "HINFO"
+  | "HTTPS"
+  | "MX"
+  | "NS"
+  | "PTR"
+  | "RP"
+  | "SOA"
+  | "SRV"
+  | "SVCB"
+  | "TLSA"
+  | "TXT"
+  | (string & {});
 ```
+
+The Zod schemas are exported as `zoneSchema` and `rrsetSchema`.

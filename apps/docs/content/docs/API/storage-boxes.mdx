@@ -1,0 +1,456 @@
+---
+title: Storage Boxes
+description: Manage Storage Boxes, their snapshots and subaccounts
+---
+
+`client.storageBoxes` manages Storage Boxes (online storage reachable via SSH/SFTP, Samba and
+WebDAV) including their snapshots, snapshot plan and subaccounts.
+
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
+```
+
+- Storage Boxes are served by the [Hetzner API](https://docs.hetzner.cloud/reference/hetzner#storage-boxes)
+  (`https://api.hetzner.com/v1`), not by the Hetzner Cloud API. The client picks the host for you;
+  override it with the `hetznerBaseUrl` client option if needed.
+- **Wait for Storage Box actions with `client.storageBoxes.actions.waitFor()`**, not with
+  `client.actions.waitFor()`. Their actions live on the Hetzner API as well, the global
+  `client.actions` only knows actions of the Hetzner Cloud API. See [Actions](#actions).
+- Deleting a Storage Box, a snapshot or a subaccount is asynchronous: `delete*()` resolves with an
+  `{ action }`, not with `void`.
+- Snapshots and subaccounts are addressed by the ID of their Storage Box plus their own ID.
+- Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+
+| Method                                                                               | Endpoint                                                                 |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `list(params?)`                                                                      | `GET /storage_boxes`                                                     |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /storage_boxes` (all pages)                                         |
+| `getByName(name)`                                                                    | `GET /storage_boxes?name=`                                               |
+| `get(id)`                                                                            | `GET /storage_boxes/{id}`                                                |
+| `create(params)`                                                                     | `POST /storage_boxes`                                                    |
+| `update(id, params)`                                                                 | `PUT /storage_boxes/{id}`                                                |
+| `delete(id)`                                                                         | `DELETE /storage_boxes/{id}`                                             |
+| `listFolders(id, params?)`                                                           | `GET /storage_boxes/{id}/folders`                                        |
+| `changeProtection(id, params)`                                                       | `POST /storage_boxes/{id}/actions/change_protection`                     |
+| `changeType(id, params)`                                                             | `POST /storage_boxes/{id}/actions/change_type`                           |
+| `resetPassword(id, params)`                                                          | `POST /storage_boxes/{id}/actions/reset_password`                        |
+| `updateAccessSettings(id, params)`                                                   | `POST /storage_boxes/{id}/actions/update_access_settings`                |
+| `rollbackSnapshot(id, params)`                                                       | `POST /storage_boxes/{id}/actions/rollback_snapshot`                     |
+| `enableSnapshotPlan(id, params)`                                                     | `POST /storage_boxes/{id}/actions/enable_snapshot_plan`                  |
+| `disableSnapshotPlan(id)`                                                            | `POST /storage_boxes/{id}/actions/disable_snapshot_plan`                 |
+| `listActions(id, params?)`                                                           | `GET /storage_boxes/{id}/actions`                                        |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /storage_boxes/actions`, `GET /storage_boxes/actions/{id}`          |
+| `actions.waitFor(action)` / `actions.waitForAll(actions)`                            | polls `GET /storage_boxes/actions/{id}`                                  |
+| `listSnapshots(storageBoxId, params?)`                                               | `GET /storage_boxes/{id}/snapshots`                                      |
+| `getSnapshot(storageBoxId, snapshotId)`                                              | `GET /storage_boxes/{id}/snapshots/{snapshot_id}`                        |
+| `getSnapshotByName(storageBoxId, name)`                                              | `GET /storage_boxes/{id}/snapshots?name=`                                |
+| `createSnapshot(storageBoxId, params?)`                                              | `POST /storage_boxes/{id}/snapshots`                                     |
+| `updateSnapshot(storageBoxId, snapshotId, params)`                                   | `PUT /storage_boxes/{id}/snapshots/{snapshot_id}`                        |
+| `deleteSnapshot(storageBoxId, snapshotId)`                                           | `DELETE /storage_boxes/{id}/snapshots/{snapshot_id}`                     |
+| `listSubaccounts(storageBoxId, params?)`                                             | `GET /storage_boxes/{id}/subaccounts`                                    |
+| `getSubaccount(storageBoxId, subaccountId)`                                          | `GET /storage_boxes/{id}/subaccounts/{subaccount_id}`                    |
+| `getSubaccountByName(storageBoxId, name)`                                            | `GET /storage_boxes/{id}/subaccounts?name=`                              |
+| `getSubaccountByUsername(storageBoxId, username)`                                    | `GET /storage_boxes/{id}/subaccounts?username=`                          |
+| `createSubaccount(storageBoxId, params)`                                             | `POST /storage_boxes/{id}/subaccounts`                                   |
+| `updateSubaccount(storageBoxId, subaccountId, params)`                               | `PUT /storage_boxes/{id}/subaccounts/{subaccount_id}`                    |
+| `deleteSubaccount(storageBoxId, subaccountId)`                                       | `DELETE /storage_boxes/{id}/subaccounts/{subaccount_id}`                 |
+| `changeSubaccountHomeDirectory(storageBoxId, subaccountId, params)`                  | `POST .../subaccounts/{subaccount_id}/actions/change_home_directory`     |
+| `resetSubaccountPassword(storageBoxId, subaccountId, params)`                        | `POST .../subaccounts/{subaccount_id}/actions/reset_subaccount_password` |
+| `updateSubaccountAccessSettings(storageBoxId, subaccountId, params)`                 | `POST .../subaccounts/{subaccount_id}/actions/update_access_settings`    |
+
+## Storage Boxes
+
+### List Storage Boxes
+
+Returns one page of Storage Boxes. Filters: `name`, `label_selector`, `sort`, `page`, `per_page`.
+
+```typescript
+const { storage_boxes, meta } = await client.storageBoxes.list({
+  label_selector: "environment=production",
+  sort: "name:asc",
+});
+```
+
+### All Storage Boxes
+
+`iterate()`, `iteratePages()` and `listAll()` follow the pagination for you and accept the same
+filters. `first()` returns the first match or `undefined`.
+
+```typescript
+for await (const box of client.storageBoxes.iterate({ label_selector: "team=backup" })) {
+  console.log(box.name, box.status, box.stats.size);
+}
+
+const all = await client.storageBoxes.listAll();
+const newest = await client.storageBoxes.first({ sort: "created:desc" });
+```
+
+### Get a Storage Box
+
+```typescript
+const { storage_box } = await client.storageBoxes.get(42);
+console.log(storage_box.server, storage_box.username);
+
+// By name: returns the Storage Box or undefined
+const box = await client.storageBoxes.getByName("backups");
+```
+
+### Create a Storage Box
+
+`name`, `password`, `location` and `storage_box_type` are required. `location` and
+`storage_box_type` take an ID or a name. `ssh_keys` are **public keys**, not IDs of SSH keys of the
+Cloud API. The response contains the Storage Box and the action creating it.
+
+```typescript
+const created = await client.storageBoxes.create({
+  name: "backups",
+  password: "my-secret-password",
+  location: "fsn1",
+  storage_box_type: "bx11",
+  ssh_keys: ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA..."],
+  access_settings: {
+    reachable_externally: true,
+    ssh_enabled: true,
+    samba_enabled: false,
+    webdav_enabled: false,
+    zfs_enabled: false,
+  },
+  labels: { environment: "production" },
+});
+
+await client.storageBoxes.actions.waitFor(created);
+const { storage_box } = await client.storageBoxes.get(created.storage_box.id);
+```
+
+### Update a Storage Box
+
+Changes the `name` and/or `labels`.
+
+```typescript
+const { storage_box } = await client.storageBoxes.update(42, {
+  name: "backups-prod",
+  labels: { environment: "production" },
+});
+```
+
+### Delete a Storage Box
+
+```typescript
+const { action } = await client.storageBoxes.delete(42);
+await client.storageBoxes.actions.waitFor(action);
+```
+
+### List folders
+
+Lists the (sub)folders below `path` (default: the root). Files are not part of the response.
+
+```typescript
+const { folders } = await client.storageBoxes.listFolders(42, { path: "backups/daily" });
+```
+
+## Storage Box actions
+
+All of these resolve with `{ action }`.
+
+### Change protection
+
+```typescript
+await client.storageBoxes.changeProtection(42, { delete: true });
+```
+
+### Change type
+
+Takes the ID or name of a [Storage Box Type](/docs/API/storage-box-types).
+
+```typescript
+const { action } = await client.storageBoxes.changeType(42, { storage_box_type: "bx21" });
+await client.storageBoxes.actions.waitFor(action);
+```
+
+### Reset password
+
+```typescript
+await client.storageBoxes.resetPassword(42, { password: "my-new-secret-password" });
+```
+
+### Update access settings
+
+Omitted settings are left unchanged.
+
+```typescript
+await client.storageBoxes.updateAccessSettings(42, {
+  reachable_externally: true,
+  ssh_enabled: true,
+  webdav_enabled: false,
+});
+```
+
+### Roll back to a snapshot
+
+Takes the ID or name of a snapshot of the Storage Box. Data written after the snapshot is lost.
+
+```typescript
+const { action } = await client.storageBoxes.rollbackSnapshot(42, { snapshot: 34 });
+await client.storageBoxes.actions.waitFor(action);
+```
+
+### Snapshot plan
+
+`max_snapshots`, `hour` and `minute` are required. `day_of_week` (1 = Monday ... 7 = Sunday) and
+`day_of_month` (1-31) restrict the plan to a day; omitted, they are sent as `null` (every day).
+
+```typescript
+// Every day at 03:30, keep the 10 most recent automatic snapshots
+await client.storageBoxes.enableSnapshotPlan(42, { max_snapshots: 10, hour: 3, minute: 30 });
+
+// Every Sunday at 07:00
+await client.storageBoxes.enableSnapshotPlan(42, {
+  max_snapshots: 4,
+  hour: 7,
+  minute: 0,
+  day_of_week: 7,
+});
+
+await client.storageBoxes.disableSnapshotPlan(42);
+```
+
+## Actions
+
+Storage Box actions are served by the Hetzner API. Use `client.storageBoxes.actions` to read and
+wait for them. `client.actions.waitFor()` would poll the Hetzner Cloud API, where these actions do
+not exist.
+
+```typescript
+// Wait for a single action. Accepts an action, an action ID or a response containing `action`.
+const created = await client.storageBoxes.createSnapshot(42);
+const action = await client.storageBoxes.actions.waitFor(created, {
+  timeout: 120_000,
+  onProgress: (a) => console.log(a.progress),
+});
+
+// Wait for several actions at once
+await client.storageBoxes.actions.waitForAll([
+  (await client.storageBoxes.deleteSnapshot(42, 34)).action,
+  (await client.storageBoxes.deleteSnapshot(42, 35)).action,
+]);
+
+// Actions of all Storage Boxes
+const { actions } = await client.storageBoxes.actions.list({ status: "running" });
+const { action: single } = await client.storageBoxes.actions.get(12345);
+
+// Actions of one Storage Box. Filters: `status`, `sort`, `page`, `per_page`.
+const { actions: boxActions } = await client.storageBoxes.listActions(42, { sort: "id:desc" });
+```
+
+`waitFor()` throws an `HCloudActionError` if the action fails and an `HCloudActionTimeoutError` if
+it does not finish in time.
+
+## Snapshots
+
+### List snapshots
+
+Returns all snapshots of a Storage Box; the endpoint is not paginated. Filters: `name`,
+`is_automatic`, `label_selector`, `sort`.
+
+```typescript
+const { snapshots } = await client.storageBoxes.listSnapshots(42, {
+  is_automatic: false,
+  sort: "created:desc",
+});
+```
+
+### Get a snapshot
+
+```typescript
+const { snapshot } = await client.storageBoxes.getSnapshot(42, 34);
+console.log(snapshot.name, snapshot.stats.size);
+
+// By name: returns the snapshot or undefined
+const found = await client.storageBoxes.getSnapshotByName(42, "before-migration");
+```
+
+### Create a snapshot
+
+`description` and `labels` are optional. The response only contains a partial snapshot (`id` and
+`storage_box`); fetch it once the action has finished.
+
+```typescript
+const created = await client.storageBoxes.createSnapshot(42, {
+  description: "before migration",
+  labels: { reason: "migration" },
+});
+
+await client.storageBoxes.actions.waitFor(created);
+const { snapshot } = await client.storageBoxes.getSnapshot(42, created.snapshot.id);
+```
+
+### Update a snapshot
+
+```typescript
+const { snapshot } = await client.storageBoxes.updateSnapshot(42, 34, {
+  description: "keep until 2027",
+  labels: { keep: "true" },
+});
+```
+
+### Delete a snapshot
+
+```typescript
+const { action } = await client.storageBoxes.deleteSnapshot(42, 34);
+await client.storageBoxes.actions.waitFor(action);
+```
+
+## Subaccounts
+
+Subaccounts are additional users restricted to a directory of the Storage Box.
+
+### List subaccounts
+
+Returns all subaccounts of a Storage Box; the endpoint is not paginated. Filters: `name`,
+`username`, `label_selector`, `sort`.
+
+```typescript
+const { subaccounts } = await client.storageBoxes.listSubaccounts(42, {
+  label_selector: "team=ci",
+});
+```
+
+### Get a subaccount
+
+```typescript
+const { subaccount } = await client.storageBoxes.getSubaccount(42, 45);
+console.log(subaccount.username, subaccount.home_directory);
+
+// By name or username: returns the subaccount or undefined
+const byName = await client.storageBoxes.getSubaccountByName(42, "ci-uploads");
+const byUsername = await client.storageBoxes.getSubaccountByUsername(42, "u42-sub1");
+```
+
+### Create a subaccount
+
+`home_directory` and `password` are required. The response only contains a partial subaccount
+(`id` and `storage_box`); fetch it once the action has finished.
+
+```typescript
+const created = await client.storageBoxes.createSubaccount(42, {
+  name: "ci-uploads",
+  home_directory: "ci/",
+  password: "my-secret-password",
+  access_settings: {
+    reachable_externally: true,
+    ssh_enabled: true,
+    samba_enabled: false,
+    webdav_enabled: false,
+    readonly: false,
+  },
+  description: "Used by the CI pipeline",
+  labels: { team: "ci" },
+});
+
+await client.storageBoxes.actions.waitFor(created);
+const { subaccount } = await client.storageBoxes.getSubaccount(42, created.subaccount.id);
+```
+
+### Update a subaccount
+
+Changes the `name`, `description` and/or `labels`.
+
+```typescript
+const { subaccount } = await client.storageBoxes.updateSubaccount(42, 45, {
+  description: "Used by the CI pipeline",
+});
+```
+
+### Delete a subaccount
+
+```typescript
+const { action } = await client.storageBoxes.deleteSubaccount(42, 45);
+await client.storageBoxes.actions.waitFor(action);
+```
+
+### Subaccount actions
+
+All of these resolve with `{ action }`.
+
+```typescript
+await client.storageBoxes.changeSubaccountHomeDirectory(42, 45, { home_directory: "backups/ci/" });
+
+await client.storageBoxes.resetSubaccountPassword(42, 45, { password: "my-new-secret-password" });
+
+// Omitted settings are left unchanged
+await client.storageBoxes.updateSubaccountAccessSettings(42, 45, { readonly: true });
+```
+
+## Types
+
+```typescript
+import type { StorageBox, StorageBoxSnapshot, StorageBoxSubaccount } from "@nilovonjs/hcloud-js";
+
+type StorageBoxStatus = "active" | "initializing" | "locked";
+
+interface StorageBox {
+  id: number;
+  name: string;
+  status: StorageBoxStatus;
+  username: string | null;
+  server: string | null; // e.g. "u1337.your-storagebox.de"
+  system: string | null; // host system, e.g. "FSN1-BX355"
+  storage_box_type: StorageBoxType;
+  location: Location;
+  access_settings: {
+    reachable_externally: boolean;
+    samba_enabled: boolean;
+    ssh_enabled: boolean;
+    webdav_enabled: boolean;
+    zfs_enabled: boolean;
+  };
+  snapshot_plan: {
+    max_snapshots: number;
+    minute: number;
+    hour: number;
+    day_of_week: number | null;
+    day_of_month: number | null;
+  } | null; // null if no snapshot plan is enabled
+  stats: { size: number; size_data: number; size_snapshots: number }; // bytes
+  labels: Record<string, string>;
+  protection: { delete: boolean };
+  created: string;
+}
+
+interface StorageBoxSnapshot {
+  id: number;
+  name: string;
+  description: string;
+  is_automatic: boolean; // created by the snapshot plan
+  stats: { size: number; size_filesystem: number }; // bytes
+  labels: Record<string, string>;
+  created: string;
+  storage_box: number; // ID of the Storage Box
+}
+
+interface StorageBoxSubaccount {
+  id: number;
+  name?: string;
+  username: string;
+  description: string;
+  server: string;
+  home_directory: string;
+  access_settings: {
+    reachable_externally: boolean;
+    samba_enabled: boolean;
+    ssh_enabled: boolean;
+    webdav_enabled: boolean;
+    readonly: boolean;
+  };
+  labels: Record<string, string>;
+  created: string;
+  storage_box: number; // ID of the Storage Box
+}
+```
+
+Request and response types (`CreateStorageBoxParams`, `CreateStorageBoxResponse`,
+`ListStorageBoxSnapshotsParams`, `CreateStorageBoxSubaccountParams`, ...) and the matching Zod
+schemas (`storageBoxSchema`, `storageBoxSnapshotSchema`, `storageBoxSubaccountSchema`,
+`createStorageBoxRequestSchema`, ...) are exported as well.

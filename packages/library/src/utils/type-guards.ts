@@ -1,33 +1,38 @@
 /**
- * Type guards for runtime type checking
+ * Type guards for narrowing resources by their state.
  */
 
-import type { Action, ActionStatus } from "../apis/actions/types";
-import type { Server, ServerStatus } from "../apis/servers/types";
-import type { Image, ImageType, ImageStatus } from "../apis/images/types";
+import type { Action } from "../apis/actions/types";
+import type { Image } from "../apis/images/types";
+import type { Server } from "../apis/servers/types";
 
 /**
- * Type guard to check if an action is completed (success or error)
+ * Check if an action is still running.
  */
-export function isActionCompleted(action: Action): action is Action & {
-  status: "success" | "error";
-  finished: string;
-} {
+export function isActionRunning(action: Action): action is Action & { status: "running" } {
+  return action.status === "running";
+}
+
+/**
+ * Check if an action has finished (successfully or not).
+ */
+export function isActionCompleted(
+  action: Action,
+): action is Action & { status: "success" | "error"; finished: string } {
   return action.status === "success" || action.status === "error";
 }
 
 /**
- * Type guard to check if an action was successful
+ * Check if an action finished successfully.
  */
-export function isActionSuccessful(action: Action): action is Action & {
-  status: "success";
-  finished: string;
-} {
+export function isActionSuccessful(
+  action: Action,
+): action is Action & { status: "success"; finished: string } {
   return action.status === "success";
 }
 
 /**
- * Type guard to check if an action failed
+ * Check if an action failed.
  */
 export function isActionFailed(action: Action): action is Action & {
   status: "error";
@@ -38,55 +43,43 @@ export function isActionFailed(action: Action): action is Action & {
 }
 
 /**
- * Type guard to check if a server is in a running state
+ * Check if a server is running.
  */
-export function isServerRunning(server: Server): server is Server & {
-  status: "running";
-} {
+export function isServerRunning(server: Server): server is Server & { status: "running" } {
   return server.status === "running";
 }
 
 /**
- * Type guard to check if a server is stopped
+ * Check if a server is powered off.
  */
-export function isServerStopped(server: Server): server is Server & {
-  status: "off";
-} {
+export function isServerStopped(server: Server): server is Server & { status: "off" } {
   return server.status === "off";
 }
 
 /**
- * Type guard to check if an image is available
+ * Check if an image can be used.
  */
-export function isImageAvailable(image: Image): image is Image & {
-  status: "available";
-} {
+export function isImageAvailable(image: Image): image is Image & { status: "available" } {
   return image.status === "available";
 }
 
 /**
- * Type guard to check if an image is a snapshot
+ * Check if an image is a snapshot.
  */
-export function isSnapshot(image: Image): image is Image & {
-  type: "snapshot";
-} {
+export function isSnapshot(image: Image): image is Image & { type: "snapshot" } {
   return image.type === "snapshot";
 }
 
 /**
- * Type guard to check if an image is a backup
+ * Check if an image is a backup.
  */
-export function isBackup(image: Image): image is Image & {
-  type: "backup";
-} {
+export function isBackup(image: Image): image is Image & { type: "backup" } {
   return image.type === "backup";
 }
 
 /**
- * Type guard to check if an image is a system image
+ * Check if an image is a system image provided by Hetzner.
  */
-export function isSystemImage(image: Image): image is Image & {
-  type: "system";
-} {
+export function isSystemImage(image: Image): image is Image & { type: "system" } {
   return image.type === "system";
 }

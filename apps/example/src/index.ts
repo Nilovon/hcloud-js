@@ -1,93 +1,9 @@
 /**
- * Hetzner Cloud SDK Example Application
- * 
- * This is a comprehensive example application demonstrating
- * how to use the Hetzner Cloud TypeScript SDK.
- * 
- * Run individual examples:
- *   bun run servers
- *   bun run images
- *   bun run actions
- * 
- * Or run all examples:
+ * Runs the read-only examples one after another.
+ *
  *   bun run dev
  */
-
-import { config } from "./config";
-import { runServerExamples } from "./examples/servers";
-import { runImageExamples } from "./examples/images";
-import { runActionExamples } from "./examples/actions";
-import { runCertificateExamples } from "./examples/certificates";
-import { runSSHKeyExamples } from "./examples/ssh-keys";
-import { runFirewallExamples } from "./examples/firewalls";
-import { runFloatingIPExamples } from "./examples/floating-ips";
-
-/**
- * Main entry point for the example application
- */
-async function main() {
-  console.log("🚀 Hetzner Cloud SDK Examples\n");
-  console.log(`API Token: ${config.token ? "✓ Set" : "✗ Missing"}\n`);
-
-  if (!config.token) {
-    console.error("❌ Error: HCLOUD_API_TOKEN environment variable is not set!");
-    console.log("\nPlease create a .env file with:");
-    console.log("  HCLOUD_API_TOKEN=your-api-token-here");
-    console.log("\nOr set the environment variable directly:");
-    console.log("  export HCLOUD_API_TOKEN=your-api-token-here");
-    process.exit(1);
-  }
-
-  try {
-    // Run all examples
-    console.log("=" .repeat(60));
-    console.log("📦 Servers API Examples");
-    console.log("=" .repeat(60));
-    await runServerExamples();
-
-    console.log("\n" + "=".repeat(60));
-    console.log("🖼️  Images API Examples");
-    console.log("=".repeat(60));
-    await runImageExamples();
-
-    console.log("\n" + "=".repeat(60));
-    console.log("⚡ Actions API Examples");
-    console.log("=".repeat(60));
-    await runActionExamples();
-
-    console.log("\n" + "=".repeat(60));
-    console.log("🔐 Certificates API Examples");
-    console.log("=".repeat(60));
-    await runCertificateExamples();
-
-    console.log("\n" + "=".repeat(60));
-    console.log("🔑 SSH Keys API Examples");
-    console.log("=".repeat(60));
-    await runSSHKeyExamples();
-
-    console.log("\n" + "=".repeat(60));
-    console.log("🔥 Firewalls API Examples");
-    console.log("=".repeat(60));
-    await runFirewallExamples();
-
-    console.log("\n" + "=".repeat(60));
-    console.log("🌐 Floating IPs API Examples");
-    console.log("=".repeat(60));
-    await runFloatingIPExamples();
-
-    console.log("\n✅ All examples completed successfully!");
-  } catch (error) {
-    console.error("\n❌ Error running examples:", error);
-    if (error instanceof Error) {
-      console.error("Message:", error.message);
-      if (error.stack) {
-        console.error("\nStack trace:");
-        console.error(error.stack);
-      }
-    }
-    process.exit(1);
-  }
+for (const example of ["01-quickstart", "02-pagination", "03-error-handling", "05-observability"]) {
+  console.log(`\n=== ${example} ===\n`);
+  await import(`./${example}.ts`);
 }
-
-// Run main function
-main();

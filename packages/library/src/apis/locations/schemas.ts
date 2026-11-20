@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { paginationMetaSchema } from "../../apis/common/schemas";
+import { metaSchema } from "../common/schemas";
 
 /**
  * Location schema
@@ -21,36 +21,12 @@ export const locationSchema = z.object({
 });
 
 /**
- * Datacenter server types schema
- */
-export const datacenterServerTypesSchema = z.object({
-  supported: z.array(z.number()),
-  available: z.array(z.number()),
-  available_for_migration: z.array(z.number()),
-});
-
-/**
- * Datacenter schema
- */
-export const datacenterSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  description: z.string(),
-  location: locationSchema,
-  server_types: datacenterServerTypesSchema,
-});
-
-/**
  * List Locations response schema
  * @see https://docs.hetzner.cloud/reference/cloud#locations-list-locations
  */
 export const listLocationsResponseSchema = z.object({
   locations: z.array(locationSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+  meta: metaSchema.optional(),
 });
 
 /**
@@ -59,25 +35,4 @@ export const listLocationsResponseSchema = z.object({
  */
 export const getLocationResponseSchema = z.object({
   location: locationSchema,
-});
-
-/**
- * List Data Centers response schema
- * @see https://docs.hetzner.cloud/reference/cloud#data-centers-list-data-centers
- */
-export const listDataCentersResponseSchema = z.object({
-  datacenters: z.array(datacenterSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
-});
-
-/**
- * Get Data Center response schema
- * @see https://docs.hetzner.cloud/reference/cloud#data-centers-get-a-data-center
- */
-export const getDataCenterResponseSchema = z.object({
-  datacenter: datacenterSchema,
 });

@@ -3,91 +3,68 @@
  * @see https://docs.hetzner.cloud/reference/cloud#server-types
  */
 
-import type { HCloudClient } from "../../client/index";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { getServerTypeResponseSchema, listServerTypesResponseSchema } from "./schemas";
 import type {
+  GetServerTypeResponse,
   ListServerTypesParams,
   ListServerTypesResponse,
-  GetServerTypeResponse,
-} from "../../apis/server-types/types";
-import { validate } from "../../validation/index";
-import {
-  listServerTypesResponseSchema,
-  getServerTypeResponseSchema,
-} from "../../apis/server-types/schemas";
+  ServerType,
+} from "./types";
 
 /**
  * Server Types API client
+ *
+ * Server types define the kinds of servers offered: cores, memory, disk and
+ * the locations they are available in.
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#server-types
  */
-export class ServerTypesClient {
-  constructor(private readonly client: HCloudClient) {}
+export class ServerTypesClient extends NamedResource<
+  ServerType,
+  ListServerTypesParams,
+  "server_types"
+> {
+  protected readonly itemsKey = "server_types";
 
   /**
-   * Returns all Server Type objects.
+   * Returns a page of server types.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of server types with pagination metadata
+   * @param params - Filters and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#server-types-list-server-types
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
+   * const { server_types } = await client.serverTypes.list();
    *
-   * // List all server types
-   * const result = await client.serverTypes.list();
-   *
-   * // List server types with filters
-   * const serverTypes = await client.serverTypes.list({
-   *   name: 'cpx11',
-   *   page: 1,
-   *   per_page: 50
-   * });
+   * // Find a server type by its name
+   * const cpx22 = await client.serverTypes.getByName("cpx22");
    * ```
    */
-  async list(params?: ListServerTypesParams): Promise<ListServerTypesResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/server_types", queryParams);
-
-    return validate(listServerTypesResponseSchema, response, {
-      context: "List server types response",
-      detailed: true,
-    });
+  list(params?: ListServerTypesParams, options?: RequestOptions): Promise<ListServerTypesResponse> {
+    return this._get("/server_types", listServerTypesResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific Server Type object.
+   * Returns a specific server type.
    *
-   * @param id - ID or name of the Server Type
-   * @returns Promise resolving to the server type
+   * @param id - ID of the server type
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#server-types-get-a-server-type
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a server type by ID or name
-   * const serverType = await client.serverTypes.get('cpx11');
-   * console.log(serverType.server_type.name);
+   * const { server_type } = await client.serverTypes.get(22);
+   * const available = server_type.locations?.filter((location) => location.available);
    * ```
    */
-  async get(id: string | number): Promise<GetServerTypeResponse> {
-    const response = await this.client.get<unknown>(`/server_types/${id}`);
-
-    return validate(getServerTypeResponseSchema, response, {
-      context: "Get server type response",
-      detailed: true,
-    });
+  get(id: number, options?: RequestOptions): Promise<GetServerTypeResponse> {
+    return this._get(path`/server_types/${id}`, getServerTypeResponseSchema, undefined, options);
   }
 }

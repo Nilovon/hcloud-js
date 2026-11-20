@@ -3,888 +3,950 @@
  * @see https://docs.hetzner.cloud/reference/cloud#servers
  */
 
-import type { HCloudClient } from "../../client/index";
-import type {
-  ListServersParams,
-  ListServersResponse,
-  CreateServerParams,
-  CreateServerResponse,
-  GetServerResponse,
-  UpdateServerParams,
-  UpdateServerResponse,
-  DeleteServerResponse,
-  GetServerMetricsParams,
-  GetServerMetricsResponse,
-  ListServerActionsParams,
-  ListServerActionsResponse,
-  GetServerActionResponse,
-  PowerOnServerResponse,
-  PowerOffServerResponse,
-  RebootServerResponse,
-  ResetServerResponse,
-  ShutdownServerResponse,
-  AttachISOToServerParams,
-  AttachISOToServerResponse,
-  DetachISOFromServerResponse,
-  EnableRescueModeParams,
-  EnableRescueModeResponse,
-  DisableRescueModeResponse,
-  CreateImageFromServerParams,
-  CreateImageFromServerResponse,
-  RebuildServerFromImageParams,
-  RebuildServerFromImageResponse,
-  ChangeServerProtectionParams,
-  ChangeServerProtectionResponse,
-  ChangeServerTypeParams,
-  ChangeServerTypeResponse,
-  EnableBackupsParams,
-  EnableBackupsResponse,
-  DisableBackupsResponse,
-  AttachServerToNetworkParams,
-  AttachServerToNetworkResponse,
-  DetachServerFromNetworkParams,
-  DetachServerFromNetworkResponse,
-  ChangeAliasIPsOfNetworkParams,
-  ChangeAliasIPsOfNetworkResponse,
-  ChangeServerReverseDNSParams,
-  ChangeServerReverseDNSResponse,
-  RequestConsoleForServerParams,
-  RequestConsoleForServerResponse,
-  ResetRootPasswordResponse,
-  AddServerToPlacementGroupParams,
-  AddServerToPlacementGroupResponse,
-  RemoveServerFromPlacementGroupResponse,
-} from "./types.js";
-import { validate } from "../../validation/index";
+import type { z } from "zod";
+import { ErrorCode, HCloudError } from "../../core/errors";
+import { sleep } from "../../core/http";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { ResourceActionsClient } from "../actions/index";
 import {
-  listServersResponseSchema,
-  createServerRequestSchema,
-  createServerResponseSchema,
-  getServerResponseSchema,
-  updateServerRequestSchema,
-  updateServerResponseSchema,
-  deleteServerResponseSchema,
-  getServerMetricsResponseSchema,
-  listServerActionsResponseSchema,
-  getServerActionResponseSchema,
-  powerOnServerResponseSchema,
-  powerOffServerResponseSchema,
-  rebootServerResponseSchema,
-  resetServerResponseSchema,
-  shutdownServerResponseSchema,
+  actionResponseSchema,
+  getActionResponseSchema,
+  listActionsResponseSchema,
+} from "../actions/schemas";
+import type { WaitForActionOptions } from "../actions/types";
+import type { OneOrMany } from "../common/types";
+import {
+  addServerToPlacementGroupRequestSchema,
   attachISOToServerRequestSchema,
-  attachISOToServerResponseSchema,
-  detachISOFromServerResponseSchema,
-  enableRescueModeRequestSchema,
-  enableRescueModeResponseSchema,
-  disableRescueModeResponseSchema,
+  attachServerToNetworkRequestSchema,
+  changeAliasIPsOfNetworkRequestSchema,
+  changeServerProtectionRequestSchema,
+  changeServerReverseDNSRequestSchema,
+  changeServerTypeRequestSchema,
   createImageFromServerRequestSchema,
   createImageFromServerResponseSchema,
+  createServerRequestSchema,
+  createServerResponseSchema,
+  detachServerFromNetworkRequestSchema,
+  enableRescueModeRequestSchema,
+  enableRescueModeResponseSchema,
+  getServerMetricsResponseSchema,
+  getServerResponseSchema,
+  listServersResponseSchema,
   rebuildServerFromImageRequestSchema,
   rebuildServerFromImageResponseSchema,
-  changeServerProtectionRequestSchema,
-  changeServerProtectionResponseSchema,
-  changeServerTypeRequestSchema,
-  changeServerTypeResponseSchema,
-  enableBackupsRequestSchema,
-  enableBackupsResponseSchema,
-  disableBackupsResponseSchema,
-  attachServerToNetworkRequestSchema,
-  attachServerToNetworkResponseSchema,
-  detachServerFromNetworkRequestSchema,
-  detachServerFromNetworkResponseSchema,
-  changeAliasIPsOfNetworkRequestSchema,
-  changeAliasIPsOfNetworkResponseSchema,
-  changeServerReverseDNSRequestSchema,
-  changeServerReverseDNSResponseSchema,
-  requestConsoleForServerRequestSchema,
   requestConsoleForServerResponseSchema,
   resetRootPasswordResponseSchema,
-  addServerToPlacementGroupRequestSchema,
-  addServerToPlacementGroupResponseSchema,
-  removeServerFromPlacementGroupRequestSchema,
-  removeServerFromPlacementGroupResponseSchema,
+  updateServerRequestSchema,
+  updateServerResponseSchema,
 } from "./schemas";
+import type {
+  AddServerToPlacementGroupParams,
+  AddServerToPlacementGroupResponse,
+  AttachISOToServerParams,
+  AttachISOToServerResponse,
+  AttachServerToNetworkParams,
+  AttachServerToNetworkResponse,
+  ChangeAliasIPsOfNetworkParams,
+  ChangeAliasIPsOfNetworkResponse,
+  ChangeServerProtectionParams,
+  ChangeServerProtectionResponse,
+  ChangeServerReverseDNSParams,
+  ChangeServerReverseDNSResponse,
+  ChangeServerTypeParams,
+  ChangeServerTypeResponse,
+  CreateImageFromServerParams,
+  CreateImageFromServerResponse,
+  CreateServerParams,
+  CreateServerResponse,
+  DeleteServerResponse,
+  DetachISOFromServerResponse,
+  DetachServerFromNetworkParams,
+  DetachServerFromNetworkResponse,
+  DisableBackupsResponse,
+  DisableRescueModeResponse,
+  EnableBackupsResponse,
+  EnableRescueModeParams,
+  EnableRescueModeResponse,
+  GetServerActionResponse,
+  GetServerMetricsParams,
+  GetServerMetricsResponse,
+  GetServerResponse,
+  ListServerActionsParams,
+  ListServerActionsResponse,
+  ListServersParams,
+  ListServersResponse,
+  PowerOffServerResponse,
+  PowerOnServerResponse,
+  RebootServerResponse,
+  RebuildServerFromImageParams,
+  RebuildServerFromImageResponse,
+  RemoveServerFromPlacementGroupResponse,
+  RequestConsoleForServerResponse,
+  ResetRootPasswordResponse,
+  ResetServerResponse,
+  Server,
+  ServerStatus,
+  ShutdownServerResponse,
+  UpdateServerParams,
+  UpdateServerResponse,
+  WaitForServerStatusOptions,
+} from "./types";
 
 /**
  * Servers API client
+ *
+ * Servers are virtual machines that can be provisioned.
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#servers
  */
-export class ServersClient {
-  constructor(private readonly client: HCloudClient) {}
+export class ServersClient extends NamedResource<Server, ListServersParams, "servers"> {
+  protected readonly itemsKey = "servers";
 
   /**
-   * Returns all Server objects.
+   * Actions of all servers: `list()`, `get()`, `waitFor()` and `waitForAll()`.
    *
-   * You can select specific Server types only and sort the results by using URI parameters.
+   * @example
+   * ```typescript
+   * const { actions } = await client.servers.actions.list({ status: "running" });
+   * ```
+   */
+  public readonly actions = new ResourceActionsClient(this.client, "/servers");
+
+  /**
+   * Returns a page of servers.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of servers with pagination metadata
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-list-servers
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all servers
-   * const result = await client.servers.list();
-   *
-   * // List servers with filters
-   * const runningServers = await client.servers.list({
-   *   status: ['running'],
-   *   label_selector: 'environment=production',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
+   * const { servers } = await client.servers.list({
+   *   status: ["running", "off"],
+   *   label_selector: "environment=production",
+   *   sort: "name:asc",
    * });
+   *
+   * // All servers across all pages
+   * const all = await client.servers.listAll();
    * ```
    */
-  async list(params?: ListServersParams): Promise<ListServersResponse> {
-    // Build query parameters
-    // Note: For array parameters (sort, status), we need to pass them as arrays
-    // to the client, which will handle them correctly using URLSearchParams.append()
-    const queryParams: Record<string, string | number | boolean | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.sort) {
-      // Convert single string to array for consistent handling
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.status) {
-      // Convert single status to array for consistent handling
-      queryParams.status = Array.isArray(params.status) ? params.status : [params.status];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/servers", queryParams);
-
-    // Validate response with Zod
-    return validate(listServersResponseSchema, response, {
-      context: "List servers response",
-      detailed: true,
-    });
+  list(params?: ListServersParams, options?: RequestOptions): Promise<ListServersResponse> {
+    return this._get("/servers", listServersResponseSchema, params, options);
   }
 
   /**
-   * Creates a new Server.
+   * Returns a specific server.
    *
-   * Returns the initial Action object for the server creation progress.
-   *
-   * @param params - Parameters for creating the server
-   * @returns Promise resolving to the created server with action and root password
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-create-a-server
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Create a server with required fields
-   * const result = await client.servers.create({
-   *   name: 'my-server',
-   *   server_type: 'cpx11',
-   *   image: 'ubuntu-22.04'
-   * });
-   *
-   * // Create a server with optional fields
-   * const result = await client.servers.create({
-   *   name: 'my-server',
-   *   server_type: 'cpx11',
-   *   image: 'ubuntu-22.04',
-   *   location: 'nbg1',
-   *   ssh_keys: ['my-ssh-key-id'],
-   *   user_data: '#cloud-config\n...',
-   *   labels: { project: 'production' }
-   * });
-   * ```
-   */
-  async create(params: CreateServerParams): Promise<CreateServerResponse> {
-    // Validate request parameters
-    const validatedParams = validate(createServerRequestSchema, params, {
-      context: "Create server request",
-      detailed: true,
-    });
-
-    // Make API request
-    const response = await this.client.post<unknown>("/servers", validatedParams);
-
-    // Validate response with Zod
-    return validate(createServerResponseSchema, response, {
-      context: "Create server response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Returns a specific Server object.
-   *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the server
+   * @param id - ID of the server
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-get-a-server
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a server by ID
-   * const server = await client.servers.get(12345);
-   * console.log(server.server.name);
+   * const { server } = await client.servers.get(12345);
+   * console.log(server.status, server.public_net.ipv4?.ip, server.location.name);
    * ```
    */
-  async get(id: number): Promise<GetServerResponse> {
-    const response = await this.client.get<unknown>(`/servers/${id}`);
-
-    // Validate response with Zod
-    return validate(getServerResponseSchema, response, {
-      context: "Get server response",
-      detailed: true,
-    });
+  get(id: number, options?: RequestOptions): Promise<GetServerResponse> {
+    return this._get(path`/servers/${id}`, getServerResponseSchema, undefined, options);
   }
 
   /**
-   * Updates a Server.
+   * Creates a new server.
    *
-   * You can update a Server's name and a Server's labels.
+   * The server is not ready when this call returns. Wait for `action` and
+   * `next_actions` with `client.actions.waitForAll()`, or use
+   * {@link ServersClient.createAndWait}.
    *
-   * @param id - ID of the Server
-   * @param params - Parameters to update (name and/or labels)
-   * @returns Promise resolving to the updated server
+   * @param params - Name, server type, image and further options
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-create-a-server
+   *
+   * @example
+   * ```typescript
+   * const { server, action, next_actions, root_password } = await client.servers.create({
+   *   name: "my-server",
+   *   server_type: "cx22",
+   *   image: "ubuntu-24.04",
+   *   location: "nbg1",
+   *   ssh_keys: ["my-ssh-key"],
+   *   labels: { environment: "production" },
+   * });
+   * ```
+   */
+  create(params: CreateServerParams, options?: RequestOptions): Promise<CreateServerResponse> {
+    return this._post(
+      "/servers",
+      createServerResponseSchema,
+      params,
+      createServerRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Creates a new server and waits until it is ready.
+   *
+   * Waits for the create action and all follow-up actions (e.g. starting the
+   * server), then fetches the server again.
+   *
+   * @param params - Name, server type, image and further options
+   * @param waitOptions - Polling options for waiting on the actions
+   * @param options - Request options for the create and get requests
+   * @returns The create response with the up-to-date server and the finished actions
+   * @throws {HCloudActionError} If an action failed (unless `throwOnError` is `false`)
+   * @throws {HCloudActionTimeoutError} If the actions did not finish in time
+   *
+   * @example
+   * ```typescript
+   * const { server, root_password } = await client.servers.createAndWait({
+   *   name: "my-server",
+   *   server_type: "cx22",
+   *   image: "ubuntu-24.04",
+   * });
+   * console.log(server.status); // "running"
+   * ```
+   */
+  async createAndWait(
+    params: CreateServerParams,
+    waitOptions?: WaitForActionOptions,
+    options?: RequestOptions,
+  ): Promise<CreateServerResponse> {
+    const requestOptions =
+      waitOptions?.signal && !options?.signal
+        ? { ...options, signal: waitOptions.signal }
+        : options;
+
+    const created = await this.create(params, requestOptions);
+    const finished = await this.actions.waitForAll(created, waitOptions);
+    const { server } = await this.get(created.server.id, requestOptions);
+
+    const [action = created.action, ...next_actions] = finished;
+    return { ...created, server, action, next_actions };
+  }
+
+  /**
+   * Updates the name and/or labels of a server.
+   *
+   * @param id - ID of the server
+   * @param params - Fields to update
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-update-a-server
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Update server name
-   * const updated = await client.servers.update(12345, {
-   *   name: 'new-server-name'
-   * });
-   *
-   * // Update labels
-   * const updated = await client.servers.update(12345, {
-   *   labels: { environment: 'production', team: 'backend' }
+   * const { server } = await client.servers.update(12345, {
+   *   name: "new-name",
+   *   labels: { environment: "production" },
    * });
    * ```
    */
-  async update(id: number, params: UpdateServerParams): Promise<UpdateServerResponse> {
-    // Validate request parameters
-    const validatedParams = validate(updateServerRequestSchema, params, {
-      context: "Update server request",
-      detailed: true,
-    });
-
-    // Make API request
-    const response = await this.client.put<unknown>(`/servers/${id}`, validatedParams);
-
-    // Validate response with Zod
-    return validate(updateServerResponseSchema, response, {
-      context: "Update server response",
-      detailed: true,
-    });
+  update(
+    id: number,
+    params: UpdateServerParams,
+    options?: RequestOptions,
+  ): Promise<UpdateServerResponse> {
+    return this._put(
+      path`/servers/${id}`,
+      updateServerResponseSchema,
+      params,
+      updateServerRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Deletes a Server.
+   * Deletes a server. This immediately removes the server from your account.
    *
-   * This immediately removes the Server from your account, and it is no longer accessible.
-   *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the delete action
+   * @param id - ID of the server
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-delete-a-server
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Delete a server
-   * const result = await client.servers.delete(12345);
-   * console.log(`Delete action ID: ${result.action.id}`);
+   * const { action } = await client.servers.delete(12345);
+   * await client.actions.waitFor(action);
    * ```
    */
-  async delete(id: number): Promise<DeleteServerResponse> {
-    const response = await this.client.delete<unknown>(`/servers/${id}`);
-
-    // Validate response with Zod
-    return validate(deleteServerResponseSchema, response, {
-      context: "Delete server response",
-      detailed: true,
-    });
+  delete(id: number, options?: RequestOptions): Promise<DeleteServerResponse> {
+    return this._delete(path`/servers/${id}`, actionResponseSchema, options);
   }
 
   /**
-   * Get Metrics for a Server.
+   * Waits until a server has reached one of the given statuses.
    *
-   * Returns Metrics for a Server. The Server must have a public network interface attached.
+   * Useful after actions that finish before the server changed its status,
+   * e.g. `shutdown()`, whose action only covers sending the shutdown request.
    *
-   * @param id - ID of the Server
-   * @param params - Query parameters for metrics (type, start, end, step)
-   * @returns Promise resolving to server metrics
+   * @param id - ID of the server
+   * @param status - Status (or statuses) to wait for
+   * @param options - Polling options
+   * @returns The server once it has one of the statuses
+   * @throws {HCloudError} With code `WAIT_TIMEOUT` if the status was not reached in time
+   *
+   * @example
+   * ```typescript
+   * await client.servers.shutdown(12345);
+   * const server = await client.servers.waitForStatus(12345, "off", { timeout: 60_000 });
+   * ```
+   */
+  async waitForStatus(
+    id: number,
+    status: OneOrMany<ServerStatus>,
+    options: WaitForServerStatusOptions = {},
+  ): Promise<Server> {
+    const { pollInterval = 1000, timeout = 300_000, signal } = options;
+    const wanted: readonly ServerStatus[] = typeof status === "string" ? [status] : status;
+    const startedAt = Date.now();
+
+    while (true) {
+      const { server } = await this.get(id, { signal });
+      if (wanted.includes(server.status)) return server;
+
+      const remaining = timeout - (Date.now() - startedAt);
+      if (remaining <= 0) {
+        throw new HCloudError(
+          `Server ${id} did not reach status ${wanted.join(" or ")} within ${timeout}ms ` +
+            `(last status: ${server.status})`,
+          ErrorCode.WaitTimeout,
+          0,
+        );
+      }
+      await sleep(Math.min(pollInterval, remaining), signal);
+    }
+  }
+
+  /**
+   * Returns metrics of a server.
+   *
+   * @param id - ID of the server
+   * @param params - Metric types, period and resolution. `start` and `end` accept a `Date` or an ISO 8601 string.
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-get-metrics-for-a-server
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const now = new Date();
-   * const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-   *
-   * // Get CPU and network metrics
-   * const metrics = await client.servers.getMetrics(12345, {
-   *   type: ['cpu', 'network'],
-   *   start: oneHourAgo.toISOString(),
-   *   end: now.toISOString(),
-   *   step: 60 // optional, resolution in seconds
+   * const { metrics } = await client.servers.getMetrics(12345, {
+   *   type: ["cpu", "network"],
+   *   start: new Date(Date.now() - 60 * 60 * 1000),
+   *   end: new Date(),
+   *   step: 60,
    * });
-   *
-   * console.log(metrics.metrics.time_series);
+   * console.log(metrics.time_series.cpu?.values);
    * ```
    */
-  async getMetrics(id: number, params: GetServerMetricsParams): Promise<GetServerMetricsResponse> {
-    // Build query parameters
-    const queryParams: Record<string, string | number | undefined> = {};
-
-    // Handle type parameter - can be single string or array
-    const types = Array.isArray(params.type) ? params.type : [params.type];
-    queryParams.type = types.join(",");
-
-    queryParams.start = params.start;
-    queryParams.end = params.end;
-
-    if (params.step !== undefined) {
-      queryParams.step = params.step;
-    }
-
-    const response = await this.client.get<unknown>(`/servers/${id}/metrics`, queryParams);
-
-    // Validate response with Zod
-    return validate(getServerMetricsResponseSchema, response, {
-      context: "Get server metrics response",
-      detailed: true,
-    });
+  getMetrics(
+    id: number,
+    params: GetServerMetricsParams,
+    options?: RequestOptions,
+  ): Promise<GetServerMetricsResponse> {
+    const query = {
+      type: typeof params.type === "string" ? params.type : params.type.join(","),
+      start: params.start instanceof Date ? params.start.toISOString() : params.start,
+      end: params.end instanceof Date ? params.end.toISOString() : params.end,
+      step: params.step,
+    };
+    return this._get(path`/servers/${id}/metrics`, getServerMetricsResponseSchema, query, options);
   }
 
   /**
-   * Returns all Action objects for a Server.
+   * Returns a page of actions of a server.
    *
-   * @param id - ID of the Server
-   * @param params - Optional query parameters for filtering and pagination
-   * @returns Promise resolving to list of actions with pagination metadata
+   * @param id - ID of the server
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-list-actions-for-a-server
    *
    * @example
    * ```typescript
-   * const actions = await client.servers.listActions(12345, {
-   *   status: ['running'],
-   *   sort: ['started:desc']
+   * const { actions } = await client.servers.listActions(12345, {
+   *   status: "running",
+   *   sort: "started:desc",
    * });
    * ```
    */
-  async listActions(id: number, params?: ListServerActionsParams): Promise<ListServerActionsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.status) {
-      queryParams.status = Array.isArray(params.status) ? params.status : [params.status];
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>(`/servers/${id}/actions`, queryParams);
-
-    return validate(listServerActionsResponseSchema, response, {
-      context: "List server actions response",
-      detailed: true,
-    });
+  listActions(
+    id: number,
+    params?: ListServerActionsParams,
+    options?: RequestOptions,
+  ): Promise<ListServerActionsResponse> {
+    return this._get(path`/servers/${id}/actions`, listActionsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific Action object for a Server.
+   * Returns a specific action of a server.
    *
-   * @param id - ID of the Server
-   * @param actionId - ID of the Action
-   * @returns Promise resolving to the action
+   * @param id - ID of the server
+   * @param actionId - ID of the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-get-an-action-for-a-server
    *
    * @example
    * ```typescript
-   * const action = await client.servers.getAction(12345, 67890);
-   * console.log(action.action.command);
+   * const { action } = await client.servers.getAction(12345, 67890);
+   * console.log(action.status, action.progress);
    * ```
    */
-  async getAction(id: number, actionId: number): Promise<GetServerActionResponse> {
-    const response = await this.client.get<unknown>(`/servers/${id}/actions/${actionId}`);
-
-    return validate(getServerActionResponseSchema, response, {
-      context: "Get server action response",
-      detailed: true,
-    });
+  getAction(
+    id: number,
+    actionId: number,
+    options?: RequestOptions,
+  ): Promise<GetServerActionResponse> {
+    return this._get(
+      path`/servers/${id}/actions/${actionId}`,
+      getActionResponseSchema,
+      undefined,
+      options,
+    );
   }
 
   /**
-   * Starts a Server by turning its power on.
+   * Starts a server by turning its power on.
    *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the action
+   * @param id - ID of the server
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-power-on-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.powerOn(12345);
+   * await client.actions.waitFor(action);
+   * ```
    */
-  async powerOn(id: number): Promise<PowerOnServerResponse> {
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/poweron`, {});
-
-    return validate(powerOnServerResponseSchema, response, {
-      context: "Power on server response",
-      detailed: true,
-    });
+  powerOn(id: number, options?: RequestOptions): Promise<PowerOnServerResponse> {
+    return this._action(id, "poweron", options);
   }
 
   /**
-   * Cuts power to a Server. This forcefully stops it without giving the Server operating system time to gracefully stop.
+   * Cuts power to a server. This forcefully stops it without giving the
+   * operating system time to shut down gracefully and may lead to data loss.
    *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the action
+   * @param id - ID of the server
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-power-off-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.powerOff(12345);
+   * ```
    */
-  async powerOff(id: number): Promise<PowerOffServerResponse> {
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/poweroff`, {});
-
-    return validate(powerOffServerResponseSchema, response, {
-      context: "Power off server response",
-      detailed: true,
-    });
+  powerOff(id: number, options?: RequestOptions): Promise<PowerOffServerResponse> {
+    return this._action(id, "poweroff", options);
   }
 
   /**
-   * Reboots a Server gracefully by sending an ACPI request.
+   * Reboots a server gracefully by sending an ACPI request.
    *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the action
+   * @param id - ID of the server
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-soft-reboot-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.reboot(12345);
+   * ```
    */
-  async reboot(id: number): Promise<RebootServerResponse> {
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/reboot`, {});
-
-    return validate(rebootServerResponseSchema, response, {
-      context: "Reboot server response",
-      detailed: true,
-    });
+  reboot(id: number, options?: RequestOptions): Promise<RebootServerResponse> {
+    return this._action(id, "reboot", options);
   }
 
   /**
-   * Cuts power to a Server and starts it again.
+   * Cuts power to a server and starts it again (hard reset).
    *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the action
+   * @param id - ID of the server
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-reset-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.reset(12345);
+   * ```
    */
-  async reset(id: number): Promise<ResetServerResponse> {
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/reset`, {});
-
-    return validate(resetServerResponseSchema, response, {
-      context: "Reset server response",
-      detailed: true,
-    });
+  reset(id: number, options?: RequestOptions): Promise<ResetServerResponse> {
+    return this._action(id, "reset", options);
   }
 
   /**
-   * Shuts down a Server gracefully by sending an ACPI shutdown request.
+   * Shuts down a server gracefully by sending an ACPI shutdown request.
    *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the action
+   * The action finishes once the request was sent, not once the server is off.
+   * Use {@link ServersClient.waitForStatus} to wait for the server to stop.
+   *
+   * @param id - ID of the server
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-shutdown-a-server
+   *
+   * @example
+   * ```typescript
+   * await client.servers.shutdown(12345);
+   * await client.servers.waitForStatus(12345, "off");
+   * ```
    */
-  async shutdown(id: number): Promise<ShutdownServerResponse> {
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/shutdown`, {});
-
-    return validate(shutdownServerResponseSchema, response, {
-      context: "Shutdown server response",
-      detailed: true,
-    });
+  shutdown(id: number, options?: RequestOptions): Promise<ShutdownServerResponse> {
+    return this._action(id, "shutdown", options);
   }
 
   /**
-   * Attaches an ISO to a Server.
+   * Resets the root password. Only works for Linux systems running the qemu
+   * guest agent. The server must be powered on.
    *
-   * @param id - ID of the Server
-   * @param params - Parameters for attaching ISO
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-attach-an-iso-to-a-server
-   */
-  async attachISO(id: number, params: AttachISOToServerParams): Promise<AttachISOToServerResponse> {
-    const validatedParams = validate(attachISOToServerRequestSchema, params, {
-      context: "Attach ISO to server request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/attach_iso`, validatedParams);
-
-    return validate(attachISOToServerResponseSchema, response, {
-      context: "Attach ISO to server response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Detaches an ISO from a Server.
-   *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-detach-an-iso-from-a-server
-   */
-  async detachISO(id: number): Promise<DetachISOFromServerResponse> {
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/detach_iso`, {});
-
-    return validate(detachISOFromServerResponseSchema, response, {
-      context: "Detach ISO from server response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Enables the Hetzner Rescue System for a Server.
-   *
-   * @param id - ID of the Server
-   * @param params - Parameters for rescue mode
-   * @returns Promise resolving to the action with root password
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-enable-rescue-mode-for-a-server
-   */
-  async enableRescueMode(id: number, params: EnableRescueModeParams): Promise<EnableRescueModeResponse> {
-    const validatedParams = validate(enableRescueModeRequestSchema, params, {
-      context: "Enable rescue mode request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/enable_rescue`, validatedParams);
-
-    return validate(enableRescueModeResponseSchema, response, {
-      context: "Enable rescue mode response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Disables the Hetzner Rescue System for a Server.
-   *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-disable-rescue-mode-for-a-server
-   */
-  async disableRescueMode(id: number): Promise<DisableRescueModeResponse> {
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/disable_rescue`, {});
-
-    return validate(disableRescueModeResponseSchema, response, {
-      context: "Disable rescue mode response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Creates an Image (snapshot) from a Server.
-   *
-   * @param id - ID of the Server
-   * @param params - Parameters for creating image
-   * @returns Promise resolving to the action and image
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-create-image-from-a-server
-   */
-  async createImage(id: number, params: CreateImageFromServerParams): Promise<CreateImageFromServerResponse> {
-    const validatedParams = validate(createImageFromServerRequestSchema, params, {
-      context: "Create image from server request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/create_image`, validatedParams);
-
-    return validate(createImageFromServerResponseSchema, response, {
-      context: "Create image from server response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Rebuilds a Server overwriting its disk with the content of an Image.
-   *
-   * @param id - ID of the Server
-   * @param params - Parameters for rebuilding
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-rebuild-a-server-from-an-image
-   */
-  async rebuild(id: number, params: RebuildServerFromImageParams): Promise<RebuildServerFromImageResponse> {
-    const validatedParams = validate(rebuildServerFromImageRequestSchema, params, {
-      context: "Rebuild server from image request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/rebuild`, validatedParams);
-
-    return validate(rebuildServerFromImageResponseSchema, response, {
-      context: "Rebuild server from image response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Changes the Protection configuration of a Server.
-   *
-   * @param id - ID of the Server
-   * @param params - Protection configuration
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-change-server-protection
-   */
-  async changeProtection(id: number, params: ChangeServerProtectionParams): Promise<ChangeServerProtectionResponse> {
-    const validatedParams = validate(changeServerProtectionRequestSchema, params, {
-      context: "Change server protection request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/change_protection`, validatedParams);
-
-    return validate(changeServerProtectionResponseSchema, response, {
-      context: "Change server protection response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Changes the type (Cores, RAM and Disk) of a Server.
-   *
-   * @param id - ID of the Server
-   * @param params - Parameters for changing type
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-change-the-type-of-a-server
-   */
-  async changeType(id: number, params: ChangeServerTypeParams): Promise<ChangeServerTypeResponse> {
-    const validatedParams = validate(changeServerTypeRequestSchema, params, {
-      context: "Change server type request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/change_type`, validatedParams);
-
-    return validate(changeServerTypeResponseSchema, response, {
-      context: "Change server type response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Enables and configures automatic Backups for a Server.
-   *
-   * @param id - ID of the Server
-   * @param params - Parameters for enabling backups
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-enable-and-configure-backups-for-a-server
-   */
-  async enableBackups(id: number, params: EnableBackupsParams): Promise<EnableBackupsResponse> {
-    const validatedParams = validate(enableBackupsRequestSchema, params, {
-      context: "Enable backups request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/enable_backup`, validatedParams);
-
-    return validate(enableBackupsResponseSchema, response, {
-      context: "Enable backups response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Disables automatic Backups for a Server.
-   *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-disable-backups-for-a-server
-   */
-  async disableBackups(id: number): Promise<DisableBackupsResponse> {
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/disable_backup`, {});
-
-    return validate(disableBackupsResponseSchema, response, {
-      context: "Disable backups response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Attaches a Server to a Network.
-   *
-   * @param id - ID of the Server
-   * @param params - Parameters for attaching to network
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-attach-a-server-to-a-network
-   */
-  async attachToNetwork(id: number, params: AttachServerToNetworkParams): Promise<AttachServerToNetworkResponse> {
-    const validatedParams = validate(attachServerToNetworkRequestSchema, params, {
-      context: "Attach server to network request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/attach_to_network`, validatedParams);
-
-    return validate(attachServerToNetworkResponseSchema, response, {
-      context: "Attach server to network response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Detaches a Server from a Network.
-   *
-   * @param id - ID of the Server
-   * @param params - Parameters for detaching from network
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-detach-a-server-from-a-network
-   */
-  async detachFromNetwork(id: number, params: DetachServerFromNetworkParams): Promise<DetachServerFromNetworkResponse> {
-    const validatedParams = validate(detachServerFromNetworkRequestSchema, params, {
-      context: "Detach server from network request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/detach_from_network`, validatedParams);
-
-    return validate(detachServerFromNetworkResponseSchema, response, {
-      context: "Detach server from network response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Changes the alias IPs of a Network the Server is attached to.
-   *
-   * @param id - ID of the Server
-   * @param params - Parameters for changing alias IPs
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-change-alias-ips-of-a-network
-   */
-  async changeAliasIPs(id: number, params: ChangeAliasIPsOfNetworkParams): Promise<ChangeAliasIPsOfNetworkResponse> {
-    const validatedParams = validate(changeAliasIPsOfNetworkRequestSchema, params, {
-      context: "Change alias IPs of network request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/change_alias_ips`, validatedParams);
-
-    return validate(changeAliasIPsOfNetworkResponseSchema, response, {
-      context: "Change alias IPs of network response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Changes the hostname that will appear when getting the hostname belonging to the primary IPs (IPv4 and IPv6) of this Server.
-   *
-   * @param id - ID of the Server
-   * @param params - Parameters for changing reverse DNS
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-change-reverse-dns-entry-for-this-server
-   */
-  async changeReverseDNS(id: number, params: ChangeServerReverseDNSParams): Promise<ChangeServerReverseDNSResponse> {
-    const validatedParams = validate(changeServerReverseDNSRequestSchema, params, {
-      context: "Change server reverse DNS request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/change_dns_ptr`, validatedParams);
-
-    return validate(changeServerReverseDNSResponseSchema, response, {
-      context: "Change server reverse DNS response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Requests credentials for remote access via VNC over websocket to keyboard, monitor, and mouse for a Server.
-   *
-   * @param id - ID of the Server
-   * @param params - Parameters for requesting console
-   * @returns Promise resolving to the action with console credentials
-   * @see https://docs.hetzner.cloud/reference/cloud#servers-request-console-for-a-server
-   */
-  async requestConsole(id: number, params: RequestConsoleForServerParams): Promise<RequestConsoleForServerResponse> {
-    const validatedParams = validate(requestConsoleForServerRequestSchema, params, {
-      context: "Request console for server request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/request_console`, validatedParams);
-
-    return validate(requestConsoleForServerResponseSchema, response, {
-      context: "Request console for server response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Resets the root password. Only works for Linux systems that are running the qemu guest agent. Server must be powered on.
-   *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the action with new root password
+   * @param id - ID of the server
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-reset-root-password-of-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action, root_password } = await client.servers.resetRootPassword(12345);
+   * ```
    */
-  async resetRootPassword(id: number): Promise<ResetRootPasswordResponse> {
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/reset_password`, {});
-
-    return validate(resetRootPasswordResponseSchema, response, {
-      context: "Reset root password response",
-      detailed: true,
-    });
+  resetRootPassword(id: number, options?: RequestOptions): Promise<ResetRootPasswordResponse> {
+    return this._post(
+      path`/servers/${id}/actions/reset_password`,
+      resetRootPasswordResponseSchema,
+      undefined,
+      undefined,
+      options,
+    );
   }
 
   /**
-   * Adds a Server to a Placement Group.
+   * Attaches an ISO to a server. The server boots from it on the next reboot.
    *
-   * @param id - ID of the Server
-   * @param params - Parameters for adding to placement group
-   * @returns Promise resolving to the action
+   * @param id - ID of the server
+   * @param params - ID or name of the ISO
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-attach-an-iso-to-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.attachISO(12345, {
+   *   iso: "FreeBSD-11.0-RELEASE-amd64-dvd1",
+   * });
+   * ```
+   */
+  attachISO(
+    id: number,
+    params: AttachISOToServerParams,
+    options?: RequestOptions,
+  ): Promise<AttachISOToServerResponse> {
+    return this._action(id, "attach_iso", options, params, attachISOToServerRequestSchema);
+  }
+
+  /**
+   * Detaches the ISO from a server.
+   *
+   * @param id - ID of the server
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-detach-an-iso-from-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.detachISO(12345);
+   * ```
+   */
+  detachISO(id: number, options?: RequestOptions): Promise<DetachISOFromServerResponse> {
+    return this._action(id, "detach_iso", options);
+  }
+
+  /**
+   * Enables the Hetzner Rescue System for a server. The server boots into the
+   * rescue system on the next reboot.
+   *
+   * @param id - ID of the server
+   * @param params - Rescue system type and SSH keys to inject
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-enable-rescue-mode-for-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action, root_password } = await client.servers.enableRescueMode(12345, {
+   *   type: "linux64",
+   *   ssh_keys: [2323],
+   * });
+   * ```
+   */
+  enableRescueMode(
+    id: number,
+    params: EnableRescueModeParams = {},
+    options?: RequestOptions,
+  ): Promise<EnableRescueModeResponse> {
+    return this._post(
+      path`/servers/${id}/actions/enable_rescue`,
+      enableRescueModeResponseSchema,
+      params,
+      enableRescueModeRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Disables the Hetzner Rescue System for a server.
+   *
+   * @param id - ID of the server
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-disable-rescue-mode-for-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.disableRescueMode(12345);
+   * ```
+   */
+  disableRescueMode(id: number, options?: RequestOptions): Promise<DisableRescueModeResponse> {
+    return this._action(id, "disable_rescue", options);
+  }
+
+  /**
+   * Creates an image (snapshot or backup) from a server.
+   *
+   * @param id - ID of the server
+   * @param params - Image type, description and labels
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-create-image-from-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action, image } = await client.servers.createImage(12345, {
+   *   type: "snapshot",
+   *   description: "before-upgrade",
+   * });
+   * await client.actions.waitFor(action);
+   * ```
+   */
+  createImage(
+    id: number,
+    params: CreateImageFromServerParams = {},
+    options?: RequestOptions,
+  ): Promise<CreateImageFromServerResponse> {
+    return this._post(
+      path`/servers/${id}/actions/create_image`,
+      createImageFromServerResponseSchema,
+      params,
+      createImageFromServerRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Rebuilds a server, overwriting its disk with the content of an image.
+   * All data on the disk is lost.
+   *
+   * @param id - ID of the server
+   * @param params - Image to rebuild from and optional user data
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-rebuild-a-server-from-an-image
+   *
+   * @example
+   * ```typescript
+   * const { action, root_password } = await client.servers.rebuild(12345, {
+   *   image: "ubuntu-24.04",
+   * });
+   * ```
+   */
+  rebuild(
+    id: number,
+    params: RebuildServerFromImageParams,
+    options?: RequestOptions,
+  ): Promise<RebuildServerFromImageResponse> {
+    return this._post(
+      path`/servers/${id}/actions/rebuild`,
+      rebuildServerFromImageResponseSchema,
+      params,
+      rebuildServerFromImageRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Changes the protection configuration of a server.
+   *
+   * @param id - ID of the server
+   * @param params - Protection settings
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-change-server-protection
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.changeProtection(12345, {
+   *   delete: true,
+   *   rebuild: true,
+   * });
+   * ```
+   */
+  changeProtection(
+    id: number,
+    params: ChangeServerProtectionParams,
+    options?: RequestOptions,
+  ): Promise<ChangeServerProtectionResponse> {
+    return this._action(
+      id,
+      "change_protection",
+      options,
+      params,
+      changeServerProtectionRequestSchema,
+    );
+  }
+
+  /**
+   * Changes the type (cores, RAM and disk size) of a server. The server must
+   * be powered off.
+   *
+   * @param id - ID of the server
+   * @param params - New server type and whether to upgrade the disk
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-change-the-type-of-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.changeType(12345, {
+   *   server_type: "cx32",
+   *   upgrade_disk: false,
+   * });
+   * ```
+   */
+  changeType(
+    id: number,
+    params: ChangeServerTypeParams,
+    options?: RequestOptions,
+  ): Promise<ChangeServerTypeResponse> {
+    return this._action(id, "change_type", options, params, changeServerTypeRequestSchema);
+  }
+
+  /**
+   * Enables automatic backups for a server. The backup window is chosen by
+   * Hetzner and reported in the `backup_window` field of the server.
+   *
+   * @param id - ID of the server
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-enable-and-configure-backups-for-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.enableBackups(12345);
+   * ```
+   */
+  enableBackups(id: number, options?: RequestOptions): Promise<EnableBackupsResponse> {
+    return this._action(id, "enable_backup", options);
+  }
+
+  /**
+   * Disables automatic backups for a server. All existing backups of the
+   * server are deleted.
+   *
+   * @param id - ID of the server
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-disable-backups-for-a-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.disableBackups(12345);
+   * ```
+   */
+  disableBackups(id: number, options?: RequestOptions): Promise<DisableBackupsResponse> {
+    return this._action(id, "disable_backup", options);
+  }
+
+  /**
+   * Attaches a server to a network.
+   *
+   * @param id - ID of the server
+   * @param params - Network and optional IP configuration
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-attach-a-server-to-a-network
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.attachToNetwork(12345, {
+   *   network: 4711,
+   *   ip: "10.0.1.1",
+   * });
+   * ```
+   */
+  attachToNetwork(
+    id: number,
+    params: AttachServerToNetworkParams,
+    options?: RequestOptions,
+  ): Promise<AttachServerToNetworkResponse> {
+    return this._action(
+      id,
+      "attach_to_network",
+      options,
+      params,
+      attachServerToNetworkRequestSchema,
+    );
+  }
+
+  /**
+   * Detaches a server from a network.
+   *
+   * @param id - ID of the server
+   * @param params - Network to detach from
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-detach-a-server-from-a-network
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.detachFromNetwork(12345, { network: 4711 });
+   * ```
+   */
+  detachFromNetwork(
+    id: number,
+    params: DetachServerFromNetworkParams,
+    options?: RequestOptions,
+  ): Promise<DetachServerFromNetworkResponse> {
+    return this._action(
+      id,
+      "detach_from_network",
+      options,
+      params,
+      detachServerFromNetworkRequestSchema,
+    );
+  }
+
+  /**
+   * Changes the alias IPs of a server in a network it is attached to.
+   *
+   * @param id - ID of the server
+   * @param params - Network and the new alias IPs
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-change-alias-ips-of-a-network
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.changeAliasIPs(12345, {
+   *   network: 4711,
+   *   alias_ips: ["10.0.1.2", "10.0.1.3"],
+   * });
+   * ```
+   */
+  changeAliasIPs(
+    id: number,
+    params: ChangeAliasIPsOfNetworkParams,
+    options?: RequestOptions,
+  ): Promise<ChangeAliasIPsOfNetworkResponse> {
+    return this._action(
+      id,
+      "change_alias_ips",
+      options,
+      params,
+      changeAliasIPsOfNetworkRequestSchema,
+    );
+  }
+
+  /**
+   * Changes the reverse DNS entry of a primary IP of a server.
+   *
+   * @param id - ID of the server
+   * @param params - IP address and hostname. A `dns_ptr` of `null` resets the entry.
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-change-reverse-dns-entry-for-this-server
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.changeReverseDNS(12345, {
+   *   ip: "1.2.3.4",
+   *   dns_ptr: "server01.example.com",
+   * });
+   * ```
+   */
+  changeReverseDNS(
+    id: number,
+    params: ChangeServerReverseDNSParams,
+    options?: RequestOptions,
+  ): Promise<ChangeServerReverseDNSResponse> {
+    return this._action(id, "change_dns_ptr", options, params, changeServerReverseDNSRequestSchema);
+  }
+
+  /**
+   * Requests credentials for remote access to a server via VNC over websocket.
+   *
+   * @param id - ID of the server
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#servers-request-console-for-a-server
+   *
+   * @example
+   * ```typescript
+   * const { wss_url, password } = await client.servers.requestConsole(12345);
+   * ```
+   */
+  requestConsole(id: number, options?: RequestOptions): Promise<RequestConsoleForServerResponse> {
+    return this._post(
+      path`/servers/${id}/actions/request_console`,
+      requestConsoleForServerResponseSchema,
+      undefined,
+      undefined,
+      options,
+    );
+  }
+
+  /**
+   * Adds a server to a placement group. The server must be powered off.
+   *
+   * @param id - ID of the server
+   * @param params - Placement group to add the server to
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-add-a-server-to-a-placement-group
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.addToPlacementGroup(12345, { placement_group: 897 });
+   * ```
    */
-  async addToPlacementGroup(id: number, params: AddServerToPlacementGroupParams): Promise<AddServerToPlacementGroupResponse> {
-    const validatedParams = validate(addServerToPlacementGroupRequestSchema, params, {
-      context: "Add server to placement group request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/add_to_placement_group`, validatedParams);
-
-    return validate(addServerToPlacementGroupResponseSchema, response, {
-      context: "Add server to placement group response",
-      detailed: true,
-    });
+  addToPlacementGroup(
+    id: number,
+    params: AddServerToPlacementGroupParams,
+    options?: RequestOptions,
+  ): Promise<AddServerToPlacementGroupResponse> {
+    return this._action(
+      id,
+      "add_to_placement_group",
+      options,
+      params,
+      addServerToPlacementGroupRequestSchema,
+    );
   }
 
   /**
-   * Removes a Server from a Placement Group.
+   * Removes a server from its placement group.
    *
-   * @param id - ID of the Server
-   * @returns Promise resolving to the action
+   * @param id - ID of the server
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#servers-remove-from-placement-group
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.servers.removeFromPlacementGroup(12345);
+   * ```
    */
-  async removeFromPlacementGroup(id: number): Promise<RemoveServerFromPlacementGroupResponse> {
-    const response = await this.client.post<unknown>(`/servers/${id}/actions/remove_from_placement_group`, {});
+  removeFromPlacementGroup(
+    id: number,
+    options?: RequestOptions,
+  ): Promise<RemoveServerFromPlacementGroupResponse> {
+    return this._action(id, "remove_from_placement_group", options);
+  }
 
-    return validate(removeServerFromPlacementGroupResponseSchema, response, {
-      context: "Remove server from placement group response",
-      detailed: true,
-    });
+  /**
+   * Trigger a server action answering with `{ action }`.
+   */
+  private _action(
+    id: number,
+    command: string,
+    options?: RequestOptions,
+    body?: unknown,
+    bodySchema?: z.ZodType,
+  ) {
+    return this._post(
+      path`/servers/${id}/actions/${command}`,
+      actionResponseSchema,
+      body,
+      bodySchema,
+      options,
+    );
   }
 }

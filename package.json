@@ -1,5 +1,5 @@
 {
-  "name": "hcloud-ts",
+  "name": "hcloud-js",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -8,24 +8,25 @@
   "type": "module",
   "scripts": {
     "dev": "turbo dev",
+    "dev:docs": "turbo -F @hcloud-js/docs dev",
     "build": "turbo build",
+    "build:library": "turbo -F @nilovonjs/hcloud-js build",
+    "test": "turbo test",
     "check-types": "turbo check-types",
-    "dev:native": "turbo -F native dev",
-    "dev:web": "turbo -F web dev",
-    "check": "oxlint && oxfmt --write",
+    "lint": "oxlint --deny-warnings",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "check": "oxlint --deny-warnings && oxfmt --write",
+    "ci": "oxlint --deny-warnings && oxfmt --check && turbo check-types test && turbo build",
     "publish:library": "cd packages/library && bun publish",
-    "publish:library:dry-run": "cd packages/library && bun pack --dry-run"
-  },
-  "dependencies": {
-    "dotenv": "^17.2.2",
-    "zod": "^4.1.13"
+    "publish:library:dry-run": "cd packages/library && bun pm pack --dry-run"
   },
   "devDependencies": {
-    "@/config": "workspace:*",
-    "oxfmt": "^0.19.0",
-    "oxlint": "^1.34.0",
-    "turbo": "^2.6.3",
-    "typescript": "^5"
+    "@hcloud-js/config": "workspace:*",
+    "oxfmt": "^0.79.0",
+    "oxlint": "^1.94.0",
+    "turbo": "^2.11.13",
+    "typescript": "^7.0.2"
   },
-  "packageManager": "bun@1.3.3"
+  "packageManager": "bun@1.4.4"
 }

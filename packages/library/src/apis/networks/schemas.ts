@@ -4,34 +4,14 @@
  */
 
 import { z } from "zod";
-import { actionSchema, actionResourceSchema } from "../../apis/actions/schemas";
-import { paginationMetaSchema } from "../../apis/common/schemas";
-import { locationSchema } from "../../apis/servers/schemas";
-
-/**
- * Network route destination schema
- */
-export const networkRouteDestinationSchema = z.object({
-  ip: z.string(),
-});
-
-/**
- * Network route gateway schema
- */
-export const networkRouteGatewaySchema = z.object({
-  ip: z.string(),
-});
-
-/**
- * Network route schema
- */
-export const networkRouteSchema = z.object({
-  destination: networkRouteDestinationSchema,
-  gateway: networkRouteGatewaySchema,
-});
+import { labelsSchema, metaSchema } from "../common/schemas";
 
 /**
  * Network subnet type schema
+ *
+ * - `cloud`: connects cloud servers and load balancers
+ * - `vswitch`: connects cloud resources with dedicated servers through a vSwitch
+ * - `server`: deprecated alias of `cloud`
  */
 export const networkSubnetTypeSchema = z.enum(["cloud", "server", "vswitch"]);
 
@@ -40,10 +20,18 @@ export const networkSubnetTypeSchema = z.enum(["cloud", "server", "vswitch"]);
  */
 export const networkSubnetSchema = z.object({
   type: networkSubnetTypeSchema,
-  ip_range: z.string().nullable(),
+  ip_range: z.string(),
   network_zone: z.string(),
-  gateway: z.string().nullable(),
-  vswitch_id: z.number().nullable(),
+  gateway: z.string(),
+  vswitch_id: z.number().nullable().optional(),
+});
+
+/**
+ * Network route schema
+ */
+export const networkRouteSchema = z.object({
+  destination: z.string(),
+  gateway: z.string(),
 });
 
 /**
@@ -56,22 +44,19 @@ export const networkProtectionSchema = z.object({
 /**
  * Network schema
  */
-export const networkSchema = z
-  .object({
-    id: z.number(),
-    name: z.string(),
-    ip_range: z.string(),
-    subnets: z.array(networkSubnetSchema),
-    routes: z.array(networkRouteSchema),
-    servers: z.array(z.number()),
-    load_balancers: z.array(z.number()).optional(),
-    protection: networkProtectionSchema,
-    labels: z.record(z.string(), z.string()),
-    created: z.string(),
-    expose_routes_to_vswitch: z.boolean().optional(),
-    blocking: z.array(actionResourceSchema).optional(),
-  })
-  .passthrough();
+export const networkSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  ip_range: z.string(),
+  subnets: z.array(networkSubnetSchema),
+  routes: z.array(networkRouteSchema),
+  expose_routes_to_vswitch: z.boolean(),
+  servers: z.array(z.number()),
+  load_balancers: z.array(z.number()).optional(),
+  protection: networkProtectionSchema,
+  labels: labelsSchema,
+  created: z.string(),
+});
 
 /**
  * List Networks response schema
@@ -79,11 +64,25 @@ export const networkSchema = z
  */
 export const listNetworksResponseSchema = z.object({
   networks: z.array(networkSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+  meta: metaSchema.optional(),
+});
+
+/**
+ * Subnet of a Create Network / Add Subnet request
+ */
+export const networkSubnetRequestSchema = z.object({
+  type: networkSubnetTypeSchema,
+  network_zone: z.string().min(1),
+  ip_range: z.string().min(1).optional(),
+  vswitch_id: z.number().optional(),
+});
+
+/**
+ * Route of a Create Network / Add Route / Delete Route request
+ */
+export const networkRouteRequestSchema = z.object({
+  destination: z.string().min(1),
+  gateway: z.string().min(1),
 });
 
 /**
@@ -91,28 +90,12 @@ export const listNetworksResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#networks-create-a-network
  */
 export const createNetworkRequestSchema = z.object({
-  name: z.string(),
-  ip_range: z.string(),
-  subnets: z
-    .array(
-      z.object({
-        type: networkSubnetTypeSchema,
-        network_zone: z.string(),
-        ip_range: z.string(),
-        vswitch_id: z.number().optional(),
-      }),
-    )
-    .optional(),
-  routes: z
-    .array(
-      z.object({
-        destination: z.string(),
-        gateway: z.string(),
-      }),
-    )
-    .optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  name: z.string().min(1),
+  ip_range: z.string().min(1),
+  subnets: z.array(networkSubnetRequestSchema).optional(),
+  routes: z.array(networkRouteRequestSchema).optional(),
   expose_routes_to_vswitch: z.boolean().optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
@@ -121,7 +104,6 @@ export const createNetworkRequestSchema = z.object({
  */
 export const createNetworkResponseSchema = z.object({
   network: networkSchema,
-  action: actionSchema.optional(),
 });
 
 /**
@@ -137,9 +119,9 @@ export const getNetworkResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#networks-update-a-network
  */
 export const updateNetworkRequestSchema = z.object({
-  name: z.string().optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  name: z.string().min(1).optional(),
   expose_routes_to_vswitch: z.boolean().optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
@@ -151,99 +133,70 @@ export const updateNetworkResponseSchema = z.object({
 });
 
 /**
- * Delete Network response schema
- * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-network
+ * Network member type schema
  */
-export const deleteNetworkResponseSchema = z.object({});
+export const networkMemberTypeSchema = z.enum(["server", "load_balancer"]);
 
 /**
- * List Network Actions response schema
- * @see https://docs.hetzner.cloud/reference/cloud#networks-list-actions-for-a-network
+ * Network member status schema
+ *
+ * - `ok`: attached, the network configuration is up to date
+ * - `attaching` / `detaching` / `updating`: an operation is in progress
+ * - `error`: the last operation failed, the network configuration might be out of date
  */
-export const listNetworkActionsResponseSchema = z.object({
-  actions: z.array(actionSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+export const networkMemberStatusSchema = z.enum([
+  "ok",
+  "attaching",
+  "detaching",
+  "updating",
+  "error",
+]);
+
+/**
+ * Network member schema: a resource attached to a network
+ */
+export const networkMemberSchema = z.object({
+  id: z.number(),
+  type: networkMemberTypeSchema,
+  ip: z.string(),
+  alias_ips: z.array(z.string()),
+  subnet: z.string(),
+  status: networkMemberStatusSchema,
 });
 
 /**
- * Get Network Action response schema
- * @see https://docs.hetzner.cloud/reference/cloud#networks-get-an-action-for-a-network
+ * List Network Members response schema
+ * @see https://docs.hetzner.cloud/reference/cloud#networks
  */
-export const getNetworkActionResponseSchema = z.object({
-  action: actionSchema,
+export const listNetworkMembersResponseSchema = z.object({
+  members: z.array(networkMemberSchema),
+  meta: metaSchema.optional(),
 });
 
 /**
  * Add Network route request schema
  * @see https://docs.hetzner.cloud/reference/cloud#networks-add-a-route-to-a-network
  */
-export const addNetworkRouteRequestSchema = z.object({
-  destination: z.string(),
-  gateway: z.string(),
-});
-
-/**
- * Add Network route response schema
- * @see https://docs.hetzner.cloud/reference/cloud#networks-add-a-route-to-a-network
- */
-export const addNetworkRouteResponseSchema = z.object({
-  action: actionSchema,
-});
+export const addNetworkRouteRequestSchema = networkRouteRequestSchema;
 
 /**
  * Delete Network route request schema
  * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-route-from-a-network
  */
-export const deleteNetworkRouteRequestSchema = z.object({
-  destination: z.string(),
-  gateway: z.string(),
-});
-
-/**
- * Delete Network route response schema
- * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-route-from-a-network
- */
-export const deleteNetworkRouteResponseSchema = z.object({
-  action: actionSchema,
-});
+export const deleteNetworkRouteRequestSchema = networkRouteRequestSchema;
 
 /**
  * Add Network subnet request schema
  * @see https://docs.hetzner.cloud/reference/cloud#networks-add-a-subnet-to-a-network
  */
-export const addNetworkSubnetRequestSchema = z.object({
-  type: networkSubnetTypeSchema,
-  network_zone: z.string(),
-  ip_range: z.string().optional(),
-  vswitch_id: z.number().optional(),
-});
-
-/**
- * Add Network subnet response schema
- * @see https://docs.hetzner.cloud/reference/cloud#networks-add-a-subnet-to-a-network
- */
-export const addNetworkSubnetResponseSchema = z.object({
-  action: actionSchema,
-});
+export const addNetworkSubnetRequestSchema = networkSubnetRequestSchema;
 
 /**
  * Delete Network subnet request schema
  * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-subnet-from-a-network
  */
 export const deleteNetworkSubnetRequestSchema = z.object({
-  ip_range: z.string(),
-});
-
-/**
- * Delete Network subnet response schema
- * @see https://docs.hetzner.cloud/reference/cloud#networks-delete-a-subnet-from-a-network
- */
-export const deleteNetworkSubnetResponseSchema = z.object({
-  action: actionSchema,
+  ip_range: z.string().min(1),
 });
 
 /**
@@ -251,15 +204,7 @@ export const deleteNetworkSubnetResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#networks-change-ip-range-of-a-network
  */
 export const changeNetworkIpRangeRequestSchema = z.object({
-  ip_range: z.string(),
-});
-
-/**
- * Change Network IP range response schema
- * @see https://docs.hetzner.cloud/reference/cloud#networks-change-ip-range-of-a-network
- */
-export const changeNetworkIpRangeResponseSchema = z.object({
-  action: actionSchema,
+  ip_range: z.string().min(1),
 });
 
 /**
@@ -267,13 +212,5 @@ export const changeNetworkIpRangeResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#networks-change-network-protection
  */
 export const changeNetworkProtectionRequestSchema = z.object({
-  delete: z.boolean(),
-});
-
-/**
- * Change Network Protection response schema
- * @see https://docs.hetzner.cloud/reference/cloud#networks-change-network-protection
- */
-export const changeNetworkProtectionResponseSchema = z.object({
-  action: actionSchema,
+  delete: z.boolean().optional(),
 });

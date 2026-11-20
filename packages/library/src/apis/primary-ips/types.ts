@@ -1,91 +1,87 @@
 /**
  * Types for Hetzner Cloud Primary IPs API
- * Types are inferred from Zod schemas
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  listPrimaryIPsResponseSchema,
+import type { z } from "zod";
+import type {
+  ActionResponse,
+  GetActionResponse,
+  ListActionsParams,
+  ListActionsResponse,
+} from "../actions/types";
+import type { OneOrMany, PageParams, SortParam } from "../common/types";
+import type {
+  assignPrimaryIPToResourceRequestSchema,
+  changePrimaryIPProtectionRequestSchema,
+  changePrimaryIPReverseDNSRequestSchema,
   createPrimaryIPRequestSchema,
   createPrimaryIPResponseSchema,
   getPrimaryIPResponseSchema,
+  listPrimaryIPsResponseSchema,
+  primaryIPAssigneeTypeSchema,
+  primaryIPDnsPointerSchema,
+  primaryIPProtectionSchema,
+  primaryIPSchema,
+  primaryIPTypeSchema,
   updatePrimaryIPRequestSchema,
   updatePrimaryIPResponseSchema,
-  deletePrimaryIPResponseSchema,
-  listPrimaryIPActionsResponseSchema,
-  getPrimaryIPActionResponseSchema,
-  assignPrimaryIPToResourceRequestSchema,
-  assignPrimaryIPToResourceResponseSchema,
-  changePrimaryIPReverseDNSRequestSchema,
-  changePrimaryIPReverseDNSResponseSchema,
-  changePrimaryIPProtectionRequestSchema,
-  changePrimaryIPProtectionResponseSchema,
-  unassignPrimaryIPRequestSchema,
-  unassignPrimaryIPResponseSchema,
-  primaryIpSchema,
-  primaryIpTypeSchema,
-  primaryIpDnsPointerSchema,
-  primaryIpProtectionSchema,
-  primaryIpAssigneeTypeSchema,
-} from "../../apis/primary-ips/schemas";
-import type { z } from "zod";
+} from "./schemas";
 
 /**
  * Primary IP type
  */
-export type PrimaryIPType = z.infer<typeof primaryIpTypeSchema>;
+export type PrimaryIPType = z.infer<typeof primaryIPTypeSchema>;
 
 /**
- * Primary IP DNS pointer
+ * Primary IP reverse DNS entry
  */
-export type PrimaryIPDnsPointer = z.infer<typeof primaryIpDnsPointerSchema>;
+export type PrimaryIPDnsPointer = z.infer<typeof primaryIPDnsPointerSchema>;
 
 /**
  * Primary IP protection
  */
-export type PrimaryIPProtection = z.infer<typeof primaryIpProtectionSchema>;
+export type PrimaryIPProtection = z.infer<typeof primaryIPProtectionSchema>;
 
 /**
- * Primary IP assignee type
+ * Types of resources a Primary IP can be assigned to
  */
-export type PrimaryIPAssigneeType = z.infer<typeof primaryIpAssigneeTypeSchema>;
+export type PrimaryIPAssigneeType = z.infer<typeof primaryIPAssigneeTypeSchema>;
 
 /**
- * Primary IP
+ * Hetzner Cloud Primary IP
+ * @see https://docs.hetzner.cloud/reference/cloud#primary-ips
  */
-export type PrimaryIP = z.infer<typeof primaryIpSchema>;
+export type PrimaryIP = z.infer<typeof primaryIPSchema>;
+
+/**
+ * Fields Primary IPs can be sorted by
+ */
+export type PrimaryIPSort = SortParam<"id" | "created">;
 
 /**
  * List Primary IPs query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-list-primary-ips
  */
-export interface ListPrimaryIPsParams {
+export interface ListPrimaryIPsParams extends PageParams {
   /**
-   * Can be used to filter Primary IPs by their name. The response will only contain the Primary IP matching the specified name.
+   * Only return the Primary IP with this exact name.
    */
   name?: string;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, created, created:asc, created:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter Primary IPs by labels. The response will only contain Primary IPs matching the label selector.
+   * Only return Primary IPs matching the label selector.
+   * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
   /**
-   * Can be used to filter Primary IPs by their IP. The response will only contain the Primary IP matching the specified IP.
+   * Only return the Primary IP with this IP address.
    */
   ip?: string;
   /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Sort the result.
+   * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
+  sort?: OneOrMany<PrimaryIPSort>;
 }
 
 /**
@@ -95,10 +91,10 @@ export interface ListPrimaryIPsParams {
 export type ListPrimaryIPsResponse = z.infer<typeof listPrimaryIPsResponseSchema>;
 
 /**
- * Create Primary IP parameters
+ * Create Primary IP request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-create-a-primary-ip
  */
-export type CreatePrimaryIPParams = z.infer<typeof createPrimaryIPRequestSchema>;
+export type CreatePrimaryIPParams = z.input<typeof createPrimaryIPRequestSchema>;
 
 /**
  * Create Primary IP response
@@ -113,10 +109,10 @@ export type CreatePrimaryIPResponse = z.infer<typeof createPrimaryIPResponseSche
 export type GetPrimaryIPResponse = z.infer<typeof getPrimaryIPResponseSchema>;
 
 /**
- * Update Primary IP parameters
+ * Update Primary IP request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-update-a-primary-ip
  */
-export type UpdatePrimaryIPParams = z.infer<typeof updatePrimaryIPRequestSchema>;
+export type UpdatePrimaryIPParams = z.input<typeof updatePrimaryIPRequestSchema>;
 
 /**
  * Update Primary IP response
@@ -125,52 +121,28 @@ export type UpdatePrimaryIPParams = z.infer<typeof updatePrimaryIPRequestSchema>
 export type UpdatePrimaryIPResponse = z.infer<typeof updatePrimaryIPResponseSchema>;
 
 /**
- * Delete Primary IP response
- * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-delete-a-primary-ip
- */
-export type DeletePrimaryIPResponse = z.infer<typeof deletePrimaryIPResponseSchema>;
-
-/**
  * List Primary IP Actions query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-list-actions-for-a-primary-ip
  */
-export interface ListPrimaryIPActionsParams {
-  /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, command, command:asc, command:desc, status, status:asc, status:desc, progress, progress:asc, progress:desc, started, started:asc, started:desc, finished, finished:asc, finished:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter Actions by status. The response will only contain Actions matching the status.
-   */
-  status?: string | string[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
-}
+export type ListPrimaryIPActionsParams = ListActionsParams;
 
 /**
  * List Primary IP Actions response
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-list-actions-for-a-primary-ip
  */
-export type ListPrimaryIPActionsResponse = z.infer<typeof listPrimaryIPActionsResponseSchema>;
+export type ListPrimaryIPActionsResponse = ListActionsResponse;
 
 /**
  * Get Primary IP Action response
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-get-an-action-for-a-primary-ip
  */
-export type GetPrimaryIPActionResponse = z.infer<typeof getPrimaryIPActionResponseSchema>;
+export type GetPrimaryIPActionResponse = GetActionResponse;
 
 /**
- * Assign Primary IP to resource parameters
+ * Assign Primary IP to resource request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-assign-a-primary-ip-to-a-resource
  */
-export type AssignPrimaryIPToResourceParams = z.infer<
+export type AssignPrimaryIPToResourceParams = z.input<
   typeof assignPrimaryIPToResourceRequestSchema
 >;
 
@@ -178,15 +150,19 @@ export type AssignPrimaryIPToResourceParams = z.infer<
  * Assign Primary IP to resource response
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-assign-a-primary-ip-to-a-resource
  */
-export type AssignPrimaryIPToResourceResponse = z.infer<
-  typeof assignPrimaryIPToResourceResponseSchema
->;
+export type AssignPrimaryIPToResourceResponse = ActionResponse;
 
 /**
- * Change Primary IP reverse DNS parameters
+ * Unassign Primary IP response
+ * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-unassign-a-primary-ip-from-a-resource
+ */
+export type UnassignPrimaryIPResponse = ActionResponse;
+
+/**
+ * Change Primary IP reverse DNS request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-reverse-dns-records-for-a-primary-ip
  */
-export type ChangePrimaryIPReverseDNSParams = z.infer<
+export type ChangePrimaryIPReverseDNSParams = z.input<
   typeof changePrimaryIPReverseDNSRequestSchema
 >;
 
@@ -194,15 +170,13 @@ export type ChangePrimaryIPReverseDNSParams = z.infer<
  * Change Primary IP reverse DNS response
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-reverse-dns-records-for-a-primary-ip
  */
-export type ChangePrimaryIPReverseDNSResponse = z.infer<
-  typeof changePrimaryIPReverseDNSResponseSchema
->;
+export type ChangePrimaryIPReverseDNSResponse = ActionResponse;
 
 /**
- * Change Primary IP Protection parameters
+ * Change Primary IP Protection request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-primary-ip-protection
  */
-export type ChangePrimaryIPProtectionParams = z.infer<
+export type ChangePrimaryIPProtectionParams = z.input<
   typeof changePrimaryIPProtectionRequestSchema
 >;
 
@@ -210,12 +184,4 @@ export type ChangePrimaryIPProtectionParams = z.infer<
  * Change Primary IP Protection response
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-primary-ip-protection
  */
-export type ChangePrimaryIPProtectionResponse = z.infer<
-  typeof changePrimaryIPProtectionResponseSchema
->;
-
-/**
- * Unassign Primary IP response
- * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-unassign-a-primary-ip-from-a-resource
- */
-export type UnassignPrimaryIPResponse = z.infer<typeof unassignPrimaryIPResponseSchema>;
+export type ChangePrimaryIPProtectionResponse = ActionResponse;

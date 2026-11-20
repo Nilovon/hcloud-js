@@ -3,40 +3,33 @@
  * @see https://docs.hetzner.cloud/reference/cloud#pricing
  */
 
-import type { HCloudClient } from "../../client/index";
-import type { GetPricingResponse } from "../../apis/pricing/types";
-import { validate } from "../../validation/index";
-import { getPricingResponseSchema } from "../../apis/pricing/schemas";
+import { ApiResource } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { getPricingResponseSchema } from "./schemas";
+import type { GetPricingResponse } from "./types";
 
 /**
  * Pricing API client
+ *
+ * Returns the prices of all resources available on the platform. VAT and
+ * currency of the project owner are used for calculations.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#pricing
  */
-export class PricingClient {
-  constructor(private readonly client: HCloudClient) {}
-
+export class PricingClient extends ApiResource {
   /**
-   * Returns all prices for all resources.
+   * Returns the prices of all resources.
    *
-   * @returns Promise resolving to all pricing information
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#pricing-get-all-prices
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get all prices
-   * const pricing = await client.pricing.getAll();
-   * console.log(`Currency: ${pricing.currency}`);
-   * console.log(`VAT Rate: ${pricing.vat_rate}`);
-   * console.log(`Server Types: ${pricing.server_types.length}`);
+   * const { pricing } = await client.pricing.getAll();
+   * console.log(pricing.currency, pricing.vat_rate);
    * ```
    */
-  async getAll(): Promise<GetPricingResponse> {
-    const response = await this.client.get<unknown>("/pricing");
-
-    return validate(getPricingResponseSchema, response, {
-      context: "Get pricing response",
-      detailed: true,
-    });
+  getAll(options?: RequestOptions): Promise<GetPricingResponse> {
+    return this._get("/pricing", getPricingResponseSchema, undefined, options);
   }
 }

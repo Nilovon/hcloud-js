@@ -3,465 +3,371 @@
  * @see https://docs.hetzner.cloud/reference/cloud#primary-ips
  */
 
-import type { HCloudClient } from "../../client/index";
-import type {
-  ListPrimaryIPsParams,
-  ListPrimaryIPsResponse,
-  CreatePrimaryIPParams,
-  CreatePrimaryIPResponse,
-  GetPrimaryIPResponse,
-  UpdatePrimaryIPParams,
-  UpdatePrimaryIPResponse,
-  DeletePrimaryIPResponse,
-  ListPrimaryIPActionsParams,
-  ListPrimaryIPActionsResponse,
-  GetPrimaryIPActionResponse,
-  AssignPrimaryIPToResourceParams,
-  AssignPrimaryIPToResourceResponse,
-  ChangePrimaryIPReverseDNSParams,
-  ChangePrimaryIPReverseDNSResponse,
-  ChangePrimaryIPProtectionParams,
-  ChangePrimaryIPProtectionResponse,
-  UnassignPrimaryIPResponse,
-} from "../../apis/primary-ips/types";
-import { validate } from "../../validation/index";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { ResourceActionsClient } from "../actions/index";
 import {
-  listPrimaryIPsResponseSchema,
+  actionResponseSchema,
+  getActionResponseSchema,
+  listActionsResponseSchema,
+} from "../actions/schemas";
+import {
+  assignPrimaryIPToResourceRequestSchema,
+  changePrimaryIPProtectionRequestSchema,
+  changePrimaryIPReverseDNSRequestSchema,
   createPrimaryIPRequestSchema,
   createPrimaryIPResponseSchema,
   getPrimaryIPResponseSchema,
+  listPrimaryIPsResponseSchema,
   updatePrimaryIPRequestSchema,
   updatePrimaryIPResponseSchema,
-  deletePrimaryIPResponseSchema,
-  listPrimaryIPActionsResponseSchema,
-  getPrimaryIPActionResponseSchema,
-  assignPrimaryIPToResourceRequestSchema,
-  assignPrimaryIPToResourceResponseSchema,
-  changePrimaryIPReverseDNSRequestSchema,
-  changePrimaryIPReverseDNSResponseSchema,
-  changePrimaryIPProtectionRequestSchema,
-  changePrimaryIPProtectionResponseSchema,
-  unassignPrimaryIPRequestSchema,
-  unassignPrimaryIPResponseSchema,
-} from "../../apis/primary-ips/schemas";
+} from "./schemas";
+import type {
+  AssignPrimaryIPToResourceParams,
+  AssignPrimaryIPToResourceResponse,
+  ChangePrimaryIPProtectionParams,
+  ChangePrimaryIPProtectionResponse,
+  ChangePrimaryIPReverseDNSParams,
+  ChangePrimaryIPReverseDNSResponse,
+  CreatePrimaryIPParams,
+  CreatePrimaryIPResponse,
+  GetPrimaryIPActionResponse,
+  GetPrimaryIPResponse,
+  ListPrimaryIPActionsParams,
+  ListPrimaryIPActionsResponse,
+  ListPrimaryIPsParams,
+  ListPrimaryIPsResponse,
+  PrimaryIP,
+  UnassignPrimaryIPResponse,
+  UpdatePrimaryIPParams,
+  UpdatePrimaryIPResponse,
+} from "./types";
 
 /**
  * Primary IPs API client
+ *
+ * Primary IPs are the public IPs of servers and load balancers. They belong to
+ * a location and can only be assigned to resources in that location.
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#primary-ips
  */
-export class PrimaryIPsClient {
-  constructor(private readonly client: HCloudClient) {}
+export class PrimaryIPsClient extends NamedResource<
+  PrimaryIP,
+  ListPrimaryIPsParams,
+  "primary_ips"
+> {
+  protected readonly itemsKey = "primary_ips";
 
   /**
-   * Returns all Primary IP objects.
+   * Actions of all Primary IPs (`GET /primary_ips/actions`), including
+   * `waitFor()` and `waitForAll()`.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of primary IPs with pagination metadata
+   * @example
+   * ```typescript
+   * const { actions } = await client.primaryIPs.actions.list({ status: "running" });
+   * ```
+   */
+  public readonly actions = new ResourceActionsClient(this.client, "/primary_ips");
+
+  /**
+   * Returns a page of Primary IPs.
+   *
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-list-primary-ips
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all primary IPs
-   * const result = await client.primaryIPs.list();
-   *
-   * // List primary IPs with filters
-   * const primaryIPs = await client.primaryIPs.list({
-   *   name: 'my-primary-ip',
-   *   label_selector: 'environment=production',
-   *   ip: '1.2.3.4',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
+   * const { primary_ips } = await client.primaryIPs.list({
+   *   label_selector: "environment=production",
+   *   sort: "created:desc",
    * });
+   *
+   * // All Primary IPs across all pages
+   * const all = await client.primaryIPs.listAll();
    * ```
    */
-  async list(params?: ListPrimaryIPsParams): Promise<ListPrimaryIPsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.ip) {
-      queryParams.ip = params.ip;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/primary_ips", queryParams);
-
-    return validate(listPrimaryIPsResponseSchema, response, {
-      context: "List primary IPs response",
-      detailed: true,
-    });
+  list(params?: ListPrimaryIPsParams, options?: RequestOptions): Promise<ListPrimaryIPsResponse> {
+    return this._get("/primary_ips", listPrimaryIPsResponseSchema, params, options);
   }
 
   /**
-   * Creates a new Primary IP.
-   *
-   * @param params - Parameters for creating the primary IP
-   * @returns Promise resolving to the created primary IP and action
-   * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-create-a-primary-ip
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Create an IPv4 primary IP
-   * const primaryIP = await client.primaryIPs.create({
-   *   name: 'my-primary-ip',
-   *   type: 'ipv4',
-   *   datacenter: 'nbg1-dc3',
-   *   assignee_type: 'server',
-   *   auto_delete: true,
-   *   labels: { environment: 'production' }
-   * });
-   * ```
-   */
-  async create(params: CreatePrimaryIPParams): Promise<CreatePrimaryIPResponse> {
-    const validatedParams = validate(createPrimaryIPRequestSchema, params, {
-      context: "Create primary IP request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>("/primary_ips", validatedParams);
-
-    return validate(createPrimaryIPResponseSchema, response, {
-      context: "Create primary IP response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Returns a specific Primary IP object.
+   * Returns a specific Primary IP.
    *
    * @param id - ID of the Primary IP
-   * @returns Promise resolving to the primary IP
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-get-a-primary-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a primary IP by ID
-   * const primaryIP = await client.primaryIPs.get(12345);
-   * console.log(primaryIP.primary_ip.ip);
+   * const { primary_ip } = await client.primaryIPs.get(12345);
+   * console.log(primary_ip.ip, primary_ip.location.name);
    * ```
    */
-  async get(id: number): Promise<GetPrimaryIPResponse> {
-    const response = await this.client.get<unknown>(`/primary_ips/${id}`);
-
-    return validate(getPrimaryIPResponseSchema, response, {
-      context: "Get primary IP response",
-      detailed: true,
-    });
+  get(id: number, options?: RequestOptions): Promise<GetPrimaryIPResponse> {
+    return this._get(path`/primary_ips/${id}`, getPrimaryIPResponseSchema, undefined, options);
   }
 
   /**
-   * Updates the Primary IP.
+   * Finds a Primary IP by its IP address.
    *
-   * You can update a Primary IP's name, auto_delete and labels.
+   * @param ip - IP address of the Primary IP
+   * @param options - Request options
+   * @returns The Primary IP, or `undefined` if none matches
+   *
+   * @example
+   * ```typescript
+   * const primaryIP = await client.primaryIPs.getByIP("131.232.99.1");
+   * ```
+   */
+  async getByIP(ip: string, options?: RequestOptions): Promise<PrimaryIP | undefined> {
+    const { primary_ips } = await this.list({ ip }, options);
+    return primary_ips.find((primaryIP) => primaryIP.ip === ip);
+  }
+
+  /**
+   * Creates a new Primary IP, optionally assigned to a resource.
+   *
+   * Pass either `location` or `assignee_id` together with `assignee_type`. The
+   * returned `action` is only set if the Primary IP is assigned on creation.
+   *
+   * @param params - Name, type and either `location` or an assignee
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-create-a-primary-ip
+   *
+   * @example
+   * ```typescript
+   * const { primary_ip } = await client.primaryIPs.create({
+   *   name: "my-primary-ip",
+   *   type: "ipv4",
+   *   location: "fsn1",
+   * });
+   * ```
+   */
+  create(
+    params: CreatePrimaryIPParams,
+    options?: RequestOptions,
+  ): Promise<CreatePrimaryIPResponse> {
+    return this._post(
+      "/primary_ips",
+      createPrimaryIPResponseSchema,
+      params,
+      createPrimaryIPRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Updates the name, `auto_delete` and/or labels of a Primary IP.
    *
    * @param id - ID of the Primary IP
-   * @param params - Parameters to update (name, auto_delete, and/or labels)
-   * @returns Promise resolving to the updated primary IP
+   * @param params - Fields to update
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-update-a-primary-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Update primary IP name
-   * const updated = await client.primaryIPs.update(12345, {
-   *   name: 'new-primary-ip-name'
-   * });
-   *
-   * // Update labels
-   * const updated = await client.primaryIPs.update(12345, {
-   *   labels: { environment: 'production', team: 'backend' }
+   * const { primary_ip } = await client.primaryIPs.update(12345, {
+   *   name: "new-name",
+   *   auto_delete: false,
    * });
    * ```
    */
-  async update(
+  update(
     id: number,
     params: UpdatePrimaryIPParams,
+    options?: RequestOptions,
   ): Promise<UpdatePrimaryIPResponse> {
-    const validatedParams = validate(updatePrimaryIPRequestSchema, params, {
-      context: "Update primary IP request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(`/primary_ips/${id}`, validatedParams);
-
-    return validate(updatePrimaryIPResponseSchema, response, {
-      context: "Update primary IP response",
-      detailed: true,
-    });
+    return this._put(
+      path`/primary_ips/${id}`,
+      updatePrimaryIPResponseSchema,
+      params,
+      updatePrimaryIPRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Deletes a Primary IP.
+   * Deletes a Primary IP. If it is assigned to a resource, it is unassigned first.
    *
    * @param id - ID of the Primary IP
-   * @returns Promise resolving to the delete action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-delete-a-primary-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Delete a primary IP
-   * const result = await client.primaryIPs.delete(12345);
-   * if (result.action) {
-   *   console.log(`Delete action ID: ${result.action.id}`);
-   * }
+   * await client.primaryIPs.delete(12345);
    * ```
    */
-  async delete(id: number): Promise<DeletePrimaryIPResponse> {
-    const response = await this.client.delete<unknown>(`/primary_ips/${id}`);
-
-    return validate(deletePrimaryIPResponseSchema, response, {
-      context: "Delete primary IP response",
-      detailed: true,
-    });
+  delete(id: number, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/primary_ips/${id}`, null, options);
   }
 
   /**
-   * Returns all Action objects for a Primary IP.
+   * Returns a page of actions of a Primary IP.
    *
    * @param id - ID of the Primary IP
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of actions with pagination metadata
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-list-actions-for-a-primary-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all actions for a primary IP
-   * const actions = await client.primaryIPs.listActions(12345);
-   *
-   * // List actions with filters
-   * const runningActions = await client.primaryIPs.listActions(12345, {
-   *   status: ['running'],
-   *   sort: ['started:desc']
+   * const { actions } = await client.primaryIPs.listActions(12345, {
+   *   status: "running",
+   *   sort: "started:desc",
    * });
    * ```
    */
-  async listActions(
+  listActions(
     id: number,
     params?: ListPrimaryIPActionsParams,
+    options?: RequestOptions,
   ): Promise<ListPrimaryIPActionsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.status) {
-      queryParams.status = Array.isArray(params.status) ? params.status : [params.status];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>(`/primary_ips/${id}/actions`, queryParams);
-
-    return validate(listPrimaryIPActionsResponseSchema, response, {
-      context: "List primary IP actions response",
-      detailed: true,
-    });
+    return this._get(path`/primary_ips/${id}/actions`, listActionsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific Action object for a Primary IP.
+   * Returns a specific action of a Primary IP.
    *
    * @param id - ID of the Primary IP
-   * @param actionId - ID of the Action
-   * @returns Promise resolving to the action
+   * @param actionId - ID of the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-get-an-action-for-a-primary-ip
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get an action by ID
-   * const action = await client.primaryIPs.getAction(12345, 67890);
-   * console.log(action.action.command);
+   * const { action } = await client.primaryIPs.getAction(12345, 67890);
+   * console.log(action.status);
    * ```
    */
-  async getAction(id: number, actionId: number): Promise<GetPrimaryIPActionResponse> {
-    const response = await this.client.get<unknown>(`/primary_ips/${id}/actions/${actionId}`);
-
-    return validate(getPrimaryIPActionResponseSchema, response, {
-      context: "Get primary IP action response",
-      detailed: true,
-    });
+  getAction(
+    id: number,
+    actionId: number,
+    options?: RequestOptions,
+  ): Promise<GetPrimaryIPActionResponse> {
+    return this._get(
+      path`/primary_ips/${id}/actions/${actionId}`,
+      getActionResponseSchema,
+      undefined,
+      options,
+    );
   }
 
   /**
-   * Assigns a Primary IP to a resource.
+   * Assigns a Primary IP to a resource. A server must be powered off for this.
    *
    * @param id - ID of the Primary IP
-   * @param params - Resource ID to assign the primary IP to
-   * @returns Promise resolving to the action
+   * @param params - ID and type of the resource to assign the Primary IP to
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-assign-a-primary-ip-to-a-resource
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Assign primary IP to a server
-   * const result = await client.primaryIPs.assignToResource(12345, {
-   *   assignee_id: 67890
+   * const { action } = await client.primaryIPs.assignToResource(12345, {
+   *   assignee_id: 42,
+   *   assignee_type: "server",
    * });
-   * console.log(`Action ID: ${result.action.id}`);
+   * await client.actions.waitFor(action);
    * ```
    */
-  async assignToResource(
+  assignToResource(
     id: number,
     params: AssignPrimaryIPToResourceParams,
+    options?: RequestOptions,
   ): Promise<AssignPrimaryIPToResourceResponse> {
-    const validatedParams = validate(assignPrimaryIPToResourceRequestSchema, params, {
-      context: "Assign primary IP to resource request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/primary_ips/${id}/actions/assign`,
-      validatedParams,
+    return this._post(
+      path`/primary_ips/${id}/actions/assign`,
+      actionResponseSchema,
+      params,
+      assignPrimaryIPToResourceRequestSchema,
+      options,
     );
-
-    return validate(assignPrimaryIPToResourceResponseSchema, response, {
-      context: "Assign primary IP to resource response",
-      detailed: true,
-    });
   }
 
   /**
-   * Changes the hostname that will appear when getting the hostname belonging to this Primary IP.
+   * Unassigns a Primary IP from the resource it is assigned to. It can be
+   * assigned again later.
    *
    * @param id - ID of the Primary IP
-   * @param params - Reverse DNS configuration
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-reverse-dns-records-for-a-primary-ip
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Change reverse DNS
-   * const result = await client.primaryIPs.changeReverseDNS(12345, {
-   *   ip: '1.2.3.4',
-   *   dns_ptr: 'server.example.com'
-   * });
-   * console.log(`Action ID: ${result.action.id}`);
-   * ```
-   */
-  async changeReverseDNS(
-    id: number,
-    params: ChangePrimaryIPReverseDNSParams,
-  ): Promise<ChangePrimaryIPReverseDNSResponse> {
-    const validatedParams = validate(changePrimaryIPReverseDNSRequestSchema, params, {
-      context: "Change primary IP reverse DNS request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/primary_ips/${id}/actions/change_dns_ptr`,
-      validatedParams,
-    );
-
-    return validate(changePrimaryIPReverseDNSResponseSchema, response, {
-      context: "Change primary IP reverse DNS response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Changes the Protection configuration of a Primary IP.
-   *
-   * @param id - ID of the Primary IP
-   * @param params - Protection configuration
-   * @returns Promise resolving to the action
-   * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-primary-ip-protection
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Enable delete protection
-   * const result = await client.primaryIPs.changeProtection(12345, {
-   *   delete: true
-   * });
-   * console.log(`Action ID: ${result.action.id}`);
-   * ```
-   */
-  async changeProtection(
-    id: number,
-    params: ChangePrimaryIPProtectionParams,
-  ): Promise<ChangePrimaryIPProtectionResponse> {
-    const validatedParams = validate(changePrimaryIPProtectionRequestSchema, params, {
-      context: "Change primary IP protection request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/primary_ips/${id}/actions/change_protection`,
-      validatedParams,
-    );
-
-    return validate(changePrimaryIPProtectionResponseSchema, response, {
-      context: "Change primary IP protection response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Unassigns a Primary IP from a resource.
-   *
-   * @param id - ID of the Primary IP
-   * @returns Promise resolving to the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-unassign-a-primary-ip-from-a-resource
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Unassign primary IP
-   * const result = await client.primaryIPs.unassign(12345);
-   * console.log(`Action ID: ${result.action.id}`);
+   * const { action } = await client.primaryIPs.unassign(12345);
+   * await client.actions.waitFor(action);
    * ```
    */
-  async unassign(id: number): Promise<UnassignPrimaryIPResponse> {
-    const response = await this.client.post<unknown>(
-      `/primary_ips/${id}/actions/unassign`,
-      {},
+  unassign(id: number, options?: RequestOptions): Promise<UnassignPrimaryIPResponse> {
+    return this._post(
+      path`/primary_ips/${id}/actions/unassign`,
+      actionResponseSchema,
+      undefined,
+      undefined,
+      options,
     );
+  }
 
-    return validate(unassignPrimaryIPResponseSchema, response, {
-      context: "Unassign primary IP response",
-      detailed: true,
-    });
+  /**
+   * Changes the hostname that appears when resolving the reverse DNS entry of
+   * a Primary IP.
+   *
+   * @param id - ID of the Primary IP
+   * @param params - IP address and hostname. A `dns_ptr` of `null` resets the entry to its default.
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-reverse-dns-records-for-a-primary-ip
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.primaryIPs.changeReverseDNS(12345, {
+   *   ip: "131.232.99.1",
+   *   dns_ptr: "server.example.com",
+   * });
+   * ```
+   */
+  changeReverseDNS(
+    id: number,
+    params: ChangePrimaryIPReverseDNSParams,
+    options?: RequestOptions,
+  ): Promise<ChangePrimaryIPReverseDNSResponse> {
+    return this._post(
+      path`/primary_ips/${id}/actions/change_dns_ptr`,
+      actionResponseSchema,
+      params,
+      changePrimaryIPReverseDNSRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Changes the protection configuration of a Primary IP.
+   *
+   * @param id - ID of the Primary IP
+   * @param params - Protection configuration
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#primary-ips-change-primary-ip-protection
+   *
+   * @example
+   * ```typescript
+   * const { action } = await client.primaryIPs.changeProtection(12345, { delete: true });
+   * ```
+   */
+  changeProtection(
+    id: number,
+    params: ChangePrimaryIPProtectionParams,
+    options?: RequestOptions,
+  ): Promise<ChangePrimaryIPProtectionResponse> {
+    return this._post(
+      path`/primary_ips/${id}/actions/change_protection`,
+      actionResponseSchema,
+      params,
+      changePrimaryIPProtectionRequestSchema,
+      options,
+    );
   }
 }

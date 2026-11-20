@@ -1,17 +1,17 @@
 /**
  * Types for Hetzner Cloud ISOs API
- * Types are inferred from Zod schemas
  * @see https://docs.hetzner.cloud/reference/cloud#isos
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  listISOsResponseSchema,
+import type { z } from "zod";
+import type { OneOrMany, PageParams } from "../common/types";
+import type { CpuArchitecture } from "../server-types/types";
+import type {
   getISOResponseSchema,
   isoSchema,
   isoTypeSchema,
-} from "@/apis/isos/schemas";
-import type { z } from "zod";
+  listISOsResponseSchema,
+} from "./schemas";
 
 /**
  * ISO type
@@ -20,6 +20,7 @@ export type ISOType = z.infer<typeof isoTypeSchema>;
 
 /**
  * Hetzner Cloud ISO
+ * @see https://docs.hetzner.cloud/reference/cloud#isos
  */
 export type ISO = z.infer<typeof isoSchema>;
 
@@ -27,24 +28,20 @@ export type ISO = z.infer<typeof isoSchema>;
  * List ISOs query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#isos-list-isos
  */
-export interface ListISOsParams {
+export interface ListISOsParams extends PageParams {
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter ISOs by their name. The response will only contain the ISO matching the specified name.
+   * Only return the ISO with this exact name.
    */
   name?: string;
   /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Only return ISOs compatible with the given architectures.
    */
-  page?: number;
+  architecture?: OneOrMany<CpuArchitecture>;
   /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Custom (private) ISOs have no architecture set. Set this to `true` to
+   * include them when filtering by `architecture`.
    */
-  per_page?: number;
+  include_architecture_wildcard?: boolean;
 }
 
 /**

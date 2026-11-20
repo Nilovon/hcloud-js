@@ -4,14 +4,19 @@
  */
 
 import { z } from "zod";
-import { actionSchema, actionResourceSchema } from "../../apis/actions/schemas";
-import { paginationMetaSchema } from "../../apis/common/schemas";
-import { locationSchema } from "../../apis/servers/schemas";
+import { actionSchema } from "../actions/schemas";
+import { labelsSchema, metaSchema } from "../common/schemas";
+import { locationSchema } from "../locations/schemas";
 
 /**
  * Volume status schema
  */
-export const volumeStatusSchema = z.enum(["creating", "available", "deleting"]);
+export const volumeStatusSchema = z.enum(["creating", "available"]);
+
+/**
+ * Filesystems a volume can be formatted with on creation
+ */
+export const volumeFormatSchema = z.enum(["xfs", "ext4"]);
 
 /**
  * Volume protection schema
@@ -23,22 +28,24 @@ export const volumeProtectionSchema = z.object({
 /**
  * Volume schema
  */
-export const volumeSchema = z
-  .object({
-    id: z.number(),
-    name: z.string(),
-    status: volumeStatusSchema,
-    server: z.number().nullable(),
-    location: locationSchema,
-    size: z.number(),
-    linux_device: z.string(),
-    created: z.string(),
-    format: z.string().nullable(),
-    labels: z.record(z.string(), z.string()),
-    protection: volumeProtectionSchema,
-    blocking: z.array(actionResourceSchema).optional(),
-  })
-  .passthrough();
+export const volumeSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  status: volumeStatusSchema,
+  /** ID of the server the volume is attached to, `null` if it is not attached. */
+  server: z.number().nullable(),
+  /** Location of the volume. It can only be attached to servers in the same location. */
+  location: locationSchema,
+  /** Size in GB. */
+  size: z.number(),
+  /** Device path of the volume on the file system of the server. */
+  linux_device: z.string(),
+  /** Filesystem of the volume if it was formatted on creation, `null` otherwise. */
+  format: z.string().nullable(),
+  protection: volumeProtectionSchema,
+  labels: labelsSchema,
+  created: z.string(),
+});
 
 /**
  * List Volumes response schema
@@ -46,26 +53,34 @@ export const volumeSchema = z
  */
 export const listVolumesResponseSchema = z.object({
   volumes: z.array(volumeSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
+  meta: metaSchema.optional(),
 });
 
 /**
  * Create Volume request schema
+ *
+ * Exactly one of `location` and `server` must be given.
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-create-a-volume
  */
-export const createVolumeRequestSchema = z.object({
-  name: z.string(),
-  size: z.number(),
-  location: z.string().optional(),
-  format: z.string().optional(),
-  labels: z.record(z.string(), z.string()).optional(),
-  automount: z.boolean().optional(),
-  server: z.number().optional(),
-});
+export const createVolumeRequestSchema = z
+  .object({
+    name: z.string().min(1),
+    /** Size in GB. */
+    size: z.number().int().positive(),
+    /** ID or name of the location to create the volume in. Omit if `server` is passed. */
+    location: z.string().min(1).optional(),
+    /** ID of the server to attach the volume to. It is created in the location of the server. */
+    server: z.number().int().optional(),
+    /** Mount the volume after attaching it. Requires `server`. */
+    automount: z.boolean().optional(),
+    /** Format the volume after creation. */
+    format: volumeFormatSchema.optional(),
+    labels: labelsSchema.optional(),
+  })
+  .refine((params) => (params.location === undefined) !== (params.server === undefined), {
+    message: "Exactly one of `location` and `server` must be given",
+    path: ["location"],
+  });
 
 /**
  * Create Volume response schema
@@ -73,8 +88,10 @@ export const createVolumeRequestSchema = z.object({
  */
 export const createVolumeResponseSchema = z.object({
   volume: volumeSchema,
+  /** Action tracking the creation of the volume. */
   action: actionSchema,
-  next_actions: z.array(actionSchema).optional(),
+  /** Actions performed after the creation, e.g. attaching the volume to a server. */
+  next_actions: z.array(actionSchema),
 });
 
 /**
@@ -90,8 +107,8 @@ export const getVolumeResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-update-a-volume
  */
 export const updateVolumeRequestSchema = z.object({
-  name: z.string().optional(),
-  labels: z.record(z.string(), z.string()).optional(),
+  name: z.string().min(1).optional(),
+  labels: labelsSchema.optional(),
 });
 
 /**
@@ -103,63 +120,14 @@ export const updateVolumeResponseSchema = z.object({
 });
 
 /**
- * Delete Volume response schema
- * @see https://docs.hetzner.cloud/reference/cloud#volumes-delete-a-volume
- */
-export const deleteVolumeResponseSchema = z.object({
-  action: actionSchema.optional(),
-});
-
-/**
- * List Volume Actions response schema
- * @see https://docs.hetzner.cloud/reference/cloud#volumes-list-actions-for-a-volume
- */
-export const listVolumeActionsResponseSchema = z.object({
-  actions: z.array(actionSchema),
-  meta: z
-    .object({
-      pagination: paginationMetaSchema,
-    })
-    .optional(),
-});
-
-/**
- * Get Volume Action response schema
- * @see https://docs.hetzner.cloud/reference/cloud#volumes-get-an-action-for-a-volume
- */
-export const getVolumeActionResponseSchema = z.object({
-  action: actionSchema,
-});
-
-/**
  * Attach Volume to Server request schema
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-attach-volume-to-a-server
  */
 export const attachVolumeToServerRequestSchema = z.object({
-  server: z.number(),
+  /** ID of the server the volume is attached to. */
+  server: z.number().int(),
+  /** Mount the volume after attaching it. */
   automount: z.boolean().optional(),
-});
-
-/**
- * Attach Volume to Server response schema
- * @see https://docs.hetzner.cloud/reference/cloud#volumes-attach-volume-to-a-server
- */
-export const attachVolumeToServerResponseSchema = z.object({
-  action: actionSchema,
-});
-
-/**
- * Detach Volume request schema
- * @see https://docs.hetzner.cloud/reference/cloud#volumes-detach-volume
- */
-export const detachVolumeRequestSchema = z.object({});
-
-/**
- * Detach Volume response schema
- * @see https://docs.hetzner.cloud/reference/cloud#volumes-detach-volume
- */
-export const detachVolumeResponseSchema = z.object({
-  action: actionSchema,
 });
 
 /**
@@ -167,15 +135,8 @@ export const detachVolumeResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-resize-volume
  */
 export const resizeVolumeRequestSchema = z.object({
-  size: z.number(),
-});
-
-/**
- * Resize Volume response schema
- * @see https://docs.hetzner.cloud/reference/cloud#volumes-resize-volume
- */
-export const resizeVolumeResponseSchema = z.object({
-  action: actionSchema,
+  /** New size in GB. Must be greater than the current size. */
+  size: z.number().int().positive(),
 });
 
 /**
@@ -183,13 +144,6 @@ export const resizeVolumeResponseSchema = z.object({
  * @see https://docs.hetzner.cloud/reference/cloud#volumes-change-volume-protection
  */
 export const changeVolumeProtectionRequestSchema = z.object({
-  delete: z.boolean(),
-});
-
-/**
- * Change Volume Protection response schema
- * @see https://docs.hetzner.cloud/reference/cloud#volumes-change-volume-protection
- */
-export const changeVolumeProtectionResponseSchema = z.object({
-  action: actionSchema,
+  /** If `true`, prevents the volume from being deleted. */
+  delete: z.boolean().optional(),
 });

@@ -1,76 +1,52 @@
 /**
  * Types for Hetzner Cloud Servers API
- * Types are inferred from Zod schemas
- * @see https://docs.hetzner.cloud/reference/cloud#servers-list-servers
+ * @see https://docs.hetzner.cloud/reference/cloud#servers
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  serverStatusSchema,
-  serverSchema,
-  serverTypeSchema,
-  locationSchema,
-  datacenterSchema,
-  networkSchema,
-  publicNetSchema,
-  privateNetSchema,
-  isoSchema,
-  backupWindowSchema,
-  serverProtectionSchema,
-  listServersResponseSchema,
-  createServerRequestSchema,
-  createServerResponseSchema,
-  getServerResponseSchema,
-  updateServerRequestSchema,
-  updateServerResponseSchema,
-  deleteServerResponseSchema,
-  getServerMetricsResponseSchema,
-  serverMetricsSchema,
-  serverMetricsTimeSeriesValueSchema,
-  serverActionSchema, 
-  serverImageSchema,
-  listServerActionsResponseSchema,
-  getServerActionResponseSchema,
-  powerOnServerResponseSchema,
-  powerOffServerResponseSchema,
-  rebootServerResponseSchema,
-  resetServerResponseSchema,
-  shutdownServerResponseSchema,
+import type { z } from "zod";
+import type {
+  Action,
+  ActionResponse,
+  GetActionResponse,
+  ListActionsParams,
+  ListActionsResponse,
+} from "../actions/types";
+import type { Metrics, OneOrMany, PageParams, SortParam } from "../common/types";
+import type {
+  addServerToPlacementGroupRequestSchema,
   attachISOToServerRequestSchema,
-  attachISOToServerResponseSchema,
-  detachISOFromServerResponseSchema,
-  enableRescueModeRequestSchema,
-  enableRescueModeResponseSchema,
-  disableRescueModeResponseSchema,
+  attachServerToNetworkRequestSchema,
+  changeAliasIPsOfNetworkRequestSchema,
+  changeServerProtectionRequestSchema,
+  changeServerReverseDNSRequestSchema,
+  changeServerTypeRequestSchema,
   createImageFromServerRequestSchema,
   createImageFromServerResponseSchema,
+  createServerFirewallSchema,
+  createServerPublicNetSchema,
+  createServerRequestSchema,
+  createServerResponseSchema,
+  detachServerFromNetworkRequestSchema,
+  enableRescueModeRequestSchema,
+  enableRescueModeResponseSchema,
+  getServerMetricsResponseSchema,
+  getServerResponseSchema,
+  listServersResponseSchema,
   rebuildServerFromImageRequestSchema,
   rebuildServerFromImageResponseSchema,
-  changeServerProtectionRequestSchema,
-  changeServerProtectionResponseSchema,
-  changeServerTypeRequestSchema,
-  changeServerTypeResponseSchema,
-  enableBackupsRequestSchema,
-  enableBackupsResponseSchema,
-  disableBackupsResponseSchema,
-  attachServerToNetworkRequestSchema,
-  attachServerToNetworkResponseSchema,
-  detachServerFromNetworkRequestSchema,
-  detachServerFromNetworkResponseSchema,
-  changeAliasIPsOfNetworkRequestSchema,
-  changeAliasIPsOfNetworkResponseSchema,
-  changeServerReverseDNSRequestSchema,
-  changeServerReverseDNSResponseSchema,
-  requestConsoleForServerRequestSchema,
   requestConsoleForServerResponseSchema,
   resetRootPasswordResponseSchema,
-  addServerToPlacementGroupRequestSchema,
-  addServerToPlacementGroupResponseSchema,
-  removeServerFromPlacementGroupRequestSchema,
-  removeServerFromPlacementGroupResponseSchema,
-} from "../../apis/servers/schemas";
-import type { z } from "zod";
-import type { paginationMetaSchema } from "../../apis/common/schemas";
+  serverPrivateNetSchema,
+  serverProtectionSchema,
+  serverPublicNetFirewallSchema,
+  serverPublicNetIPv4Schema,
+  serverPublicNetIPv6Schema,
+  serverPublicNetSchema,
+  serverSchema,
+  serverStatusSchema,
+  updateServerRequestSchema,
+  updateServerResponseSchema,
+} from "./schemas";
 
 /**
  * Server status values
@@ -78,49 +54,29 @@ import type { paginationMetaSchema } from "../../apis/common/schemas";
 export type ServerStatus = z.infer<typeof serverStatusSchema>;
 
 /**
- * Server type information
+ * Public IPv4 address of a server
  */
-export type ServerType = z.infer<typeof serverTypeSchema>;
+export type ServerPublicNetIPv4 = z.infer<typeof serverPublicNetIPv4Schema>;
 
 /**
- * Server Image information
+ * Public IPv6 network of a server
  */
-export type ServerImage = z.infer<typeof serverImageSchema>;
+export type ServerPublicNetIPv6 = z.infer<typeof serverPublicNetIPv6Schema>;
 
 /**
- * Location information
+ * Status of a firewall applied to the public network interface of a server
  */
-export type Location = z.infer<typeof locationSchema>;
+export type ServerPublicNetFirewall = z.infer<typeof serverPublicNetFirewallSchema>;
 
 /**
- * Datacenter information
+ * Public network information of a server
  */
-export type Datacenter = z.infer<typeof datacenterSchema>;
+export type ServerPublicNet = z.infer<typeof serverPublicNetSchema>;
 
 /**
- * Network information
+ * Attachment of a server to a private network
  */
-export type Network = z.infer<typeof networkSchema>;
-
-/**
- * Public Net information
- */
-export type PublicNet = z.infer<typeof publicNetSchema>;
-
-/**
- * Private Net information
- */
-export type PrivateNet = z.infer<typeof privateNetSchema>;
-
-/**
- * ISO information
- */
-export type ISO = z.infer<typeof isoSchema>;
-
-/**
- * Backup window information
- */
-export type BackupWindow = z.infer<typeof backupWindowSchema>;
+export type ServerPrivateNet = z.infer<typeof serverPrivateNetSchema>;
 
 /**
  * Server protection settings
@@ -129,48 +85,38 @@ export type ServerProtection = z.infer<typeof serverProtectionSchema>;
 
 /**
  * Hetzner Cloud Server
- * @see https://docs.hetzner.cloud/reference/cloud#servers-list-servers
+ * @see https://docs.hetzner.cloud/reference/cloud#servers
  */
 export type Server = z.infer<typeof serverSchema>;
 
 /**
- * Pagination metadata
- * @see https://docs.hetzner.cloud/reference/cloud#pagination
+ * Fields servers can be sorted by
  */
-export type PaginationMeta = z.infer<typeof paginationMetaSchema>;
+export type ServerSort = SortParam<"id" | "name" | "created">;
 
 /**
  * List Servers query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-list-servers
  */
-export interface ListServersParams {
+export interface ListServersParams extends PageParams {
   /**
-   * Can be used to filter Servers by their name. The response will only contain the Server matching the specified name.
+   * Only return the server with this exact name.
    */
   name?: string;
   /**
-   * Can be used to filter Servers by labels. The response will only contain Servers matching the label selector.
+   * Only return servers matching the label selector.
    * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, created, created:asc, created:desc
+   * Only return servers with one of the given statuses.
+   */
+  status?: OneOrMany<ServerStatus>;
+  /**
+   * Sort the result.
    * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  sort?: string | string[];
-  /**
-   * Can be used multiple times. The response will only contain Servers matching the status.
-   * Choices: running, initializing, starting, stopping, off, deleting, migrating, rebuilding, unknown
-   */
-  status?: ServerStatus | ServerStatus[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
+  sort?: OneOrMany<ServerSort>;
 }
 
 /**
@@ -180,10 +126,20 @@ export interface ListServersParams {
 export type ListServersResponse = z.infer<typeof listServersResponseSchema>;
 
 /**
+ * Public network configuration for creating servers
+ */
+export type CreateServerPublicNet = z.input<typeof createServerPublicNetSchema>;
+
+/**
+ * Firewall to apply when creating a server
+ */
+export type CreateServerFirewall = z.input<typeof createServerFirewallSchema>;
+
+/**
  * Create Server request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-create-a-server
  */
-export type CreateServerParams = z.infer<typeof createServerRequestSchema>;
+export type CreateServerParams = z.input<typeof createServerRequestSchema>;
 
 /**
  * Create Server response
@@ -201,7 +157,7 @@ export type GetServerResponse = z.infer<typeof getServerResponseSchema>;
  * Update Server request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-update-a-server
  */
-export type UpdateServerParams = z.infer<typeof updateServerRequestSchema>;
+export type UpdateServerParams = z.input<typeof updateServerRequestSchema>;
 
 /**
  * Update Server response
@@ -213,7 +169,30 @@ export type UpdateServerResponse = z.infer<typeof updateServerResponseSchema>;
  * Delete Server response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-delete-a-server
  */
-export type DeleteServerResponse = z.infer<typeof deleteServerResponseSchema>;
+export type DeleteServerResponse = ActionResponse;
+
+/**
+ * Options for waiting until a server reaches a status
+ */
+export interface WaitForServerStatusOptions {
+  /**
+   * Delay between polls in milliseconds. Default: `1000`.
+   */
+  pollInterval?: number;
+  /**
+   * Maximum time to wait in milliseconds. Default: `300000` (5 minutes).
+   */
+  timeout?: number;
+  /**
+   * Abort waiting.
+   */
+  signal?: AbortSignal;
+}
+
+/**
+ * Type of server metrics
+ */
+export type ServerMetricsType = "cpu" | "disk" | "network";
 
 /**
  * Server Metrics query parameters
@@ -221,32 +200,27 @@ export type DeleteServerResponse = z.infer<typeof deleteServerResponseSchema>;
  */
 export interface GetServerMetricsParams {
   /**
-   * Type of metrics to get. Can be one or multiple of: cpu, disk, network
+   * Type(s) of metrics to get.
    */
-  type: Array<"cpu" | "disk" | "network"> | "cpu" | "disk" | "network";
+  type: OneOrMany<ServerMetricsType>;
   /**
-   * Start of period to get Metrics for (ISO 8601 format)
+   * Start of the period to get metrics for. A `Date` or an ISO 8601 string.
    */
-  start: string;
+  start: string | Date;
   /**
-   * End of period to get Metrics for (ISO 8601 format)
+   * End of the period to get metrics for. A `Date` or an ISO 8601 string.
    */
-  end: string;
+  end: string | Date;
   /**
-   * Resolution of results in seconds
+   * Resolution of the results in seconds.
    */
   step?: number;
 }
 
 /**
- * Server Metrics time series value
- */
-export type ServerMetricsTimeSeriesValue = z.infer<typeof serverMetricsTimeSeriesValueSchema>;
-
-/**
  * Server Metrics
  */
-export type ServerMetrics = z.infer<typeof serverMetricsSchema>;
+export type ServerMetrics = Metrics;
 
 /**
  * Get Server Metrics response
@@ -255,99 +229,82 @@ export type ServerMetrics = z.infer<typeof serverMetricsSchema>;
 export type GetServerMetricsResponse = z.infer<typeof getServerMetricsResponseSchema>;
 
 /**
- * Action information
+ * Action of a server
+ * @deprecated Use `Action` instead.
  */
-export type ServerAction = z.infer<typeof serverActionSchema>;
+export type ServerAction = Action;
 
 /**
  * List Server Actions query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-list-actions-for-a-server
  */
-export interface ListServerActionsParams {
-  /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, command, command:asc, command:desc, status, status:asc, status:desc, progress, progress:asc, progress:desc, started, started:asc, started:desc, finished, finished:asc, finished:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter Actions by status. The response will only contain Actions matching the status.
-   */
-  status?: string | string[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
-}
+export type ListServerActionsParams = ListActionsParams;
 
 /**
  * List Server Actions response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-list-actions-for-a-server
  */
-export type ListServerActionsResponse = z.infer<typeof listServerActionsResponseSchema>;
+export type ListServerActionsResponse = ListActionsResponse;
 
 /**
  * Get Server Action response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-get-an-action-for-a-server
  */
-export type GetServerActionResponse = z.infer<typeof getServerActionResponseSchema>;
+export type GetServerActionResponse = GetActionResponse;
 
 /**
  * Power On Server response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-power-on-a-server
  */
-export type PowerOnServerResponse = z.infer<typeof powerOnServerResponseSchema>;
+export type PowerOnServerResponse = ActionResponse;
 
 /**
  * Power Off Server response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-power-off-a-server
  */
-export type PowerOffServerResponse = z.infer<typeof powerOffServerResponseSchema>;
+export type PowerOffServerResponse = ActionResponse;
 
 /**
  * Reboot Server response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-soft-reboot-a-server
  */
-export type RebootServerResponse = z.infer<typeof rebootServerResponseSchema>;
+export type RebootServerResponse = ActionResponse;
 
 /**
  * Reset Server response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-reset-a-server
  */
-export type ResetServerResponse = z.infer<typeof resetServerResponseSchema>;
+export type ResetServerResponse = ActionResponse;
 
 /**
  * Shutdown Server response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-shutdown-a-server
  */
-export type ShutdownServerResponse = z.infer<typeof shutdownServerResponseSchema>;
+export type ShutdownServerResponse = ActionResponse;
 
 /**
  * Attach ISO to Server parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-attach-an-iso-to-a-server
  */
-export type AttachISOToServerParams = z.infer<typeof attachISOToServerRequestSchema>;
+export type AttachISOToServerParams = z.input<typeof attachISOToServerRequestSchema>;
 
 /**
  * Attach ISO to Server response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-attach-an-iso-to-a-server
  */
-export type AttachISOToServerResponse = z.infer<typeof attachISOToServerResponseSchema>;
+export type AttachISOToServerResponse = ActionResponse;
 
 /**
  * Detach ISO from Server response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-detach-an-iso-from-a-server
  */
-export type DetachISOFromServerResponse = z.infer<typeof detachISOFromServerResponseSchema>;
+export type DetachISOFromServerResponse = ActionResponse;
 
 /**
  * Enable Rescue Mode parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-enable-rescue-mode-for-a-server
  */
-export type EnableRescueModeParams = z.infer<typeof enableRescueModeRequestSchema>;
+export type EnableRescueModeParams = z.input<typeof enableRescueModeRequestSchema>;
 
 /**
  * Enable Rescue Mode response
@@ -359,13 +316,13 @@ export type EnableRescueModeResponse = z.infer<typeof enableRescueModeResponseSc
  * Disable Rescue Mode response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-disable-rescue-mode-for-a-server
  */
-export type DisableRescueModeResponse = z.infer<typeof disableRescueModeResponseSchema>;
+export type DisableRescueModeResponse = ActionResponse;
 
 /**
  * Create Image from Server parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-create-image-from-a-server
  */
-export type CreateImageFromServerParams = z.infer<typeof createImageFromServerRequestSchema>;
+export type CreateImageFromServerParams = z.input<typeof createImageFromServerRequestSchema>;
 
 /**
  * Create Image from Server response
@@ -377,135 +334,103 @@ export type CreateImageFromServerResponse = z.infer<typeof createImageFromServer
  * Rebuild Server from Image parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-rebuild-a-server-from-an-image
  */
-export type RebuildServerFromImageParams = z.infer<typeof rebuildServerFromImageRequestSchema>;
+export type RebuildServerFromImageParams = z.input<typeof rebuildServerFromImageRequestSchema>;
 
 /**
  * Rebuild Server from Image response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-rebuild-a-server-from-an-image
  */
-export type RebuildServerFromImageResponse = z.infer<
-  typeof rebuildServerFromImageResponseSchema
->;
+export type RebuildServerFromImageResponse = z.infer<typeof rebuildServerFromImageResponseSchema>;
 
 /**
  * Change Server Protection parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-change-server-protection
  */
-export type ChangeServerProtectionParams = z.infer<
-  typeof changeServerProtectionRequestSchema
->;
+export type ChangeServerProtectionParams = z.input<typeof changeServerProtectionRequestSchema>;
 
 /**
  * Change Server Protection response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-change-server-protection
  */
-export type ChangeServerProtectionResponse = z.infer<
-  typeof changeServerProtectionResponseSchema
->;
+export type ChangeServerProtectionResponse = ActionResponse;
 
 /**
  * Change Server Type parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-change-the-type-of-a-server
  */
-export type ChangeServerTypeParams = z.infer<typeof changeServerTypeRequestSchema>;
+export type ChangeServerTypeParams = z.input<typeof changeServerTypeRequestSchema>;
 
 /**
  * Change Server Type response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-change-the-type-of-a-server
  */
-export type ChangeServerTypeResponse = z.infer<typeof changeServerTypeResponseSchema>;
-
-/**
- * Enable Backups parameters
- * @see https://docs.hetzner.cloud/reference/cloud#servers-enable-and-configure-backups-for-a-server
- */
-export type EnableBackupsParams = z.infer<typeof enableBackupsRequestSchema>;
+export type ChangeServerTypeResponse = ActionResponse;
 
 /**
  * Enable Backups response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-enable-and-configure-backups-for-a-server
  */
-export type EnableBackupsResponse = z.infer<typeof enableBackupsResponseSchema>;
+export type EnableBackupsResponse = ActionResponse;
 
 /**
  * Disable Backups response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-disable-backups-for-a-server
  */
-export type DisableBackupsResponse = z.infer<typeof disableBackupsResponseSchema>;
+export type DisableBackupsResponse = ActionResponse;
 
 /**
  * Attach Server to Network parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-attach-a-server-to-a-network
  */
-export type AttachServerToNetworkParams = z.infer<typeof attachServerToNetworkRequestSchema>;
+export type AttachServerToNetworkParams = z.input<typeof attachServerToNetworkRequestSchema>;
 
 /**
  * Attach Server to Network response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-attach-a-server-to-a-network
  */
-export type AttachServerToNetworkResponse = z.infer<typeof attachServerToNetworkResponseSchema>;
+export type AttachServerToNetworkResponse = ActionResponse;
 
 /**
  * Detach Server from Network parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-detach-a-server-from-a-network
  */
-export type DetachServerFromNetworkParams = z.infer<
-  typeof detachServerFromNetworkRequestSchema
->;
+export type DetachServerFromNetworkParams = z.input<typeof detachServerFromNetworkRequestSchema>;
 
 /**
  * Detach Server from Network response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-detach-a-server-from-a-network
  */
-export type DetachServerFromNetworkResponse = z.infer<
-  typeof detachServerFromNetworkResponseSchema
->;
+export type DetachServerFromNetworkResponse = ActionResponse;
 
 /**
  * Change alias IPs of Network parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-change-alias-ips-of-a-network
  */
-export type ChangeAliasIPsOfNetworkParams = z.infer<
-  typeof changeAliasIPsOfNetworkRequestSchema
->;
+export type ChangeAliasIPsOfNetworkParams = z.input<typeof changeAliasIPsOfNetworkRequestSchema>;
 
 /**
  * Change alias IPs of Network response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-change-alias-ips-of-a-network
  */
-export type ChangeAliasIPsOfNetworkResponse = z.infer<
-  typeof changeAliasIPsOfNetworkResponseSchema
->;
+export type ChangeAliasIPsOfNetworkResponse = ActionResponse;
 
 /**
  * Change reverse DNS entry for Server parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-change-reverse-dns-entry-for-this-server
  */
-export type ChangeServerReverseDNSParams = z.infer<typeof changeServerReverseDNSRequestSchema>;
+export type ChangeServerReverseDNSParams = z.input<typeof changeServerReverseDNSRequestSchema>;
 
 /**
  * Change reverse DNS entry for Server response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-change-reverse-dns-entry-for-this-server
  */
-export type ChangeServerReverseDNSResponse = z.infer<
-  typeof changeServerReverseDNSResponseSchema
->;
-
-/**
- * Request Console for Server parameters
- * @see https://docs.hetzner.cloud/reference/cloud#servers-request-console-for-a-server
- */
-export type RequestConsoleForServerParams = z.infer<
-  typeof requestConsoleForServerRequestSchema
->;
+export type ChangeServerReverseDNSResponse = ActionResponse;
 
 /**
  * Request Console for Server response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-request-console-for-a-server
  */
-export type RequestConsoleForServerResponse = z.infer<
-  typeof requestConsoleForServerResponseSchema
->;
+export type RequestConsoleForServerResponse = z.infer<typeof requestConsoleForServerResponseSchema>;
 
 /**
  * Reset root Password response
@@ -517,7 +442,7 @@ export type ResetRootPasswordResponse = z.infer<typeof resetRootPasswordResponse
  * Add Server to Placement Group parameters
  * @see https://docs.hetzner.cloud/reference/cloud#servers-add-a-server-to-a-placement-group
  */
-export type AddServerToPlacementGroupParams = z.infer<
+export type AddServerToPlacementGroupParams = z.input<
   typeof addServerToPlacementGroupRequestSchema
 >;
 
@@ -525,14 +450,10 @@ export type AddServerToPlacementGroupParams = z.infer<
  * Add Server to Placement Group response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-add-a-server-to-a-placement-group
  */
-export type AddServerToPlacementGroupResponse = z.infer<
-  typeof addServerToPlacementGroupResponseSchema
->;
+export type AddServerToPlacementGroupResponse = ActionResponse;
 
 /**
  * Remove Server from Placement Group response
  * @see https://docs.hetzner.cloud/reference/cloud#servers-remove-from-placement-group
  */
-export type RemoveServerFromPlacementGroupResponse = z.infer<
-  typeof removeServerFromPlacementGroupResponseSchema
->;
+export type RemoveServerFromPlacementGroupResponse = ActionResponse;

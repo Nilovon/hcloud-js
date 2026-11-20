@@ -1,18 +1,16 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "ui": "tui",
+  "ui": "stream",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
-    "lint": {
-      "dependsOn": ["^lint"]
+    "test": {
+      "inputs": ["src/**", "test/**", "package.json", "tsconfig.json"]
     },
-    "check-types": {
-      "dependsOn": ["^check-types"]
-    },
+    "check-types": {},
     "dev": {
       "cache": false,
       "persistent": true

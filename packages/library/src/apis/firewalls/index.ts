@@ -3,467 +3,338 @@
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls
  */
 
-import type { HCloudClient } from "../../client/index";
+import { ResourceActionsClient } from "../actions/index";
+import {
+  actionsResponseSchema,
+  getActionResponseSchema,
+  listActionsResponseSchema,
+} from "../actions/schemas";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import {
+  applyFirewallToResourcesRequestSchema,
+  createFirewallRequestSchema,
+  createFirewallResponseSchema,
+  getFirewallResponseSchema,
+  listFirewallsResponseSchema,
+  removeFirewallFromResourcesRequestSchema,
+  setFirewallRulesRequestSchema,
+  updateFirewallRequestSchema,
+  updateFirewallResponseSchema,
+} from "./schemas";
 import type {
-  ListFirewallsParams,
-  ListFirewallsResponse,
-  CreateFirewallParams,
-  CreateFirewallResponse,
-  GetFirewallResponse,
-  UpdateFirewallParams,
-  UpdateFirewallResponse,
-  DeleteFirewallResponse,
-  ListFirewallActionsParams,
-  ListFirewallActionsResponse,
-  GetFirewallActionResponse,
   ApplyFirewallToResourcesParams,
   ApplyFirewallToResourcesResponse,
+  CreateFirewallParams,
+  CreateFirewallResponse,
+  Firewall,
+  GetFirewallActionResponse,
+  GetFirewallResponse,
+  ListFirewallActionsParams,
+  ListFirewallActionsResponse,
+  ListFirewallsParams,
+  ListFirewallsResponse,
   RemoveFirewallFromResourcesParams,
   RemoveFirewallFromResourcesResponse,
   SetFirewallRulesParams,
   SetFirewallRulesResponse,
-} from "../../apis/firewalls/types";
-import { validate } from "../../validation/index";
-import {
-  listFirewallsResponseSchema,
-  createFirewallRequestSchema,
-  createFirewallResponseSchema,
-  getFirewallResponseSchema,
-  updateFirewallRequestSchema,
-  updateFirewallResponseSchema,
-  deleteFirewallResponseSchema,
-  listFirewallActionsResponseSchema,
-  getFirewallActionResponseSchema,
-  applyFirewallToResourcesRequestSchema,
-  applyFirewallToResourcesResponseSchema,
-  removeFirewallFromResourcesRequestSchema,
-  removeFirewallFromResourcesResponseSchema,
-  setFirewallRulesRequestSchema,
-  setFirewallRulesResponseSchema,
-} from "../../apis/firewalls/schemas";
+  UpdateFirewallParams,
+  UpdateFirewallResponse,
+} from "./types";
 
 /**
  * Firewalls API client
+ *
+ * Firewalls restrict inbound and outbound traffic of the servers they are
+ * applied to, either directly or through a label selector.
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#firewalls
  */
-export class FirewallsClient {
-  constructor(private readonly client: HCloudClient) {}
+export class FirewallsClient extends NamedResource<Firewall, ListFirewallsParams, "firewalls"> {
+  protected readonly itemsKey = "firewalls";
 
   /**
-   * Returns all Firewall objects.
+   * Actions of all firewalls: `list()`, `get()`, `waitFor()` and `waitForAll()`.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of firewalls with pagination metadata
+   * @example
+   * ```typescript
+   * const { actions } = await client.firewalls.actions.list({ status: "running" });
+   * ```
+   */
+  public readonly actions = new ResourceActionsClient(this.client, "/firewalls");
+
+  /**
+   * Returns a page of firewalls.
+   *
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#firewalls-list-firewalls
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all firewalls
-   * const result = await client.firewalls.list();
-   *
-   * // List firewalls with filters
-   * const firewalls = await client.firewalls.list({
-   *   name: 'my-firewall',
-   *   label_selector: 'environment=production',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
+   * const { firewalls } = await client.firewalls.list({
+   *   label_selector: "environment=production",
+   *   sort: "name:asc",
    * });
+   *
+   * // All firewalls across all pages
+   * const all = await client.firewalls.listAll();
    * ```
    */
-  async list(params?: ListFirewallsParams): Promise<ListFirewallsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/firewalls", queryParams);
-
-    return validate(listFirewallsResponseSchema, response, {
-      context: "List firewalls response",
-      detailed: true,
-    });
+  list(params?: ListFirewallsParams, options?: RequestOptions): Promise<ListFirewallsResponse> {
+    return this._get("/firewalls", listFirewallsResponseSchema, params, options);
   }
 
   /**
-   * Creates a new Firewall.
+   * Returns a specific firewall.
    *
-   * @param params - Parameters for creating the firewall
-   * @returns Promise resolving to the created firewall and action
-   * @see https://docs.hetzner.cloud/reference/cloud#firewalls-create-a-firewall
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Create a firewall with rules
-   * const firewall = await client.firewalls.create({
-   *   name: 'my-firewall',
-   *   rules: {
-   *     inbound: [
-   *       {
-   *         direction: 'in',
-   *         protocol: 'tcp',
-   *         port: '80',
-   *         source_ips: ['0.0.0.0/0']
-   *       }
-   *     ]
-   *   },
-   *   apply_to: [
-   *     {
-   *       type: 'server',
-   *       server: { id: 12345 }
-   *     }
-   *   ]
-   * });
-   * ```
-   */
-  async create(params: CreateFirewallParams): Promise<CreateFirewallResponse> {
-    const validatedParams = validate(createFirewallRequestSchema, params, {
-      context: "Create firewall request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>("/firewalls", validatedParams);
-
-    return validate(createFirewallResponseSchema, response, {
-      context: "Create firewall response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Returns a specific Firewall object.
-   *
-   * @param id - ID of the Firewall
-   * @returns Promise resolving to the firewall
+   * @param id - ID of the firewall
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#firewalls-get-a-firewall
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a firewall by ID
-   * const firewall = await client.firewalls.get(12345);
-   * console.log(firewall.firewall.name);
+   * const { firewall } = await client.firewalls.get(12345);
+   * console.log(firewall.rules.length);
    * ```
    */
-  async get(id: number): Promise<GetFirewallResponse> {
-    const response = await this.client.get<unknown>(`/firewalls/${id}`);
-
-    return validate(getFirewallResponseSchema, response, {
-      context: "Get firewall response",
-      detailed: true,
-    });
+  get(id: number, options?: RequestOptions): Promise<GetFirewallResponse> {
+    return this._get(path`/firewalls/${id}`, getFirewallResponseSchema, undefined, options);
   }
 
   /**
-   * Updates the Firewall.
+   * Creates a new firewall, optionally with rules and applied to resources.
    *
-   * You can update a Firewall's name and labels.
+   * The returned `actions` track setting the rules and applying the firewall.
    *
-   * @param id - ID of the Firewall
-   * @param params - Parameters to update (name and/or labels)
-   * @returns Promise resolving to the updated firewall
+   * @param params - Name and optional labels, rules and resources to apply the firewall to
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#firewalls-create-a-firewall
+   *
+   * @example
+   * ```typescript
+   * const created = await client.firewalls.create({
+   *   name: "web",
+   *   rules: [
+   *     { direction: "in", protocol: "tcp", port: "443", source_ips: ["0.0.0.0/0", "::/0"] },
+   *     { direction: "in", protocol: "icmp", source_ips: ["0.0.0.0/0", "::/0"] },
+   *   ],
+   *   apply_to: [{ type: "label_selector", label_selector: { selector: "role=web" } }],
+   * });
+   * await client.actions.waitForAll(created);
+   * ```
+   */
+  create(params: CreateFirewallParams, options?: RequestOptions): Promise<CreateFirewallResponse> {
+    return this._post(
+      "/firewalls",
+      createFirewallResponseSchema,
+      params,
+      createFirewallRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Updates the name and/or labels of a firewall.
+   *
+   * @param id - ID of the firewall
+   * @param params - Fields to update
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#firewalls-update-a-firewall
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Update firewall name
-   * const updated = await client.firewalls.update(12345, {
-   *   name: 'new-firewall-name'
-   * });
-   *
-   * // Update labels
-   * const updated = await client.firewalls.update(12345, {
-   *   labels: { environment: 'production', team: 'backend' }
+   * const { firewall } = await client.firewalls.update(12345, {
+   *   name: "new-name",
+   *   labels: { environment: "production" },
    * });
    * ```
    */
-  async update(id: number, params: UpdateFirewallParams): Promise<UpdateFirewallResponse> {
-    const validatedParams = validate(updateFirewallRequestSchema, params, {
-      context: "Update firewall request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(`/firewalls/${id}`, validatedParams);
-
-    return validate(updateFirewallResponseSchema, response, {
-      context: "Update firewall response",
-      detailed: true,
-    });
+  update(
+    id: number,
+    params: UpdateFirewallParams,
+    options?: RequestOptions,
+  ): Promise<UpdateFirewallResponse> {
+    return this._put(
+      path`/firewalls/${id}`,
+      updateFirewallResponseSchema,
+      params,
+      updateFirewallRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Deletes a Firewall.
+   * Deletes a firewall. It must not be applied to any resource anymore.
    *
-   * @param id - ID of the Firewall
-   * @returns Promise resolving to the delete action
+   * @param id - ID of the firewall
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#firewalls-delete-a-firewall
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Delete a firewall
-   * const result = await client.firewalls.delete(12345);
-   * if (result.action) {
-   *   console.log(`Delete action ID: ${result.action.id}`);
-   * }
+   * await client.firewalls.delete(12345);
    * ```
    */
-  async delete(id: number): Promise<DeleteFirewallResponse> {
-    const response = await this.client.delete<unknown>(`/firewalls/${id}`);
-
-    return validate(deleteFirewallResponseSchema, response, {
-      context: "Delete firewall response",
-      detailed: true,
-    });
+  delete(id: number, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/firewalls/${id}`, null, options);
   }
 
   /**
-   * Returns all Action objects for a Firewall.
+   * Returns a page of actions of a firewall.
    *
-   * @param id - ID of the Firewall
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of actions with pagination metadata
+   * @param id - ID of the firewall
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#firewalls-list-actions-for-a-firewall
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all actions for a firewall
-   * const actions = await client.firewalls.listActions(12345);
-   *
-   * // List actions with filters
-   * const runningActions = await client.firewalls.listActions(12345, {
-   *   status: ['running'],
-   *   sort: ['started:desc']
+   * const { actions } = await client.firewalls.listActions(12345, {
+   *   status: "running",
+   *   sort: "started:desc",
    * });
    * ```
    */
-  async listActions(
+  listActions(
     id: number,
     params?: ListFirewallActionsParams,
+    options?: RequestOptions,
   ): Promise<ListFirewallActionsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.status) {
-      queryParams.status = Array.isArray(params.status) ? params.status : [params.status];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>(`/firewalls/${id}/actions`, queryParams);
-
-    return validate(listFirewallActionsResponseSchema, response, {
-      context: "List firewall actions response",
-      detailed: true,
-    });
+    return this._get(path`/firewalls/${id}/actions`, listActionsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific Action object for a Firewall.
+   * Returns a specific action of a firewall.
    *
-   * @param id - ID of the Firewall
-   * @param actionId - ID of the Action
-   * @returns Promise resolving to the action
+   * @param id - ID of the firewall
+   * @param actionId - ID of the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#firewalls-get-an-action-for-a-firewall
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get an action by ID
-   * const action = await client.firewalls.getAction(12345, 67890);
-   * console.log(action.action.command);
+   * const { action } = await client.firewalls.getAction(12345, 67890);
+   * console.log(action.status);
    * ```
    */
-  async getAction(id: number, actionId: number): Promise<GetFirewallActionResponse> {
-    const response = await this.client.get<unknown>(`/firewalls/${id}/actions/${actionId}`);
-
-    return validate(getFirewallActionResponseSchema, response, {
-      context: "Get firewall action response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Applies one Firewall to multiple resources.
-   *
-   * @param id - ID of the Firewall
-   * @param params - Resources to apply the firewall to
-   * @returns Promise resolving to list of actions
-   * @see https://docs.hetzner.cloud/reference/cloud#firewalls-apply-to-resources
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Apply firewall to a server
-   * const result = await client.firewalls.applyToResources(12345, {
-   *   apply_to: [
-   *     {
-   *       type: 'server',
-   *       server: { id: 67890 }
-   *     }
-   *   ]
-   * });
-   *
-   * // Apply firewall using label selector
-   * const result = await client.firewalls.applyToResources(12345, {
-   *   apply_to: [
-   *     {
-   *       type: 'label_selector',
-   *       label_selector: { selector: 'environment=production' }
-   *     }
-   *   ]
-   * });
-   * ```
-   */
-  async applyToResources(
+  getAction(
     id: number,
-    params: ApplyFirewallToResourcesParams,
-  ): Promise<ApplyFirewallToResourcesResponse> {
-    const validatedParams = validate(applyFirewallToResourcesRequestSchema, params, {
-      context: "Apply firewall to resources request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/firewalls/${id}/actions/apply_to_resources`,
-      validatedParams,
+    actionId: number,
+    options?: RequestOptions,
+  ): Promise<GetFirewallActionResponse> {
+    return this._get(
+      path`/firewalls/${id}/actions/${actionId}`,
+      getActionResponseSchema,
+      undefined,
+      options,
     );
-
-    return validate(applyFirewallToResourcesResponseSchema, response, {
-      context: "Apply firewall to resources response",
-      detailed: true,
-    });
   }
 
   /**
-   * Removes one Firewall from multiple resources.
+   * Sets the rules of a firewall. All existing rules are replaced; pass an
+   * empty array to remove all rules.
    *
-   * @param id - ID of the Firewall
-   * @param params - Resources to remove the firewall from
-   * @returns Promise resolving to list of actions
-   * @see https://docs.hetzner.cloud/reference/cloud#firewalls-remove-from-resources
+   * Rules returned by the API (`firewall.rules`) can be passed back as they are.
    *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Remove firewall from a server
-   * const result = await client.firewalls.removeFromResources(12345, {
-   *   remove_from: [
-   *     {
-   *       type: 'server',
-   *       server: { id: 67890 }
-   *     }
-   *   ]
-   * });
-   * ```
-   */
-  async removeFromResources(
-    id: number,
-    params: RemoveFirewallFromResourcesParams,
-  ): Promise<RemoveFirewallFromResourcesResponse> {
-    const validatedParams = validate(removeFirewallFromResourcesRequestSchema, params, {
-      context: "Remove firewall from resources request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/firewalls/${id}/actions/remove_from_resources`,
-      validatedParams,
-    );
-
-    return validate(removeFirewallFromResourcesResponseSchema, response, {
-      context: "Remove firewall from resources response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Sets the rules of a Firewall.
-   *
-   * @param id - ID of the Firewall
-   * @param params - Firewall rules to set
-   * @returns Promise resolving to list of actions
+   * @param id - ID of the firewall
+   * @param params - The complete list of rules
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#firewalls-set-rules
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Set firewall rules
-   * const result = await client.firewalls.setRules(12345, {
-   *   rules: {
-   *     inbound: [
-   *       {
-   *         direction: 'in',
-   *         protocol: 'tcp',
-   *         port: '443',
-   *         source_ips: ['0.0.0.0/0']
-   *       }
-   *     ],
-   *     outbound: [
-   *       {
-   *         direction: 'out',
-   *         protocol: 'tcp',
-   *         port: '80',
-   *         destination_ips: ['0.0.0.0/0']
-   *       }
-   *     ]
-   *   }
+   * // Add a rule to the existing ones
+   * const { firewall } = await client.firewalls.get(12345);
+   * const { actions } = await client.firewalls.setRules(12345, {
+   *   rules: [
+   *     ...firewall.rules,
+   *     { direction: "in", protocol: "tcp", port: "22", source_ips: ["203.0.113.7/32"] },
+   *   ],
    * });
+   * await client.actions.waitForAll(actions);
    * ```
    */
-  async setRules(id: number, params: SetFirewallRulesParams): Promise<SetFirewallRulesResponse> {
-    const validatedParams = validate(setFirewallRulesRequestSchema, params, {
-      context: "Set firewall rules request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/firewalls/${id}/actions/set_rules`,
-      validatedParams,
+  setRules(
+    id: number,
+    params: SetFirewallRulesParams,
+    options?: RequestOptions,
+  ): Promise<SetFirewallRulesResponse> {
+    return this._post(
+      path`/firewalls/${id}/actions/set_rules`,
+      actionsResponseSchema,
+      params,
+      setFirewallRulesRequestSchema,
+      options,
     );
+  }
 
-    return validate(setFirewallRulesResponseSchema, response, {
-      context: "Set firewall rules response",
-      detailed: true,
-    });
+  /**
+   * Applies a firewall to servers and/or label selectors.
+   *
+   * @param id - ID of the firewall
+   * @param params - Resources to apply the firewall to
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#firewalls-apply-to-resources
+   *
+   * @example
+   * ```typescript
+   * const { actions } = await client.firewalls.applyToResources(12345, {
+   *   apply_to: [
+   *     { type: "server", server: { id: 42 } },
+   *     { type: "label_selector", label_selector: { selector: "role=web" } },
+   *   ],
+   * });
+   * await client.actions.waitForAll(actions);
+   * ```
+   */
+  applyToResources(
+    id: number,
+    params: ApplyFirewallToResourcesParams,
+    options?: RequestOptions,
+  ): Promise<ApplyFirewallToResourcesResponse> {
+    return this._post(
+      path`/firewalls/${id}/actions/apply_to_resources`,
+      actionsResponseSchema,
+      params,
+      applyFirewallToResourcesRequestSchema,
+      options,
+    );
+  }
+
+  /**
+   * Removes a firewall from servers and/or label selectors.
+   *
+   * Resources returned by the API (`firewall.applied_to`) can be passed back as they are.
+   *
+   * @param id - ID of the firewall
+   * @param params - Resources to remove the firewall from
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#firewalls-remove-from-resources
+   *
+   * @example
+   * ```typescript
+   * const { actions } = await client.firewalls.removeFromResources(12345, {
+   *   remove_from: [{ type: "server", server: { id: 42 } }],
+   * });
+   * await client.actions.waitForAll(actions);
+   * ```
+   */
+  removeFromResources(
+    id: number,
+    params: RemoveFirewallFromResourcesParams,
+    options?: RequestOptions,
+  ): Promise<RemoveFirewallFromResourcesResponse> {
+    return this._post(
+      path`/firewalls/${id}/actions/remove_from_resources`,
+      actionsResponseSchema,
+      params,
+      removeFirewallFromResourcesRequestSchema,
+      options,
+    );
   }
 }

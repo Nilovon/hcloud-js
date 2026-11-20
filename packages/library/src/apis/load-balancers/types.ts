@@ -1,55 +1,55 @@
 /**
  * Types for Hetzner Cloud Load Balancers API
- * Types are inferred from Zod schemas
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  listLoadBalancersResponseSchema,
+import type { z } from "zod";
+import type {
+  ActionResponse,
+  GetActionResponse,
+  ListActionsParams,
+  ListActionsResponse,
+} from "../actions/types";
+import type { OneOrMany, PageParams, SortParam } from "../common/types";
+import type {
+  addLoadBalancerServiceRequestSchema,
+  addLoadBalancerTargetRequestSchema,
+  attachLoadBalancerToNetworkRequestSchema,
+  changeLoadBalancerAlgorithmRequestSchema,
+  changeLoadBalancerProtectionRequestSchema,
+  changeLoadBalancerReverseDNSRequestSchema,
+  changeLoadBalancerTypeRequestSchema,
   createLoadBalancerRequestSchema,
   createLoadBalancerResponseSchema,
+  getLoadBalancerMetricsResponseSchema,
   getLoadBalancerResponseSchema,
+  listLoadBalancersResponseSchema,
+  loadBalancerAlgorithmSchema,
+  loadBalancerAlgorithmTypeSchema,
+  loadBalancerMetricTypeSchema,
+  loadBalancerPrivateNetSchema,
+  loadBalancerProtectionSchema,
+  loadBalancerPublicNetSchema,
+  loadBalancerResolvedTargetSchema,
+  loadBalancerSchema,
+  loadBalancerServiceHealthCheckProtocolSchema,
+  loadBalancerServiceHealthCheckSchema,
+  loadBalancerServiceProtocolSchema,
+  loadBalancerServiceSchema,
+  loadBalancerTargetHealthStatusSchema,
+  loadBalancerTargetSchema,
+  loadBalancerTargetTypeSchema,
+  removeLoadBalancerTargetRequestSchema,
   updateLoadBalancerRequestSchema,
   updateLoadBalancerResponseSchema,
-  deleteLoadBalancerResponseSchema,
-  listLoadBalancerActionsResponseSchema,
-  getLoadBalancerActionResponseSchema,
-  addLoadBalancerServiceRequestSchema,
-  addLoadBalancerServiceResponseSchema,
   updateLoadBalancerServiceRequestSchema,
-  updateLoadBalancerServiceResponseSchema,
-  deleteLoadBalancerServiceRequestSchema,
-  deleteLoadBalancerServiceResponseSchema,
-  addLoadBalancerTargetRequestSchema,
-  addLoadBalancerTargetResponseSchema,
-  removeLoadBalancerTargetRequestSchema,
-  removeLoadBalancerTargetResponseSchema,
-  changeLoadBalancerAlgorithmRequestSchema,
-  changeLoadBalancerAlgorithmResponseSchema,
-  changeLoadBalancerReverseDNSRequestSchema,
-  changeLoadBalancerReverseDNSResponseSchema,
-  changeLoadBalancerProtectionRequestSchema,
-  changeLoadBalancerProtectionResponseSchema,
-  changeLoadBalancerTypeRequestSchema,
-  changeLoadBalancerTypeResponseSchema,
-  attachLoadBalancerToNetworkRequestSchema,
-  attachLoadBalancerToNetworkResponseSchema,
-  detachLoadBalancerFromNetworkRequestSchema,
-  detachLoadBalancerFromNetworkResponseSchema,
-  enableLoadBalancerPublicInterfaceRequestSchema,
-  enableLoadBalancerPublicInterfaceResponseSchema,
-  disableLoadBalancerPublicInterfaceRequestSchema,
-  disableLoadBalancerPublicInterfaceResponseSchema,
-  getLoadBalancerMetricsRequestSchema,
-  getLoadBalancerMetricsResponseSchema,
-  loadBalancerSchema,
-  loadBalancerAlgorithmTypeSchema,
-  loadBalancerServiceProtocolSchema,
-  loadBalancerTargetTypeSchema,
-  loadBalancerServiceHealthCheckProtocolSchema,
-} from "@/apis/load-balancers/schemas";
-import type { z } from "zod";
+} from "./schemas";
+
+/**
+ * Hetzner Cloud Load Balancer
+ * @see https://docs.hetzner.cloud/reference/cloud#load-balancers
+ */
+export type LoadBalancer = z.infer<typeof loadBalancerSchema>;
 
 /**
  * Load Balancer algorithm type
@@ -57,14 +57,14 @@ import type { z } from "zod";
 export type LoadBalancerAlgorithmType = z.infer<typeof loadBalancerAlgorithmTypeSchema>;
 
 /**
+ * Load Balancer algorithm
+ */
+export type LoadBalancerAlgorithm = z.infer<typeof loadBalancerAlgorithmSchema>;
+
+/**
  * Load Balancer service protocol
  */
 export type LoadBalancerServiceProtocol = z.infer<typeof loadBalancerServiceProtocolSchema>;
-
-/**
- * Load Balancer target type
- */
-export type LoadBalancerTargetType = z.infer<typeof loadBalancerTargetTypeSchema>;
 
 /**
  * Load Balancer service health check protocol
@@ -74,36 +74,79 @@ export type LoadBalancerServiceHealthCheckProtocol = z.infer<
 >;
 
 /**
- * Load Balancer
+ * Load Balancer service health check
  */
-export type LoadBalancer = z.infer<typeof loadBalancerSchema>;
+export type LoadBalancerServiceHealthCheck = z.infer<typeof loadBalancerServiceHealthCheckSchema>;
+
+/**
+ * Load Balancer service
+ */
+export type LoadBalancerService = z.infer<typeof loadBalancerServiceSchema>;
+
+/**
+ * Load Balancer target type
+ */
+export type LoadBalancerTargetType = z.infer<typeof loadBalancerTargetTypeSchema>;
+
+/**
+ * Health status of a Load Balancer target for one service
+ */
+export type LoadBalancerTargetHealthStatus = z.infer<typeof loadBalancerTargetHealthStatusSchema>;
+
+/**
+ * Load Balancer target
+ */
+export type LoadBalancerTarget = z.infer<typeof loadBalancerTargetSchema>;
+
+/**
+ * Server a label selector target of a Load Balancer resolved to
+ */
+export type LoadBalancerResolvedTarget = z.infer<typeof loadBalancerResolvedTargetSchema>;
+
+/**
+ * Load Balancer protection
+ */
+export type LoadBalancerProtection = z.infer<typeof loadBalancerProtectionSchema>;
+
+/**
+ * Load Balancer public network
+ */
+export type LoadBalancerPublicNet = z.infer<typeof loadBalancerPublicNetSchema>;
+
+/**
+ * Load Balancer private network attachment
+ */
+export type LoadBalancerPrivateNet = z.infer<typeof loadBalancerPrivateNetSchema>;
+
+/**
+ * Load Balancer metric type
+ */
+export type LoadBalancerMetricType = z.infer<typeof loadBalancerMetricTypeSchema>;
+
+/**
+ * Fields Load Balancers can be sorted by
+ */
+export type LoadBalancerSort = SortParam<"id" | "name" | "created">;
 
 /**
  * List Load Balancers query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-list-load-balancers
  */
-export interface ListLoadBalancersParams {
+export interface ListLoadBalancersParams extends PageParams {
   /**
-   * Can be used to filter resources by their name. The response will only contain the resources matching the specified name.
+   * Only return the Load Balancer with this exact name.
    */
   name?: string;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, created, created:asc, created:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter resources by labels. The response will only contain resources matching the label selector.
+   * Only return Load Balancers matching the label selector.
+   * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
   /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Sort the result.
+   * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
+  sort?: OneOrMany<LoadBalancerSort>;
 }
 
 /**
@@ -113,10 +156,10 @@ export interface ListLoadBalancersParams {
 export type ListLoadBalancersResponse = z.infer<typeof listLoadBalancersResponseSchema>;
 
 /**
- * Create Load Balancer parameters
+ * Create Load Balancer request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-create-a-load-balancer
  */
-export type CreateLoadBalancerParams = z.infer<typeof createLoadBalancerRequestSchema>;
+export type CreateLoadBalancerParams = z.input<typeof createLoadBalancerRequestSchema>;
 
 /**
  * Create Load Balancer response
@@ -131,10 +174,10 @@ export type CreateLoadBalancerResponse = z.infer<typeof createLoadBalancerRespon
 export type GetLoadBalancerResponse = z.infer<typeof getLoadBalancerResponseSchema>;
 
 /**
- * Update Load Balancer parameters
+ * Update Load Balancer request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-update-a-load-balancer
  */
-export type UpdateLoadBalancerParams = z.infer<typeof updateLoadBalancerRequestSchema>;
+export type UpdateLoadBalancerParams = z.input<typeof updateLoadBalancerRequestSchema>;
 
 /**
  * Update Load Balancer response
@@ -143,116 +186,92 @@ export type UpdateLoadBalancerParams = z.infer<typeof updateLoadBalancerRequestS
 export type UpdateLoadBalancerResponse = z.infer<typeof updateLoadBalancerResponseSchema>;
 
 /**
- * Delete Load Balancer response
+ * Delete Load Balancer response: the action tracking the deletion
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-delete-a-load-balancer
  */
-export type DeleteLoadBalancerResponse = z.infer<typeof deleteLoadBalancerResponseSchema>;
+export type DeleteLoadBalancerResponse = ActionResponse;
 
 /**
  * List Load Balancer Actions query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-list-actions-for-a-load-balancer
  */
-export interface ListLoadBalancerActionsParams {
-  /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, command, command:asc, command:desc, status, status:asc, status:desc, progress, progress:asc, progress:desc, started, started:asc, started:desc, finished, finished:asc, finished:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter Actions by status. The response will only contain Actions matching the status.
-   */
-  status?: string | string[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
-}
+export type ListLoadBalancerActionsParams = ListActionsParams;
 
 /**
  * List Load Balancer Actions response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-list-actions-for-a-load-balancer
  */
-export type ListLoadBalancerActionsResponse = z.infer<typeof listLoadBalancerActionsResponseSchema>;
+export type ListLoadBalancerActionsResponse = ListActionsResponse;
 
 /**
  * Get Load Balancer Action response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-get-an-action-for-a-load-balancer
  */
-export type GetLoadBalancerActionResponse = z.infer<typeof getLoadBalancerActionResponseSchema>;
+export type GetLoadBalancerActionResponse = GetActionResponse;
 
 /**
- * Add Load Balancer Service parameters
+ * Add Load Balancer Service request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-add-service
  */
-export type AddLoadBalancerServiceParams = z.infer<typeof addLoadBalancerServiceRequestSchema>;
+export type AddLoadBalancerServiceParams = z.input<typeof addLoadBalancerServiceRequestSchema>;
 
 /**
  * Add Load Balancer Service response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-add-service
  */
-export type AddLoadBalancerServiceResponse = z.infer<typeof addLoadBalancerServiceResponseSchema>;
+export type AddLoadBalancerServiceResponse = ActionResponse;
 
 /**
- * Update Load Balancer Service parameters
+ * Update Load Balancer Service request parameters. The service is identified
+ * by its listen port, which is passed separately.
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-update-service
  */
-export type UpdateLoadBalancerServiceParams = z.infer<
-  typeof updateLoadBalancerServiceRequestSchema
+export type UpdateLoadBalancerServiceParams = Omit<
+  z.input<typeof updateLoadBalancerServiceRequestSchema>,
+  "listen_port"
 >;
 
 /**
  * Update Load Balancer Service response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-update-service
  */
-export type UpdateLoadBalancerServiceResponse = z.infer<
-  typeof updateLoadBalancerServiceResponseSchema
->;
+export type UpdateLoadBalancerServiceResponse = ActionResponse;
 
 /**
  * Delete Load Balancer Service response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-delete-service
  */
-export type DeleteLoadBalancerServiceResponse = z.infer<
-  typeof deleteLoadBalancerServiceResponseSchema
->;
+export type DeleteLoadBalancerServiceResponse = ActionResponse;
 
 /**
- * Add Load Balancer Target parameters
+ * Add Load Balancer Target request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-add-target
  */
-export type AddLoadBalancerTargetParams = z.infer<typeof addLoadBalancerTargetRequestSchema>;
+export type AddLoadBalancerTargetParams = z.input<typeof addLoadBalancerTargetRequestSchema>;
 
 /**
  * Add Load Balancer Target response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-add-target
  */
-export type AddLoadBalancerTargetResponse = z.infer<typeof addLoadBalancerTargetResponseSchema>;
+export type AddLoadBalancerTargetResponse = ActionResponse;
 
 /**
- * Remove Load Balancer Target parameters
+ * Remove Load Balancer Target request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-remove-target
  */
-export type RemoveLoadBalancerTargetParams = z.infer<
-  typeof removeLoadBalancerTargetRequestSchema
->;
+export type RemoveLoadBalancerTargetParams = z.input<typeof removeLoadBalancerTargetRequestSchema>;
 
 /**
  * Remove Load Balancer Target response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-remove-target
  */
-export type RemoveLoadBalancerTargetResponse = z.infer<
-  typeof removeLoadBalancerTargetResponseSchema
->;
+export type RemoveLoadBalancerTargetResponse = ActionResponse;
 
 /**
- * Change Load Balancer Algorithm parameters
+ * Change Load Balancer Algorithm request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-algorithm
  */
-export type ChangeLoadBalancerAlgorithmParams = z.infer<
+export type ChangeLoadBalancerAlgorithmParams = z.input<
   typeof changeLoadBalancerAlgorithmRequestSchema
 >;
 
@@ -260,15 +279,13 @@ export type ChangeLoadBalancerAlgorithmParams = z.infer<
  * Change Load Balancer Algorithm response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-algorithm
  */
-export type ChangeLoadBalancerAlgorithmResponse = z.infer<
-  typeof changeLoadBalancerAlgorithmResponseSchema
->;
+export type ChangeLoadBalancerAlgorithmResponse = ActionResponse;
 
 /**
- * Change Load Balancer reverse DNS parameters
+ * Change Load Balancer reverse DNS request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-reverse-dns-entry-for-this-load-balancer
  */
-export type ChangeLoadBalancerReverseDNSParams = z.infer<
+export type ChangeLoadBalancerReverseDNSParams = z.input<
   typeof changeLoadBalancerReverseDNSRequestSchema
 >;
 
@@ -276,15 +293,13 @@ export type ChangeLoadBalancerReverseDNSParams = z.infer<
  * Change Load Balancer reverse DNS response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-reverse-dns-entry-for-this-load-balancer
  */
-export type ChangeLoadBalancerReverseDNSResponse = z.infer<
-  typeof changeLoadBalancerReverseDNSResponseSchema
->;
+export type ChangeLoadBalancerReverseDNSResponse = ActionResponse;
 
 /**
- * Change Load Balancer Protection parameters
+ * Change Load Balancer Protection request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-load-balancer-protection
  */
-export type ChangeLoadBalancerProtectionParams = z.infer<
+export type ChangeLoadBalancerProtectionParams = z.input<
   typeof changeLoadBalancerProtectionRequestSchema
 >;
 
@@ -292,27 +307,25 @@ export type ChangeLoadBalancerProtectionParams = z.infer<
  * Change Load Balancer Protection response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-load-balancer-protection
  */
-export type ChangeLoadBalancerProtectionResponse = z.infer<
-  typeof changeLoadBalancerProtectionResponseSchema
->;
+export type ChangeLoadBalancerProtectionResponse = ActionResponse;
 
 /**
- * Change Load Balancer Type parameters
+ * Change Load Balancer Type request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-the-type-of-a-load-balancer
  */
-export type ChangeLoadBalancerTypeParams = z.infer<typeof changeLoadBalancerTypeRequestSchema>;
+export type ChangeLoadBalancerTypeParams = z.input<typeof changeLoadBalancerTypeRequestSchema>;
 
 /**
  * Change Load Balancer Type response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-the-type-of-a-load-balancer
  */
-export type ChangeLoadBalancerTypeResponse = z.infer<typeof changeLoadBalancerTypeResponseSchema>;
+export type ChangeLoadBalancerTypeResponse = ActionResponse;
 
 /**
- * Attach Load Balancer to Network parameters
+ * Attach Load Balancer to Network request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-attach-a-load-balancer-to-a-network
  */
-export type AttachLoadBalancerToNetworkParams = z.infer<
+export type AttachLoadBalancerToNetworkParams = z.input<
   typeof attachLoadBalancerToNetworkRequestSchema
 >;
 
@@ -320,39 +333,48 @@ export type AttachLoadBalancerToNetworkParams = z.infer<
  * Attach Load Balancer to Network response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-attach-a-load-balancer-to-a-network
  */
-export type AttachLoadBalancerToNetworkResponse = z.infer<
-  typeof attachLoadBalancerToNetworkResponseSchema
->;
+export type AttachLoadBalancerToNetworkResponse = ActionResponse;
 
 /**
  * Detach Load Balancer from Network response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-detach-a-load-balancer-from-a-network
  */
-export type DetachLoadBalancerFromNetworkResponse = z.infer<
-  typeof detachLoadBalancerFromNetworkResponseSchema
->;
+export type DetachLoadBalancerFromNetworkResponse = ActionResponse;
 
 /**
  * Enable Load Balancer public interface response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-enable-the-public-interface-of-a-load-balancer
  */
-export type EnableLoadBalancerPublicInterfaceResponse = z.infer<
-  typeof enableLoadBalancerPublicInterfaceResponseSchema
->;
+export type EnableLoadBalancerPublicInterfaceResponse = ActionResponse;
 
 /**
  * Disable Load Balancer public interface response
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-disable-the-public-interface-of-a-load-balancer
  */
-export type DisableLoadBalancerPublicInterfaceResponse = z.infer<
-  typeof disableLoadBalancerPublicInterfaceResponseSchema
->;
+export type DisableLoadBalancerPublicInterfaceResponse = ActionResponse;
 
 /**
- * Get Load Balancer Metrics parameters
+ * Get Load Balancer Metrics query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-get-metrics-for-a-load-balancer
  */
-export type GetLoadBalancerMetricsParams = z.infer<typeof getLoadBalancerMetricsRequestSchema>;
+export interface GetLoadBalancerMetricsParams {
+  /**
+   * Type(s) of metrics to get.
+   */
+  type: OneOrMany<LoadBalancerMetricType>;
+  /**
+   * Start of the period to get metrics for: a `Date` or an ISO-8601 string.
+   */
+  start: string | Date;
+  /**
+   * End of the period to get metrics for: a `Date` or an ISO-8601 string.
+   */
+  end: string | Date;
+  /**
+   * Resolution of the results in seconds.
+   */
+  step?: number;
+}
 
 /**
  * Get Load Balancer Metrics response

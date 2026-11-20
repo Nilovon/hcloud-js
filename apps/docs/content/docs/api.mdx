@@ -1,118 +1,86 @@
 ---
 title: API Reference
-description: Complete API documentation for hcloud-js
+description: All resources and how their clients are structured
 ---
 
-# API Reference
+Every API resource has a sub-client on `HCloudClient`.
 
-hcloud-js provides a typed client for all Hetzner Cloud API endpoints. All APIs are accessible through the `HCloudClient` instance.
+## Resources
 
-## Client Structure
+| Client                                                      | Resource                   | Notes                                                             |
+| ----------------------------------------------------------- | -------------------------- | ----------------------------------------------------------------- |
+| [`client.servers`](/docs/API/servers)                       | Servers                    | All server actions, metrics, `createAndWait()`, `waitForStatus()` |
+| [`client.serverTypes`](/docs/API/server-types)              | Server types               | Read-only                                                         |
+| [`client.images`](/docs/API/images)                         | Images, snapshots, backups |                                                                   |
+| [`client.isos`](/docs/API/isos)                             | ISOs                       | Read-only                                                         |
+| [`client.placementGroups`](/docs/API/placement-groups)      | Placement groups           |                                                                   |
+| [`client.sshKeys`](/docs/API/ssh-keys)                      | SSH keys                   |                                                                   |
+| [`client.volumes`](/docs/API/volumes)                       | Volumes                    |                                                                   |
+| [`client.networks`](/docs/API/networks)                     | Networks, subnets, routes  |                                                                   |
+| [`client.firewalls`](/docs/API/firewalls)                   | Firewalls                  |                                                                   |
+| [`client.floatingIPs`](/docs/API/floating-ips)              | Floating IPs               |                                                                   |
+| [`client.primaryIPs`](/docs/API/primary-ips)                | Primary IPs                |                                                                   |
+| [`client.loadBalancers`](/docs/API/load-balancers)          | Load balancers             | Services, targets, metrics                                        |
+| [`client.loadBalancerTypes`](/docs/API/load-balancer-types) | Load balancer types        | Read-only                                                         |
+| [`client.certificates`](/docs/API/certificates)             | TLS certificates           |                                                                   |
+| [`client.dns`](/docs/API/dns)                               | DNS zones and RRSets       |                                                                   |
+| [`client.storageBoxes`](/docs/API/storage-boxes)            | Storage Boxes              | Snapshots, subaccounts. Served by `api.hetzner.com`               |
+| [`client.storageBoxTypes`](/docs/API/storage-box-types)     | Storage Box types          | Read-only                                                         |
+| [`client.locations`](/docs/API/locations)                   | Locations                  | Read-only                                                         |
+| [`client.datacenters`](/docs/API/datacenters)               | Datacenters                | Deprecated by Hetzner                                             |
+| [`client.pricing`](/docs/API/pricing)                       | Prices                     | Read-only                                                         |
+| [`client.actions`](/docs/API/actions)                       | Actions                    | `waitFor()`, `waitForAll()`                                       |
 
-```typescript
-const client = new HCloudClient({ token: 'your-token' });
+## Conventions
 
-// Available API clients:
-client.servers         // Servers API
-client.images          // Images API
-client.actions         // Actions API
-client.certificates    // Certificates API
-client.sshKeys         // SSH Keys API
-client.locations       // Locations API
-client.firewalls       // Firewalls API
-client.floatingIPs     // Floating IPs API
-client.isos            // ISOs API
-client.placementGroups // Placement Groups API
-client.primaryIPs      // Primary IPs API
-client.serverTypes     // Server Types API
-client.loadBalancers   // Load Balancers API
-client.networks        // Networks API
-client.pricing         // Pricing API
-client.volumes         // Volumes API
-client.dns             // DNS (Zones) API
-```
+### Endpoint methods return the API envelope
 
-## Common Patterns
-
-### Listing Resources
-
-Most APIs support listing resources with optional filtering and pagination:
-
-```typescript
-// List all servers
-const servers = await client.servers.list();
-
-// List with filters
-const filtered = await client.servers.list({
-  name: 'my-server',
-  label_selector: 'environment=production',
-  sort: ['name:asc'],
-  page: 1,
-  per_page: 50
-});
-```
-
-### Getting a Single Resource
+Methods that map to an endpoint return exactly what the API returns, with
+snake_case fields as in the
+[Hetzner documentation](https://docs.hetzner.cloud/reference/cloud):
 
 ```typescript
-const server = await client.servers.get(12345);
-console.log(server.server.name);
+const { servers, meta } = await client.servers.list();
+const { server } = await client.servers.get(42);
+const { server: created, action, next_actions, root_password } = await client.servers.create({ ... });
+const { action: reboot } = await client.servers.reboot(42);
+await client.sshKeys.delete(7); // endpoints answering 204 resolve to undefined
 ```
 
-### Creating Resources
+### Helpers return plain items
 
-```typescript
-const newServer = await client.servers.create({
-  name: 'my-server',
-  server_type: 'cpx11',
-  image: 'ubuntu-22.04',
-  location: 'nbg1'
-});
-```
+Every listable resource additionally has:
 
-### Updating Resources
+| Method                  | Returns                                            |
+| ----------------------- | -------------------------------------------------- |
+| `listAll(params?)`      | `Item[]` - all pages                               |
+| `iterate(params?)`      | `AsyncGenerator<Item>` - lazily, page by page      |
+| `iteratePages(params?)` | `AsyncGenerator<ListResponse>`                     |
+| `first(params?)`        | `Item \| undefined`                                |
+| `getByName(name)`       | `Item \| undefined` (resources with a name filter) |
 
-```typescript
-const updated = await client.servers.update(12345, {
-  name: 'new-name',
-  labels: { environment: 'production' }
-});
-```
+See [Pagination](/docs/pagination).
 
-### Deleting Resources
+### Actions
 
-```typescript
-await client.servers.delete(12345);
-```
+Resources with actions have
 
-## Utilities
+- one method per action (`client.servers.powerOn(id)`, `client.volumes.resize(id, params)`, ...),
+- `listActions(id, params?)` and `getAction(id, actionId)` for the actions of one resource,
+- an `actions` sub-client (`client.servers.actions.list()`, `.get()`, `.listAll()`,
+  `.waitFor()`) for the actions of the resource type.
 
-<Card title="Utilities" href="/docs/utils">
-  Helper functions for pagination, action polling, type guards, and more
-</Card>
+See [Waiting for Actions](/docs/actions).
 
-## API Documentation
+### Request options
 
-<Card title="Servers API" href="/docs/API/servers">
-  Manage your Hetzner Cloud servers - includes all server actions
-</Card>
+The last argument of every method is an optional
+[`RequestOptions`](/docs/configuration#request-options) object with `signal`,
+`timeout`, `retry` and `headers`.
 
-<Card title="Images API" href="/docs/API/images">
-  Work with server images and snapshots
-</Card>
+### Types and schemas
 
-<Card title="Networks API" href="/docs/API/networks">
-  Manage private networks
-</Card>
-
-<Card title="Load Balancers API" href="/docs/API/load-balancers">
-  Configure load balancers
-</Card>
-
-<Card title="DNS API" href="/docs/API/dns">
-  Manage DNS zones and records
-</Card>
-
-<Card title="All APIs" href="/docs/API/overview">
-  Complete list of all available APIs
-</Card>
+For every endpoint the package exports the parameter and response types
+(`CreateServerParams`, `CreateServerResponse`), the entity types (`Server`) and
+the Zod schemas behind them (`serverSchema`, `createServerRequestSchema`).
+See [Utilities](/docs/utils#zod-schemas).

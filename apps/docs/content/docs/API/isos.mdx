@@ -1,51 +1,56 @@
 ---
-title: ISOs API
-description: List available ISO images
+title: ISOs
+description: List the ISO images that can be attached to servers
 ---
 
-# ISOs API
-
-The ISOs API allows you to list available ISO images.
-
-## List ISOs
-
-Returns all ISO objects.
-
 ```typescript
-const isos = await client.isos.list();
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
 ```
 
-### Example
+Attach an ISO with `client.servers.attachISO()`.
+
+## `list(params?)`
+
+`GET /isos`
 
 ```typescript
-const isos = await client.isos.list();
-
-isos.isos.forEach(iso => {
-  console.log(`${iso.name}: ${iso.description}`);
-  console.log(`  Type: ${iso.type}`);
-  console.log(`  Architecture: ${iso.architecture}`);
+const { isos, meta } = await client.isos.list({
+  architecture: "arm",
+  include_architecture_wildcard: true,
 });
 ```
 
-## Get ISO
+| Parameter                       | Description                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| `name`                          | Exact name                                                                            |
+| `architecture`                  | `x86`, `arm` - one or many                                                            |
+| `include_architecture_wildcard` | Also return custom ISOs, which have no architecture, when filtering by `architecture` |
+| `page`, `per_page`              | Pagination                                                                            |
 
-Returns a specific ISO object.
+Pagination helpers: `listAll()`, `iterate()`, `iteratePages()`, `first()`.
 
 ```typescript
-const iso = await client.isos.get(12345);
+const all = await client.isos.listAll();
 ```
 
-## Types
+## `get(id)`
+
+`GET /isos/{id}`
 
 ```typescript
-type ISOType = 'public' | 'private';
+const { iso } = await client.isos.get(4711);
+console.log(iso.name, iso.type, iso.architecture, iso.deprecation?.unavailable_after);
+```
 
-interface ISO {
-  id: number;
-  name: string;
-  description: string;
-  type: ISOType;
-  architecture: 'x86' | 'arm' | null;
-  deprecated: string | null;
-}
+`iso.name` and `iso.architecture` are `null` for custom (`private`) ISOs. `iso.deprecation` is
+`null` unless the ISO is deprecated; the former `iso.deprecated` timestamp is deprecated.
+
+## `getByName(name)`
+
+Returns the ISO or `undefined`.
+
+```typescript
+const iso = await client.isos.getByName("FreeBSD-11.0-RELEASE-amd64-dvd1");
 ```

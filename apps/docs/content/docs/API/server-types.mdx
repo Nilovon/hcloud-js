@@ -1,71 +1,76 @@
 ---
-title: Server Types API
-description: List available server types
+title: Server Types
+description: List the server types and the locations they are available in
 ---
 
-# Server Types API
-
-The Server Types API allows you to list available server types and their specifications.
-
-## List Server Types
-
-Returns all Server Type objects.
-
 ```typescript
-const serverTypes = await client.serverTypes.list();
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
 ```
 
-### Example
+## `list(params?)`
+
+`GET /server_types`
 
 ```typescript
-const serverTypes = await client.serverTypes.list();
-
-serverTypes.server_types.forEach(type => {
-  console.log(`${type.name}: ${type.cores} vCPU, ${type.memory} GB RAM`);
-  console.log(`  Prices: ${type.prices.length} locations`);
-});
+const { server_types, meta } = await client.serverTypes.list();
 ```
 
-## Get Server Type
+| Parameter          | Description |
+| ------------------ | ----------- |
+| `name`             | Exact name  |
+| `page`, `per_page` | Pagination  |
 
-Returns a specific Server Type object.
+Pagination helpers: `listAll()`, `iterate()`, `iteratePages()`, `first()`.
 
 ```typescript
-const serverType = await client.serverTypes.get(1);
+const all = await client.serverTypes.listAll();
+const arm = all.filter((serverType) => serverType.architecture === "arm");
 ```
 
-### Example
+## `get(id)`
+
+`GET /server_types/{id}` - takes the numeric ID. Use `getByName()` to look up a name.
 
 ```typescript
-const serverType = await client.serverTypes.get(1);
-console.log(serverType.server_type.name);
-console.log(`Cores: ${serverType.server_type.cores}`);
-console.log(`Memory: ${serverType.server_type.memory} GB`);
-console.log(`Disk: ${serverType.server_type.disk} GB`);
+const { server_type } = await client.serverTypes.get(22);
+console.log(server_type.cores, server_type.memory, server_type.disk);
 ```
 
-## Types
+## `getByName(name)`
+
+Returns the server type or `undefined`.
 
 ```typescript
-interface ServerType {
-  id: number;
-  name: string;
-  description: string;
-  cores: number;
-  memory: number;
-  disk: number;
-  prices: Array<{
-    location: string;
-    price_hourly: Price;
-    price_monthly: Price;
-  }>;
-  storage_type: string;
-  cpu_type: string;
-  architecture: 'x86' | 'arm';
-  included_traffic: number;
-  deprecation: {
-    announced: string;
-    unavailable_after: string;
-  } | null;
+const serverType = await client.serverTypes.getByName("cpx22");
+```
+
+## Per-location information
+
+Availability and deprecation are reported per location in `locations[]`.
+
+```typescript
+const serverType = await client.serverTypes.getByName("cpx22");
+
+for (const location of serverType?.locations ?? []) {
+  console.log(location.name, {
+    available: location.available,
+    recommended: location.recommended,
+    deprecated: location.deprecation !== null,
+    unavailableAfter: location.deprecation?.unavailable_after,
+  });
 }
 ```
+
+| Field                                | Description                                                                             |
+| ------------------------------------ | --------------------------------------------------------------------------------------- |
+| `locations[].id`, `locations[].name` | The location                                                                            |
+| `locations[].available`              | Servers of this type can currently be created in the location                           |
+| `locations[].recommended`            | The type is currently recommended in the location                                       |
+| `locations[].deprecation`            | `{ announced, unavailable_after }`, or `null` if not deprecated                         |
+| `prices[]`                           | `location`, `price_hourly`, `price_monthly`, `included_traffic`, `price_per_tb_traffic` |
+| `category`                           | Category of the type, e.g. `Shared vCPU`                                                |
+
+The top-level `deprecated`, `deprecation` and `included_traffic` fields are deprecated by Hetzner
+and may be missing. Use `locations[].deprecation` and `prices[].included_traffic` instead.
