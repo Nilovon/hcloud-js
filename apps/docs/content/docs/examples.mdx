@@ -57,7 +57,7 @@ async function ensureNetwork(name: string) {
 ## Lock down a server with a firewall
 
 ```typescript
-const { firewall, actions } = await client.firewalls.create({
+const created = await client.firewalls.create({
   name: "web",
   rules: [
     {
@@ -73,7 +73,8 @@ const { firewall, actions } = await client.firewalls.create({
   apply_to: [{ type: "label_selector", label_selector: { selector: "role=web" } }],
 });
 
-await client.actions.waitForAll(actions);
+await client.actions.waitForAll(created);
+console.log(`Firewall ${created.firewall.id} is active`);
 ```
 
 ## Attach and resize a volume
