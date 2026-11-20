@@ -72,13 +72,13 @@ await client.actions.waitFor(action, {
 });
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `pollInterval` | backoff from 500ms to 5s | Delay between polls in milliseconds, or a function `(attempt) => ms` |
-| `timeout` | `300000` (5 minutes) | Maximum time to wait |
-| `throwOnError` | `true` | Throw when an action fails. With `false`, failed actions are returned. |
-| `onProgress` | - | Called with the current action after every poll |
-| `signal` | - | `AbortSignal` to stop waiting |
+| Option         | Default                  | Description                                                            |
+| -------------- | ------------------------ | ---------------------------------------------------------------------- |
+| `pollInterval` | backoff from 500ms to 5s | Delay between polls in milliseconds, or a function `(attempt) => ms`   |
+| `timeout`      | `300000` (5 minutes)     | Maximum time to wait                                                   |
+| `throwOnError` | `true`                   | Throw when an action fails. With `false`, failed actions are returned. |
+| `onProgress`   | -                        | Called with the current action after every poll                        |
+| `signal`       | -                        | `AbortSignal` to stop waiting                                          |
 
 Change the defaults for the whole client:
 
@@ -94,7 +94,9 @@ const client = new HCloudClient({
 import { HCloudActionError, HCloudActionTimeoutError } from "@nilovonjs/hcloud-js";
 
 try {
-  await client.actions.waitFor(await client.servers.changeType(42, { server_type: "cx32", upgrade_disk: false }));
+  await client.actions.waitFor(
+    await client.servers.changeType(42, { server_type: "cx32", upgrade_disk: false }),
+  );
 } catch (error) {
   if (error instanceof HCloudActionError) {
     console.error(`${error.action.command} failed: ${error.code} - ${error.message}`);

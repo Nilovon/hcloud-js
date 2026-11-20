@@ -89,7 +89,10 @@ export class SSHKeysClient extends NamedResource<SSHKey, ListSSHKeysParams, "ssh
    * const key = await client.sshKeys.getByFingerprint("b7:2f:30:a0:2f:6c:58:6c:21:04:58:61:ba:06:3b:2f");
    * ```
    */
-  async getByFingerprint(fingerprint: string, options?: RequestOptions): Promise<SSHKey | undefined> {
+  async getByFingerprint(
+    fingerprint: string,
+    options?: RequestOptions,
+  ): Promise<SSHKey | undefined> {
     const { ssh_keys } = await this.list({ fingerprint }, options);
     return ssh_keys.find((key) => key.fingerprint === fingerprint);
   }
@@ -110,7 +113,13 @@ export class SSHKeysClient extends NamedResource<SSHKey, ListSSHKeysParams, "ssh
    * ```
    */
   create(params: CreateSSHKeyParams, options?: RequestOptions): Promise<CreateSSHKeyResponse> {
-    return this._post("/ssh_keys", createSSHKeyResponseSchema, params, createSSHKeyRequestSchema, options);
+    return this._post(
+      "/ssh_keys",
+      createSSHKeyResponseSchema,
+      params,
+      createSSHKeyRequestSchema,
+      options,
+    );
   }
 
   /**
@@ -134,7 +143,13 @@ export class SSHKeysClient extends NamedResource<SSHKey, ListSSHKeysParams, "ssh
     params: UpdateSSHKeyParams,
     options?: RequestOptions,
   ): Promise<UpdateSSHKeyResponse> {
-    return this._put(path`/ssh_keys/${id}`, updateSSHKeyResponseSchema, params, updateSSHKeyRequestSchema, options);
+    return this._put(
+      path`/ssh_keys/${id}`,
+      updateSSHKeyResponseSchema,
+      params,
+      updateSSHKeyRequestSchema,
+      options,
+    );
   }
 
   /**

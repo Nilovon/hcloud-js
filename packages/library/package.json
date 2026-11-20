@@ -2,8 +2,39 @@
   "name": "@nilovonjs/hcloud-js",
   "version": "2.0.0",
   "description": "Modern TypeScript SDK for the Hetzner Cloud API - fully typed, validated, with auto-pagination, action waiting, retries and typed errors",
-  "author": "Nilovon",
+  "keywords": [
+    "api",
+    "cloud",
+    "dns",
+    "hcloud",
+    "hetzner",
+    "hetzner-cloud",
+    "infrastructure",
+    "load-balancer",
+    "networks",
+    "sdk",
+    "servers",
+    "storage-box",
+    "typescript",
+    "zod"
+  ],
+  "homepage": "https://hcloud-js.nilovon.com",
+  "bugs": {
+    "url": "https://github.com/Nilovon/hcloud-js/issues"
+  },
   "license": "MIT",
+  "author": "Nilovon",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nilovon/hcloud-js.git",
+    "directory": "packages/library"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
@@ -22,39 +53,9 @@
     },
     "./package.json": "./package.json"
   },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE",
-    "CHANGELOG.md"
-  ],
-  "keywords": [
-    "hetzner",
-    "hetzner-cloud",
-    "hcloud",
-    "cloud",
-    "api",
-    "sdk",
-    "typescript",
-    "zod",
-    "servers",
-    "networks",
-    "load-balancer",
-    "dns",
-    "storage-box",
-    "infrastructure"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Nilovon/hcloud-js.git",
-    "directory": "packages/library"
-  },
-  "bugs": {
-    "url": "https://github.com/Nilovon/hcloud-js/issues"
-  },
-  "homepage": "https://hcloud-js.nilovon.com",
-  "engines": {
-    "node": ">=20.0.0"
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "build": "tsdown",
@@ -69,15 +70,14 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@hcloud-js/config": "workspace:*",
     "@arethetypeswrong/cli": "^0.18.5",
+    "@hcloud-js/config": "workspace:*",
     "@types/bun": "^1.4.4",
     "publint": "^0.3.25",
     "tsdown": "^0.23.7",
     "typescript": "^7.0.2"
   },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

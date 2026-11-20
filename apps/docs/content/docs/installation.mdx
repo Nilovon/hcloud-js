@@ -20,13 +20,13 @@ dependency is [Zod](https://zod.dev).
 
 ## Requirements
 
-| Runtime | Version |
-| --- | --- |
-| Node.js | 20 or later |
-| Bun | 1.0 or later |
-| Deno | 1.40 or later |
+| Runtime                  | Version                                     |
+| ------------------------ | ------------------------------------------- |
+| Node.js                  | 20 or later                                 |
+| Bun                      | 1.0 or later                                |
+| Deno                     | 1.40 or later                               |
 | Browsers / edge runtimes | Anything with `fetch` and `AbortController` |
-| TypeScript (optional) | 5.0 or later |
+| TypeScript (optional)    | 5.0 or later                                |
 
 No polyfills are needed: the SDK only uses web standard APIs (`fetch`,
 `Headers`, `URL`, `AbortController`).
@@ -34,7 +34,7 @@ No polyfills are needed: the SDK only uses web standard APIs (`fetch`,
 ## Create an API token
 
 1. Open the [Hetzner Console](https://console.hetzner.cloud/) and select your project.
-2. Go to **Security > API tokens** and generate a token. Choose *Read & Write*
+2. Go to **Security > API tokens** and generate a token. Choose _Read & Write_
    if you want to create or change resources.
 3. Store the token as an environment variable:
 
@@ -59,8 +59,8 @@ const client = new HCloudClient("your-api-token");
 ```
 
 <Callout type="warn">
-  Never commit API tokens and never ship them to browsers. A token grants full
-  access to the project it belongs to.
+  Never commit API tokens and never ship them to browsers. A token grants full access to the project
+  it belongs to.
 </Callout>
 
 ## CommonJS

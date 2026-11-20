@@ -16,22 +16,22 @@ const client = new HCloudClient({
 });
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `token` | `HCLOUD_TOKEN` env var | API token, or a (sync/async) function returning one |
-| `baseUrl` | `https://api.hetzner.cloud/v1` | Base URL of the Cloud API |
-| `hetznerBaseUrl` | `https://api.hetzner.com/v1` | Base URL of the Hetzner API (Storage Boxes) |
-| `timeout` | `30000` | Request timeout in milliseconds |
-| `retry` | see below | Retry behaviour, `false` to disable |
-| `fetch` | `globalThis.fetch` | Custom fetch implementation |
-| `headers` | `{}` | Headers sent with every request |
-| `userAgent` | - | Prepended to the `User-Agent` header (`my-app/1.2.3 hcloud-js/2.0.0`) |
-| `requestValidation` | `true` | Validate request parameters before sending |
-| `responseValidation` | `"warn"` | `"warn"`, `"throw"` or `"off"`, see below |
-| `actions` | backoff 0.5s to 5s, 5 min timeout | Defaults for [waiting on actions](/docs/actions) |
-| `hooks` | - | Lifecycle hooks, see below |
-| `debug` | `false` | `true` or a logger function |
-| `onWarning` | `console.warn` | Receives SDK warnings |
+| Option               | Default                           | Description                                                           |
+| -------------------- | --------------------------------- | --------------------------------------------------------------------- |
+| `token`              | `HCLOUD_TOKEN` env var            | API token, or a (sync/async) function returning one                   |
+| `baseUrl`            | `https://api.hetzner.cloud/v1`    | Base URL of the Cloud API                                             |
+| `hetznerBaseUrl`     | `https://api.hetzner.com/v1`      | Base URL of the Hetzner API (Storage Boxes)                           |
+| `timeout`            | `30000`                           | Request timeout in milliseconds                                       |
+| `retry`              | see below                         | Retry behaviour, `false` to disable                                   |
+| `fetch`              | `globalThis.fetch`                | Custom fetch implementation                                           |
+| `headers`            | `{}`                              | Headers sent with every request                                       |
+| `userAgent`          | -                                 | Prepended to the `User-Agent` header (`my-app/1.2.3 hcloud-js/2.0.0`) |
+| `requestValidation`  | `true`                            | Validate request parameters before sending                            |
+| `responseValidation` | `"warn"`                          | `"warn"`, `"throw"` or `"off"`, see below                             |
+| `actions`            | backoff 0.5s to 5s, 5 min timeout | Defaults for [waiting on actions](/docs/actions)                      |
+| `hooks`              | -                                 | Lifecycle hooks, see below                                            |
+| `debug`              | `false`                           | `true` or a logger function                                           |
+| `onWarning`          | `console.warn`                    | Receives SDK warnings                                                 |
 
 The resolved configuration is available as `client.config`.
 
@@ -49,12 +49,12 @@ await client.servers.get(42, {
 });
 ```
 
-| Option | Description |
-| --- | --- |
-| `signal` | `AbortSignal` to cancel the request and pending retries |
-| `timeout` | Timeout for each attempt in milliseconds |
-| `retry` | `false`, a maximum number of retries, or retry options |
-| `headers` | Additional headers |
+| Option    | Description                                             |
+| --------- | ------------------------------------------------------- |
+| `signal`  | `AbortSignal` to cancel the request and pending retries |
+| `timeout` | Timeout for each attempt in milliseconds                |
+| `retry`   | `false`, a maximum number of retries, or retry options  |
+| `headers` | Additional headers                                      |
 
 ## Retries
 
@@ -73,9 +73,9 @@ network errors, because the server may already have processed them.
 ```typescript
 const client = new HCloudClient({
   retry: {
-    maxRetries: 3,     // default 5
-    baseDelay: 500,    // default 1000 ms
-    maxDelay: 30_000,  // default 60000 ms
+    maxRetries: 3, // default 5
+    baseDelay: 500, // default 1000 ms
+    maxDelay: 30_000, // default 60000 ms
     factor: 2,
     jitter: true,
     // Also retry when a resource is locked by another action
@@ -130,12 +130,12 @@ const client = new HCloudClient({
 });
 ```
 
-| Hook | Called |
-| --- | --- |
-| `onRequest` | Before every attempt. May modify `headers`. |
-| `onResponse` | After every successful response |
-| `onRetry` | Before a failed request is retried |
-| `onError` | When a request finally failed |
+| Hook         | Called                                      |
+| ------------ | ------------------------------------------- |
+| `onRequest`  | Before every attempt. May modify `headers`. |
+| `onResponse` | After every successful response             |
+| `onRetry`    | Before a failed request is retried          |
+| `onError`    | When a request finally failed               |
 
 ## Debug logging
 
@@ -159,11 +159,11 @@ Responses are checked against the SDK's schemas as well. Because the Hetzner API
 evolves (new enum values, removed deprecated fields), a mismatch does **not**
 break your application by default:
 
-| `responseValidation` | Behaviour on mismatch |
-| --- | --- |
-| `"warn"` (default) | Log a warning through `onWarning`, return the response as-is |
-| `"throw"` | Throw a `HCloudValidationError` |
-| `"off"` | Skip response validation |
+| `responseValidation` | Behaviour on mismatch                                        |
+| -------------------- | ------------------------------------------------------------ |
+| `"warn"` (default)   | Log a warning through `onWarning`, return the response as-is |
+| `"throw"`            | Throw a `HCloudValidationError`                              |
+| `"off"`              | Skip response validation                                     |
 
 Responses are always returned unchanged, so fields added to the API after your
 SDK version was released are still there at runtime.

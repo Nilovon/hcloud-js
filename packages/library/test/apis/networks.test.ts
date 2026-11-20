@@ -274,7 +274,10 @@ describe("NetworksClient", () => {
 
   test("addRoute", async () => {
     const { networks, last, requests } = setup({ action });
-    const result = await networks.addRoute(1, { destination: "10.100.1.0/24", gateway: "10.0.1.1" });
+    const result = await networks.addRoute(1, {
+      destination: "10.100.1.0/24",
+      gateway: "10.0.1.1",
+    });
     expect(result.action.id).toBe(13);
     expect(last().method).toBe("POST");
     expect(last().path).toBe("/networks/1/actions/add_route");

@@ -118,7 +118,9 @@ describe("LoadBalancerTypesClient", () => {
   });
 
   test("rejects responses that do not match the schema", async () => {
-    const { loadBalancerTypes } = setup({ load_balancer_type: { ...lb11, max_connections: "many" } });
+    const { loadBalancerTypes } = setup({
+      load_balancer_type: { ...lb11, max_connections: "many" },
+    });
     await expect(loadBalancerTypes.get(1)).rejects.toBeInstanceOf(HCloudValidationError);
   });
 });

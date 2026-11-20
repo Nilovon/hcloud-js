@@ -16,22 +16,22 @@ const client = new HCloudClient();
 
 Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /volumes` |
-| `get(id)` | `GET /volumes/{id}` |
-| `getByName(name)` | `GET /volumes?name=` |
-| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /volumes` (all pages) |
-| `create(params)` | `POST /volumes` |
-| `update(id, params)` | `PUT /volumes/{id}` |
-| `delete(id)` | `DELETE /volumes/{id}` |
-| `attachToServer(id, params)` | `POST /volumes/{id}/actions/attach` |
-| `detach(id)` | `POST /volumes/{id}/actions/detach` |
-| `resize(id, params)` | `POST /volumes/{id}/actions/resize` |
-| `changeProtection(id, params)` | `POST /volumes/{id}/actions/change_protection` |
-| `listActions(id, params?)` | `GET /volumes/{id}/actions` |
-| `getAction(id, actionId)` | `GET /volumes/{id}/actions/{action_id}` |
-| `actions.list(params?)` / `actions.get(id)` | `GET /volumes/actions`, `GET /volumes/actions/{id}` |
+| Method                                                                               | Endpoint                                            |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| `list(params?)`                                                                      | `GET /volumes`                                      |
+| `get(id)`                                                                            | `GET /volumes/{id}`                                 |
+| `getByName(name)`                                                                    | `GET /volumes?name=`                                |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /volumes` (all pages)                          |
+| `create(params)`                                                                     | `POST /volumes`                                     |
+| `update(id, params)`                                                                 | `PUT /volumes/{id}`                                 |
+| `delete(id)`                                                                         | `DELETE /volumes/{id}`                              |
+| `attachToServer(id, params)`                                                         | `POST /volumes/{id}/actions/attach`                 |
+| `detach(id)`                                                                         | `POST /volumes/{id}/actions/detach`                 |
+| `resize(id, params)`                                                                 | `POST /volumes/{id}/actions/resize`                 |
+| `changeProtection(id, params)`                                                       | `POST /volumes/{id}/actions/change_protection`      |
+| `listActions(id, params?)`                                                           | `GET /volumes/{id}/actions`                         |
+| `getAction(id, actionId)`                                                            | `GET /volumes/{id}/actions/{action_id}`             |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /volumes/actions`, `GET /volumes/actions/{id}` |
 
 ## List Volumes
 

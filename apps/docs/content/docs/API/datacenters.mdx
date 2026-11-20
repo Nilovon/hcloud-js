@@ -17,12 +17,12 @@ const client = new HCloudClient();
 
 ## Migrating
 
-| Before | After |
-| --- | --- |
-| `client.datacenters.list()` | `client.locations.list()` |
-| `datacenter.location` | The location itself |
-| `datacenter.server_types.available` | `server_type.locations[].available` of [server types](/docs/API/server-types) |
-| `server.datacenter`, `primary_ip.datacenter` | `server.location`, `primary_ip.location` |
+| Before                                       | After                                                                         |
+| -------------------------------------------- | ----------------------------------------------------------------------------- |
+| `client.datacenters.list()`                  | `client.locations.list()`                                                     |
+| `datacenter.location`                        | The location itself                                                           |
+| `datacenter.server_types.available`          | `server_type.locations[].available` of [server types](/docs/API/server-types) |
+| `server.datacenter`, `primary_ip.datacenter` | `server.location`, `primary_ip.location`                                      |
 
 ## `list(params?)`
 
@@ -32,11 +32,11 @@ const client = new HCloudClient();
 const { datacenters, recommendation } = await client.datacenters.list({ sort: "name:asc" });
 ```
 
-| Parameter | Description |
-| --- | --- |
-| `name` | Exact name |
-| `sort` | `id`, `name`, each with `:asc` / `:desc` |
-| `page`, `per_page` | Pagination |
+| Parameter          | Description                              |
+| ------------------ | ---------------------------------------- |
+| `name`             | Exact name                               |
+| `sort`             | `id`, `name`, each with `:asc` / `:desc` |
+| `page`, `per_page` | Pagination                               |
 
 `recommendation` is the ID of the datacenter recommended for new resources.
 

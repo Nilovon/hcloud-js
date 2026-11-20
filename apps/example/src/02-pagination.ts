@@ -21,7 +21,9 @@ console.log(`${allSystemImages.length} x86 system images in total`);
 // 3. Lazily, item by item. Pages are fetched on demand, so breaking early saves requests.
 for await (const serverType of client.serverTypes.iterate({ per_page: 10 })) {
   if (serverType.cores >= 8) {
-    console.log(`First server type with 8+ cores: ${serverType.name} (${serverType.memory} GB RAM)`);
+    console.log(
+      `First server type with 8+ cores: ${serverType.name} (${serverType.memory} GB RAM)`,
+    );
     break;
   }
 }

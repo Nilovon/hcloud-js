@@ -124,11 +124,7 @@ describe("ImagesClient", () => {
 
   test("getByNameAndArchitecture filters by name and architecture", async () => {
     const arm: Image = { ...image1, id: 45557057, architecture: "arm" };
-    const { images, last } = setup(
-      { images: [image1] },
-      { images: [image1, arm] },
-      { images: [] },
-    );
+    const { images, last } = setup({ images: [image1] }, { images: [image1, arm] }, { images: [] });
 
     expect(await images.getByNameAndArchitecture("debian-11", "x86")).toEqual(image1);
     expect(last().method).toBe("GET");

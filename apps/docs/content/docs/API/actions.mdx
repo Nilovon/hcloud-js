@@ -17,10 +17,10 @@ const client = new HCloudClient();
 ```typescript
 interface Action {
   id: number;
-  command: string;                          // e.g. "start_server"
+  command: string; // e.g. "start_server"
   status: "running" | "success" | "error";
-  progress: number;                         // 0-100
-  started: string;                          // ISO 8601
+  progress: number; // 0-100
+  started: string; // ISO 8601
   finished: string | null;
   resources: { id: number; type: string }[];
   error?: { code: string; message: string } | null;
@@ -47,12 +47,12 @@ actions, use the `actions` sub-client of a resource (see below).
 const { actions } = await client.actions.list({ id: [1, 2, 3] });
 ```
 
-| Parameter | Description |
-| --- | --- |
-| `id` | One or more action IDs |
-| `status` | `"running"`, `"success"`, `"error"` (one or more) |
-| `sort` | `id`, `command`, `status`, `started`, `finished`, each with `:asc` / `:desc` |
-| `page`, `per_page` | Pagination |
+| Parameter          | Description                                                                  |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `id`               | One or more action IDs                                                       |
+| `status`           | `"running"`, `"success"`, `"error"` (one or more)                            |
+| `sort`             | `id`, `command`, `status`, `started`, `finished`, each with `:asc` / `:desc` |
+| `page`, `per_page` | Pagination                                                                   |
 
 ## `waitFor(action, options?)`
 
@@ -73,19 +73,23 @@ Accepts an array of actions or IDs, or a response containing `action`,
 `actions` and/or `next_actions`. Returns the finished actions in input order.
 
 ```typescript
-const created = await client.servers.create({ name: "web-1", server_type: "cx22", image: "ubuntu-24.04" });
+const created = await client.servers.create({
+  name: "web-1",
+  server_type: "cx22",
+  image: "ubuntu-24.04",
+});
 const finished = await client.actions.waitForAll(created);
 ```
 
 ### Wait options
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `pollInterval` | backoff from 500ms to 5s | Milliseconds or `(attempt) => ms` |
-| `timeout` | `300000` | Maximum time to wait in milliseconds |
-| `throwOnError` | `true` | Throw when an action fails |
-| `onProgress` | - | `(action) => void`, called after every poll |
-| `signal` | - | `AbortSignal` to stop waiting |
+| Option         | Default                  | Description                                 |
+| -------------- | ------------------------ | ------------------------------------------- |
+| `pollInterval` | backoff from 500ms to 5s | Milliseconds or `(attempt) => ms`           |
+| `timeout`      | `300000`                 | Maximum time to wait in milliseconds        |
+| `throwOnError` | `true`                   | Throw when an action fails                  |
+| `onProgress`   | -                        | `(action) => void`, called after every poll |
+| `signal`       | -                        | `AbortSignal` to stop waiting               |
 
 ## Resource action clients
 

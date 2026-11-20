@@ -33,7 +33,9 @@ export type MockReply =
   | Error
   | object
   | undefined
-  | ((request: RecordedRequest) => Response | Error | object | undefined | Promise<Response | object | undefined>);
+  | ((
+      request: RecordedRequest,
+    ) => Response | Error | object | undefined | Promise<Response | object | undefined>);
 
 export interface MockClient<C extends BaseClient = BaseClient> {
   client: C;
@@ -169,7 +171,11 @@ export function mockClient(
 export function mockOptions(
   replies: MockReply | MockReply[] = {},
   options: ClientOptions = {},
-): { options: ClientOptions; requests: RecordedRequest[]; reply: (...replies: MockReply[]) => void } {
+): {
+  options: ClientOptions;
+  requests: RecordedRequest[];
+  reply: (...replies: MockReply[]) => void;
+} {
   const mock = createFetchMock(Array.isArray(replies) ? replies : [replies]);
   return {
     options: { ...TEST_DEFAULTS, ...options, fetch: mock.fetch },

@@ -37,7 +37,11 @@ for (const [format, sdk] of [
   assert.equal(requests[0].url, "https://api.hetzner.cloud/v1/ssh_keys?page=1&per_page=50");
 
   await assert.rejects(
-    () => new sdk.HCloudClient({ token: "x", fetch: async () => new Response("{}", { status: 404 }) }).servers.get(1),
+    () =>
+      new sdk.HCloudClient({
+        token: "x",
+        fetch: async () => new Response("{}", { status: 404 }),
+      }).servers.get(1),
     (error) => error instanceof sdk.HCloudNotFoundError && error instanceof sdk.HCloudError,
     `${format}: typed errors`,
   );

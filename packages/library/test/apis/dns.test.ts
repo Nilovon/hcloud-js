@@ -143,7 +143,9 @@ describe("DNSClient zones", () => {
     });
 
     // @ts-expect-error - `mode` is required
-    await expect(dns.createZone({ name: "example.com" })).rejects.toBeInstanceOf(HCloudValidationError);
+    await expect(dns.createZone({ name: "example.com" })).rejects.toBeInstanceOf(
+      HCloudValidationError,
+    );
     await expect(dns.createZone({ name: "", mode: "primary" })).rejects.toBeInstanceOf(
       HCloudValidationError,
     );
@@ -152,7 +154,11 @@ describe("DNSClient zones", () => {
 
   test("createZone from a zone file", async () => {
     const { dns, last } = setup({ zone: zone1, action });
-    await dns.createZone({ name: "example.com", mode: "primary", zonefile: "$ORIGIN example.com." });
+    await dns.createZone({
+      name: "example.com",
+      mode: "primary",
+      zonefile: "$ORIGIN example.com.",
+    });
     expect(last().body).toEqual({
       name: "example.com",
       mode: "primary",
@@ -326,8 +332,9 @@ describe("DNSClient zone actions", () => {
     expect(last().path).toBe("/zones/example1.com/actions/import_zonefile");
     expect(last().body).toEqual({ zonefile: "content" });
 
-    // @ts-expect-error - v1 sent `zone_file`, the API expects `zonefile`
-    await expect(dns.importZoneFile("example1.com", { zone_file: "content" })).rejects.toBeInstanceOf(
+    // v1 sent `zone_file`, the API expects `zonefile`
+    const v1Params = { zone_file: "content" } as unknown as { zonefile: string };
+    await expect(dns.importZoneFile("example1.com", v1Params)).rejects.toBeInstanceOf(
       HCloudValidationError,
     );
     expect(requests).toHaveLength(1);
@@ -495,7 +502,9 @@ describe("DNSClient RRSet actions", () => {
     expect(last().body).toEqual({ ttl: null });
 
     // @ts-expect-error - `ttl` is required
-    await expect(dns.changeRRSetTTL(42, "www", "A", {})).rejects.toBeInstanceOf(HCloudValidationError);
+    await expect(dns.changeRRSetTTL(42, "www", "A", {})).rejects.toBeInstanceOf(
+      HCloudValidationError,
+    );
     expect(requests).toHaveLength(2);
   });
 

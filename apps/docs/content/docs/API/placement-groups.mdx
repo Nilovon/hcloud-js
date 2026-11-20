@@ -20,13 +20,13 @@ const { placement_groups, meta } = await client.placementGroups.list({
 });
 ```
 
-| Parameter | Description |
-| --- | --- |
-| `name` | Exact name |
-| `label_selector` | [Label selector](/docs/pagination#label-selectors) |
-| `type` | `spread` |
-| `sort` | `id`, `name`, `created`, each with `:asc` / `:desc` |
-| `page`, `per_page` | Pagination |
+| Parameter          | Description                                         |
+| ------------------ | --------------------------------------------------- |
+| `name`             | Exact name                                          |
+| `label_selector`   | [Label selector](/docs/pagination#label-selectors)  |
+| `type`             | `spread`                                            |
+| `sort`             | `id`, `name`, `created`, each with `:asc` / `:desc` |
+| `page`, `per_page` | Pagination                                          |
 
 Pagination helpers: `listAll()`, `iterate()`, `iteratePages()`, `first()`.
 

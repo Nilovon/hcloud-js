@@ -18,23 +18,23 @@ const client = new HCloudClient();
 - Hetzner removed the `datacenter` property of Primary IPs. Use `location` instead; `datacenter`
   is only kept as an optional, deprecated field of the response type.
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /primary_ips` |
-| `get(id)` | `GET /primary_ips/{id}` |
-| `getByName(name)` | `GET /primary_ips?name=` |
-| `getByIP(ip)` | `GET /primary_ips?ip=` |
-| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /primary_ips` (all pages) |
-| `create(params)` | `POST /primary_ips` |
-| `update(id, params)` | `PUT /primary_ips/{id}` |
-| `delete(id)` | `DELETE /primary_ips/{id}` |
-| `assignToResource(id, params)` | `POST /primary_ips/{id}/actions/assign` |
-| `unassign(id)` | `POST /primary_ips/{id}/actions/unassign` |
-| `changeReverseDNS(id, params)` | `POST /primary_ips/{id}/actions/change_dns_ptr` |
-| `changeProtection(id, params)` | `POST /primary_ips/{id}/actions/change_protection` |
-| `listActions(id, params?)` | `GET /primary_ips/{id}/actions` |
-| `getAction(id, actionId)` | `GET /primary_ips/{id}/actions/{action_id}` |
-| `actions.list(params?)` / `actions.get(id)` | `GET /primary_ips/actions`, `GET /primary_ips/actions/{id}` |
+| Method                                                                               | Endpoint                                                    |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `list(params?)`                                                                      | `GET /primary_ips`                                          |
+| `get(id)`                                                                            | `GET /primary_ips/{id}`                                     |
+| `getByName(name)`                                                                    | `GET /primary_ips?name=`                                    |
+| `getByIP(ip)`                                                                        | `GET /primary_ips?ip=`                                      |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /primary_ips` (all pages)                              |
+| `create(params)`                                                                     | `POST /primary_ips`                                         |
+| `update(id, params)`                                                                 | `PUT /primary_ips/{id}`                                     |
+| `delete(id)`                                                                         | `DELETE /primary_ips/{id}`                                  |
+| `assignToResource(id, params)`                                                       | `POST /primary_ips/{id}/actions/assign`                     |
+| `unassign(id)`                                                                       | `POST /primary_ips/{id}/actions/unassign`                   |
+| `changeReverseDNS(id, params)`                                                       | `POST /primary_ips/{id}/actions/change_dns_ptr`             |
+| `changeProtection(id, params)`                                                       | `POST /primary_ips/{id}/actions/change_protection`          |
+| `listActions(id, params?)`                                                           | `GET /primary_ips/{id}/actions`                             |
+| `getAction(id, actionId)`                                                            | `GET /primary_ips/{id}/actions/{action_id}`                 |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /primary_ips/actions`, `GET /primary_ips/actions/{id}` |
 
 ## List Primary IPs
 

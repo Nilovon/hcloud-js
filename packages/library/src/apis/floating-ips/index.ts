@@ -234,12 +234,7 @@ export class FloatingIPsClient extends NamedResource<
     params?: ListFloatingIPActionsParams,
     options?: RequestOptions,
   ): Promise<ListFloatingIPActionsResponse> {
-    return this._get(
-      path`/floating_ips/${id}/actions`,
-      listActionsResponseSchema,
-      params,
-      options,
-    );
+    return this._get(path`/floating_ips/${id}/actions`, listActionsResponseSchema, params, options);
   }
 
   /**

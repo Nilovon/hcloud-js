@@ -20,16 +20,16 @@ console.log(pricing.currency, pricing.vat_rate);
 
 Prices are objects with a `net` and a `gross` amount, encoded as decimal strings.
 
-| Field | Description |
-| --- | --- |
-| `currency`, `vat_rate` | Currency and VAT rate of the project owner |
-| `server_types[]` | `id`, `name` and `prices[]` per location |
-| `load_balancer_types[]` | `id`, `name` and `prices[]` per location |
-| `primary_ips[]` | `type` and `prices[]` per location |
-| `floating_ips[]` | `type` and `prices[]` per location |
-| `image` | `price_per_gb_month` |
-| `volume` | `price_per_gb_month` |
-| `server_backup` | `percentage` of the server price |
+| Field                   | Description                                |
+| ----------------------- | ------------------------------------------ |
+| `currency`, `vat_rate`  | Currency and VAT rate of the project owner |
+| `server_types[]`        | `id`, `name` and `prices[]` per location   |
+| `load_balancer_types[]` | `id`, `name` and `prices[]` per location   |
+| `primary_ips[]`         | `type` and `prices[]` per location         |
+| `floating_ips[]`        | `type` and `prices[]` per location         |
+| `image`                 | `price_per_gb_month`                       |
+| `volume`                | `price_per_gb_month`                       |
+| `server_backup`         | `percentage` of the server price           |
 
 `prices[]` entries contain `location` and, depending on the resource, `price_hourly`,
 `price_monthly`, `included_traffic` and `price_per_tb_traffic`. All fields except `currency` and

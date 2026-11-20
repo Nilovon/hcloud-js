@@ -17,7 +17,9 @@ const [servers, sshKeys, firewalls, volumes] = await Promise.all([
 console.log(`Servers (${servers.length})`);
 for (const server of servers) {
   const ip = server.public_net.ipv4?.ip ?? "no public IPv4";
-  console.log(`  ${server.name.padEnd(24)} ${server.status.padEnd(12)} ${server.server_type.name} ${ip}`);
+  console.log(
+    `  ${server.name.padEnd(24)} ${server.status.padEnd(12)} ${server.server_type.name} ${ip}`,
+  );
 }
 
 console.log(`SSH keys (${sshKeys.length})`);

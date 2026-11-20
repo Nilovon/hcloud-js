@@ -110,7 +110,9 @@ describe("pagination helpers", () => {
     const client = new SSHKeysClient(mock.client);
 
     const sizes: number[] = [];
-    for await (const items of paginate((params) => client.list(params), "ssh_keys", { perPage: 2 })) {
+    for await (const items of paginate((params) => client.list(params), "ssh_keys", {
+      perPage: 2,
+    })) {
       sizes.push(items.length);
     }
     expect(sizes).toEqual([2, 2, 1]);
@@ -169,7 +171,29 @@ describe("validation", () => {
     const result = await new SSHKeysClient(mock.client).get(1);
     expect(result).toEqual(broken as never);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain("GET /ssh_keys/1 response validation failed: ssh_key.fingerprint");
+    expect(warnings[0]).toContain(
+      "GET /ssh_keys/1 response validation failed: ssh_key.fingerprint",
+    );
+  });
+
+  test("the same schema mismatch is only reported once per client", async () => {
+    const warnings: string[] = [];
+    const mock = mockClient(
+      (request) => ({ ssh_key: { ...key(1), fingerprint: null }, path: request.path }),
+      {
+        responseValidation: "warn",
+        onWarning: (message) => warnings.push(message),
+      },
+    );
+    const client = new SSHKeysClient(mock.client);
+    await client.get(1);
+    await client.get(2);
+    await client.get(1);
+    expect(warnings).toHaveLength(1);
+
+    mock.reply({ ssh_keys: [{ id: "x" }] });
+    await client.list();
+    expect(warnings).toHaveLength(2);
   });
 
   test('responseValidation "off" skips validation', async () => {

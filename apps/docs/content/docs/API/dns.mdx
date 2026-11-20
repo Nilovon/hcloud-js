@@ -20,34 +20,34 @@ const client = new HCloudClient();
 - Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
 - Most mutating calls return an `action`. Wait for it with `client.actions.waitFor()`.
 
-| Method | Endpoint |
-| --- | --- |
-| `listZones(params?)` | `GET /zones` |
-| `iterateZones(params?)` / `listAllZones(params?)` | `GET /zones` (all pages) |
-| `createZone(params)` | `POST /zones` |
-| `getZone(zone)` | `GET /zones/{zone}` |
-| `updateZone(zone, params)` | `PUT /zones/{zone}` |
-| `deleteZone(zone)` | `DELETE /zones/{zone}` |
-| `exportZone(zone)` | `GET /zones/{zone}/zonefile` |
-| `importZoneFile(zone, params)` | `POST /zones/{zone}/actions/import_zonefile` |
-| `changeZoneProtection(zone, params)` | `POST /zones/{zone}/actions/change_protection` |
-| `changeZoneDefaultTTL(zone, params)` | `POST /zones/{zone}/actions/change_ttl` |
-| `changeZonePrimaryNameservers(zone, params)` | `POST /zones/{zone}/actions/change_primary_nameservers` |
-| `listZoneActions(zone, params?)` | `GET /zones/{zone}/actions` |
-| `getZoneAction(zone, actionId)` | `GET /zones/{zone}/actions/{action_id}` |
-| `actions.list(params?)` / `actions.get(id)` | `GET /zones/actions`, `GET /zones/actions/{id}` |
-| `listRRSets(zone, params?)` | `GET /zones/{zone}/rrsets` |
-| `iterateRRSets(zone, params?)` / `listAllRRSets(zone, params?)` | `GET /zones/{zone}/rrsets` (all pages) |
-| `createRRSet(zone, params)` | `POST /zones/{zone}/rrsets` |
-| `getRRSet(zone, name, type)` | `GET /zones/{zone}/rrsets/{name}/{type}` |
-| `updateRRSet(zone, name, type, params)` | `PUT /zones/{zone}/rrsets/{name}/{type}` |
-| `deleteRRSet(zone, name, type)` | `DELETE /zones/{zone}/rrsets/{name}/{type}` |
-| `setRRSetRecords(zone, name, type, params)` | `POST .../actions/set_records` |
-| `addRRSetRecords(zone, name, type, params)` | `POST .../actions/add_records` |
-| `removeRRSetRecords(zone, name, type, params)` | `POST .../actions/remove_records` |
-| `updateRRSetRecords(zone, name, type, params)` | `POST .../actions/update_records` |
-| `changeRRSetTTL(zone, name, type, params)` | `POST .../actions/change_ttl` |
-| `changeRRSetProtection(zone, name, type, params)` | `POST .../actions/change_protection` |
+| Method                                                          | Endpoint                                                |
+| --------------------------------------------------------------- | ------------------------------------------------------- |
+| `listZones(params?)`                                            | `GET /zones`                                            |
+| `iterateZones(params?)` / `listAllZones(params?)`               | `GET /zones` (all pages)                                |
+| `createZone(params)`                                            | `POST /zones`                                           |
+| `getZone(zone)`                                                 | `GET /zones/{zone}`                                     |
+| `updateZone(zone, params)`                                      | `PUT /zones/{zone}`                                     |
+| `deleteZone(zone)`                                              | `DELETE /zones/{zone}`                                  |
+| `exportZone(zone)`                                              | `GET /zones/{zone}/zonefile`                            |
+| `importZoneFile(zone, params)`                                  | `POST /zones/{zone}/actions/import_zonefile`            |
+| `changeZoneProtection(zone, params)`                            | `POST /zones/{zone}/actions/change_protection`          |
+| `changeZoneDefaultTTL(zone, params)`                            | `POST /zones/{zone}/actions/change_ttl`                 |
+| `changeZonePrimaryNameservers(zone, params)`                    | `POST /zones/{zone}/actions/change_primary_nameservers` |
+| `listZoneActions(zone, params?)`                                | `GET /zones/{zone}/actions`                             |
+| `getZoneAction(zone, actionId)`                                 | `GET /zones/{zone}/actions/{action_id}`                 |
+| `actions.list(params?)` / `actions.get(id)`                     | `GET /zones/actions`, `GET /zones/actions/{id}`         |
+| `listRRSets(zone, params?)`                                     | `GET /zones/{zone}/rrsets`                              |
+| `iterateRRSets(zone, params?)` / `listAllRRSets(zone, params?)` | `GET /zones/{zone}/rrsets` (all pages)                  |
+| `createRRSet(zone, params)`                                     | `POST /zones/{zone}/rrsets`                             |
+| `getRRSet(zone, name, type)`                                    | `GET /zones/{zone}/rrsets/{name}/{type}`                |
+| `updateRRSet(zone, name, type, params)`                         | `PUT /zones/{zone}/rrsets/{name}/{type}`                |
+| `deleteRRSet(zone, name, type)`                                 | `DELETE /zones/{zone}/rrsets/{name}/{type}`             |
+| `setRRSetRecords(zone, name, type, params)`                     | `POST .../actions/set_records`                          |
+| `addRRSetRecords(zone, name, type, params)`                     | `POST .../actions/add_records`                          |
+| `removeRRSetRecords(zone, name, type, params)`                  | `POST .../actions/remove_records`                       |
+| `updateRRSetRecords(zone, name, type, params)`                  | `POST .../actions/update_records`                       |
+| `changeRRSetTTL(zone, name, type, params)`                      | `POST .../actions/change_ttl`                           |
+| `changeRRSetProtection(zone, name, type, params)`               | `POST .../actions/change_protection`                    |
 
 ## Zones
 
@@ -189,7 +189,10 @@ const { rrsets } = await client.dns.listRRSets("example.com", {
 
 ```typescript
 for await (const rrset of client.dns.iterateRRSets("example.com", { type: "TXT" })) {
-  console.log(rrset.name, rrset.records.map((record) => record.value));
+  console.log(
+    rrset.name,
+    rrset.records.map((record) => record.value),
+  );
 }
 
 const rrsets = await client.dns.listAllRRSets("example.com");
@@ -329,7 +332,8 @@ interface Zone {
     assigned: string[];
     delegated: string[];
     delegation_last_check: string | null;
-    delegation_status: "valid" | "partially-valid" | "invalid" | "lame" | "unregistered" | "unknown";
+    delegation_status:
+      "valid" | "partially-valid" | "invalid" | "lame" | "unregistered" | "unknown";
   };
 }
 
@@ -346,8 +350,22 @@ interface RRSet {
 
 // Well-known types, any other string is accepted as well
 type RRSetType =
-  | "A" | "AAAA" | "CAA" | "CNAME" | "DS" | "HINFO" | "HTTPS" | "MX" | "NS"
-  | "PTR" | "RP" | "SOA" | "SRV" | "SVCB" | "TLSA" | "TXT"
+  | "A"
+  | "AAAA"
+  | "CAA"
+  | "CNAME"
+  | "DS"
+  | "HINFO"
+  | "HTTPS"
+  | "MX"
+  | "NS"
+  | "PTR"
+  | "RP"
+  | "SOA"
+  | "SRV"
+  | "SVCB"
+  | "TLSA"
+  | "TXT"
   | (string & {});
 ```
 

@@ -91,11 +91,11 @@ import { labelSelector } from "@nilovonjs/hcloud-js";
 
 const servers = await client.servers.listAll({
   label_selector: labelSelector({
-    env: "production",          // env=production
-    tier: ["web", "api"],       // tier in (web,api)
-    team: { not: "legacy" },    // team!=legacy
-    managed: true,              // managed (label exists)
-    deprecated: false,          // !deprecated (label does not exist)
+    env: "production", // env=production
+    tier: ["web", "api"], // tier in (web,api)
+    team: { not: "legacy" }, // team!=legacy
+    managed: true, // managed (label exists)
+    deprecated: false, // !deprecated (label does not exist)
   }),
 });
 ```
@@ -130,12 +130,11 @@ response, e.g. for endpoints you call through the low-level client:
 ```typescript
 import { getAllPages, paginate } from "@nilovonjs/hcloud-js";
 
-const actions = await getAllPages(
-  (params) => client.servers.listActions(42, params),
-  "actions",
-);
+const actions = await getAllPages((params) => client.servers.listActions(42, params), "actions");
 
-for await (const page of paginate((params) => client.servers.list(params), "servers", { maxPages: 3 })) {
+for await (const page of paginate((params) => client.servers.list(params), "servers", {
+  maxPages: 3,
+})) {
   console.log(page.length);
 }
 ```

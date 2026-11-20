@@ -17,20 +17,20 @@ const client = new HCloudClient();
 
 Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /certificates` |
-| `get(id)` | `GET /certificates/{id}` |
-| `getByName(name)` | `GET /certificates?name=` |
-| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /certificates` (all pages) |
-| `create(params)` | `POST /certificates` |
-| `createManaged(params)` | `POST /certificates` (`type: "managed"`) |
-| `update(id, params)` | `PUT /certificates/{id}` |
-| `delete(id)` | `DELETE /certificates/{id}` |
-| `retryIssuance(id)` | `POST /certificates/{id}/actions/retry` |
-| `listActions(id, params?)` | `GET /certificates/{id}/actions` |
-| `getAction(id, actionId)` | `GET /certificates/{id}/actions/{action_id}` |
-| `actions.list(params?)` / `actions.get(id)` | `GET /certificates/actions`, `GET /certificates/actions/{id}` |
+| Method                                                                               | Endpoint                                                      |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `list(params?)`                                                                      | `GET /certificates`                                           |
+| `get(id)`                                                                            | `GET /certificates/{id}`                                      |
+| `getByName(name)`                                                                    | `GET /certificates?name=`                                     |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /certificates` (all pages)                               |
+| `create(params)`                                                                     | `POST /certificates`                                          |
+| `createManaged(params)`                                                              | `POST /certificates` (`type: "managed"`)                      |
+| `update(id, params)`                                                                 | `PUT /certificates/{id}`                                      |
+| `delete(id)`                                                                         | `DELETE /certificates/{id}`                                   |
+| `retryIssuance(id)`                                                                  | `POST /certificates/{id}/actions/retry`                       |
+| `listActions(id, params?)`                                                           | `GET /certificates/{id}/actions`                              |
+| `getAction(id, actionId)`                                                            | `GET /certificates/{id}/actions/{action_id}`                  |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /certificates/actions`, `GET /certificates/actions/{id}` |
 
 ## List Certificates
 

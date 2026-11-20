@@ -19,11 +19,11 @@ const client = new HCloudClient();
   override it with the `hetznerBaseUrl` client option if needed.
 - Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /storage_box_types` |
-| `get(id)` | `GET /storage_box_types/{id}` |
-| `getByName(name)` | `GET /storage_box_types?name=` |
+| Method                                                                               | Endpoint                             |
+| ------------------------------------------------------------------------------------ | ------------------------------------ |
+| `list(params?)`                                                                      | `GET /storage_box_types`             |
+| `get(id)`                                                                            | `GET /storage_box_types/{id}`        |
+| `getByName(name)`                                                                    | `GET /storage_box_types?name=`       |
 | `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /storage_box_types` (all pages) |
 
 ## List Storage Box Types

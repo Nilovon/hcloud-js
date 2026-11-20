@@ -13,11 +13,11 @@ strings. All conditions must match.
 ```typescript
 import { labelSelector } from "@nilovonjs/hcloud-js";
 
-labelSelector({ env: "production" });                // "env=production"
-labelSelector({ env: ["staging", "production"] });   // "env in (staging,production)"
-labelSelector({ env: { not: "dev" } });              // "env!=dev"
-labelSelector({ env: { notIn: ["dev", "test"] } });  // "env notin (dev,test)"
-labelSelector({ managed: true, legacy: false });     // "managed,!legacy"
+labelSelector({ env: "production" }); // "env=production"
+labelSelector({ env: ["staging", "production"] }); // "env in (staging,production)"
+labelSelector({ env: { not: "dev" } }); // "env!=dev"
+labelSelector({ env: { notIn: ["dev", "test"] } }); // "env notin (dev,test)"
+labelSelector({ managed: true, legacy: false }); // "managed,!legacy"
 ```
 
 ## `parseTimeSeries()`
@@ -71,7 +71,12 @@ All Zod schemas the SDK validates with are exported, e.g. to validate webhook
 payloads, cached data or configuration files:
 
 ```typescript
-import { createServerRequestSchema, safeValidate, serverSchema, validate } from "@nilovonjs/hcloud-js";
+import {
+  createServerRequestSchema,
+  safeValidate,
+  serverSchema,
+  validate,
+} from "@nilovonjs/hcloud-js";
 
 // Throws a HCloudValidationError
 const server = validate(serverSchema, JSON.parse(cached), { context: "Cached server" });
@@ -85,12 +90,12 @@ if (!result.success) {
 
 Naming is consistent across resources:
 
-| Pattern | Example |
-| --- | --- |
-| `<resource>Schema` | `serverSchema`, `volumeSchema`, `zoneSchema` |
-| `list<Resources>ResponseSchema` | `listServersResponseSchema` |
-| `create<Resource>RequestSchema` | `createServerRequestSchema` |
-| `actionSchema`, `actionResponseSchema` | Shared by all action endpoints |
+| Pattern                                | Example                                      |
+| -------------------------------------- | -------------------------------------------- |
+| `<resource>Schema`                     | `serverSchema`, `volumeSchema`, `zoneSchema` |
+| `list<Resources>ResponseSchema`        | `listServersResponseSchema`                  |
+| `create<Resource>RequestSchema`        | `createServerRequestSchema`                  |
+| `actionSchema`, `actionResponseSchema` | Shared by all action endpoints               |
 
 Types follow the same idea: `Server`, `ListServersParams`, `CreateServerParams`,
 `CreateServerResponse`, ...
@@ -133,11 +138,11 @@ await widgets.listAll();
 
 These v1 functions still work but are superseded by client methods:
 
-| Deprecated | Use instead |
-| --- | --- |
-| `pollAction(client, id)` | `client.actions.waitFor(id)` |
-| `pollActions(client, ids)` | `client.actions.waitForAll(ids)` |
+| Deprecated                               | Use instead                            |
+| ---------------------------------------- | -------------------------------------- |
+| `pollAction(client, id)`                 | `client.actions.waitFor(id)`           |
+| `pollActions(client, ids)`               | `client.actions.waitForAll(ids)`       |
 | `createAndWaitForServer(client, params)` | `client.servers.createAndWait(params)` |
-| `findServerByName(client, name)` | `client.servers.getByName(name)` |
-| `findImageByName(client, name)` | `client.images.getByName(name)` |
-| `findFloatingIPByIP(client, ip)` | `client.floatingIPs.getByIP(ip)` |
+| `findServerByName(client, name)`         | `client.servers.getByName(name)`       |
+| `findImageByName(client, name)`          | `client.images.getByName(name)`        |
+| `findFloatingIPByIP(client, ip)`         | `client.floatingIPs.getByIP(ip)`       |

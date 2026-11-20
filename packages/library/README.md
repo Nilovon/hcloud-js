@@ -99,7 +99,12 @@ await client.actions.waitFor(await client.volumes.resize(volume.id, { size: 100 
 ### Errors
 
 ```typescript
-import { HCloudActionError, HCloudApiError, HCloudNotFoundError, isHCloudError } from "@nilovonjs/hcloud-js";
+import {
+  HCloudActionError,
+  HCloudApiError,
+  HCloudNotFoundError,
+  isHCloudError,
+} from "@nilovonjs/hcloud-js";
 
 try {
   await client.servers.delete(42);
@@ -142,7 +147,12 @@ console.log(client.rateLimit); // { limit: 3600, remaining: 3597, reset: Date }
 ### Utilities
 
 ```typescript
-import { labelSelector, parseTimeSeries, isServerRunning, serverSchema } from "@nilovonjs/hcloud-js";
+import {
+  labelSelector,
+  parseTimeSeries,
+  isServerRunning,
+  serverSchema,
+} from "@nilovonjs/hcloud-js";
 
 labelSelector({ env: ["staging", "production"], legacy: false });
 // "env in (staging,production),!legacy"
@@ -150,29 +160,29 @@ labelSelector({ env: ["staging", "production"], legacy: false });
 
 ## Resources
 
-| Client | Resource |
-| --- | --- |
-| `client.servers` | Servers, all server actions, metrics |
-| `client.serverTypes` | Server types |
-| `client.images` | Images, snapshots, backups |
-| `client.isos` | ISOs |
-| `client.placementGroups` | Placement groups |
-| `client.sshKeys` | SSH keys |
-| `client.volumes` | Volumes |
-| `client.networks` | Networks, subnets, routes |
-| `client.firewalls` | Firewalls |
-| `client.floatingIPs` | Floating IPs |
-| `client.primaryIPs` | Primary IPs |
-| `client.loadBalancers` | Load balancers, services, targets, metrics |
-| `client.loadBalancerTypes` | Load balancer types |
-| `client.certificates` | TLS certificates |
-| `client.dns` | DNS zones and RRSets |
-| `client.storageBoxes` | Storage Boxes, snapshots, subaccounts |
-| `client.storageBoxTypes` | Storage Box types |
-| `client.locations` | Locations |
-| `client.datacenters` | Datacenters (deprecated by Hetzner) |
-| `client.pricing` | Prices |
-| `client.actions` | Actions, `waitFor()`, `waitForAll()` |
+| Client                     | Resource                                   |
+| -------------------------- | ------------------------------------------ |
+| `client.servers`           | Servers, all server actions, metrics       |
+| `client.serverTypes`       | Server types                               |
+| `client.images`            | Images, snapshots, backups                 |
+| `client.isos`              | ISOs                                       |
+| `client.placementGroups`   | Placement groups                           |
+| `client.sshKeys`           | SSH keys                                   |
+| `client.volumes`           | Volumes                                    |
+| `client.networks`          | Networks, subnets, routes                  |
+| `client.firewalls`         | Firewalls                                  |
+| `client.floatingIPs`       | Floating IPs                               |
+| `client.primaryIPs`        | Primary IPs                                |
+| `client.loadBalancers`     | Load balancers, services, targets, metrics |
+| `client.loadBalancerTypes` | Load balancer types                        |
+| `client.certificates`      | TLS certificates                           |
+| `client.dns`               | DNS zones and RRSets                       |
+| `client.storageBoxes`      | Storage Boxes, snapshots, subaccounts      |
+| `client.storageBoxTypes`   | Storage Box types                          |
+| `client.locations`         | Locations                                  |
+| `client.datacenters`       | Datacenters (deprecated by Hetzner)        |
+| `client.pricing`           | Prices                                     |
+| `client.actions`           | Actions, `waitFor()`, `waitForAll()`       |
 
 Anything missing? `client.request()` gives you authenticated, retried, typed-error
 access to any endpoint.

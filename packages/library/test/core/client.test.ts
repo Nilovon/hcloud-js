@@ -68,7 +68,10 @@ describe("client construction", () => {
 
 describe("requests", () => {
   test("sends default headers", async () => {
-    const { client, last } = mockClient({}, { userAgent: "my-app/1.0", headers: { "X-Custom": "1" } });
+    const { client, last } = mockClient(
+      {},
+      { userAgent: "my-app/1.0", headers: { "X-Custom": "1" } },
+    );
     await client.get("/servers", { headers: { "X-Request": "2" } });
 
     expect(last().headers.get("authorization")).toBe("Bearer test-token");

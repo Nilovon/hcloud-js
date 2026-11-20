@@ -3,26 +3,12 @@
   "ui": "stream",
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        ".env*"
-      ],
-      "outputs": [
-        "dist/**",
-        ".next/**",
-        "!.next/cache/**"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "test": {
-      "inputs": [
-        "src/**",
-        "test/**",
-        "package.json",
-        "tsconfig.json"
-      ]
+      "inputs": ["src/**", "test/**", "package.json", "tsconfig.json"]
     },
     "check-types": {},
     "dev": {

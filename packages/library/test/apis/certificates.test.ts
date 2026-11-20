@@ -115,7 +115,10 @@ describe("CertificatesClient", () => {
   });
 
   test("create with type managed returns the issuance action", async () => {
-    const pending = { ...managed, status: { issuance: "pending", renewal: "scheduled", error: null } };
+    const pending = {
+      ...managed,
+      status: { issuance: "pending", renewal: "scheduled", error: null },
+    };
     const { certificates, last } = setup({ certificate: pending, action: issueAction });
 
     const result = await certificates.create({

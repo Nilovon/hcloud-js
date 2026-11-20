@@ -17,10 +17,10 @@ const client = new HCloudClient();
 const { server_types, meta } = await client.serverTypes.list();
 ```
 
-| Parameter | Description |
-| --- | --- |
-| `name` | Exact name |
-| `page`, `per_page` | Pagination |
+| Parameter          | Description |
+| ------------------ | ----------- |
+| `name`             | Exact name  |
+| `page`, `per_page` | Pagination  |
 
 Pagination helpers: `listAll()`, `iterate()`, `iteratePages()`, `first()`.
 
@@ -63,14 +63,14 @@ for (const location of serverType?.locations ?? []) {
 }
 ```
 
-| Field | Description |
-| --- | --- |
-| `locations[].id`, `locations[].name` | The location |
-| `locations[].available` | Servers of this type can currently be created in the location |
-| `locations[].recommended` | The type is currently recommended in the location |
-| `locations[].deprecation` | `{ announced, unavailable_after }`, or `null` if not deprecated |
-| `prices[]` | `location`, `price_hourly`, `price_monthly`, `included_traffic`, `price_per_tb_traffic` |
-| `category` | Category of the type, e.g. `Shared vCPU` |
+| Field                                | Description                                                                             |
+| ------------------------------------ | --------------------------------------------------------------------------------------- |
+| `locations[].id`, `locations[].name` | The location                                                                            |
+| `locations[].available`              | Servers of this type can currently be created in the location                           |
+| `locations[].recommended`            | The type is currently recommended in the location                                       |
+| `locations[].deprecation`            | `{ announced, unavailable_after }`, or `null` if not deprecated                         |
+| `prices[]`                           | `location`, `price_hourly`, `price_monthly`, `included_traffic`, `price_per_tb_traffic` |
+| `category`                           | Category of the type, e.g. `Shared vCPU`                                                |
 
 The top-level `deprecated`, `deprecation` and `included_traffic` fields are deprecated by Hetzner
 and may be missing. Use `locations[].deprecation` and `prices[].included_traffic` instead.

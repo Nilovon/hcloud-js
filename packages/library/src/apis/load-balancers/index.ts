@@ -138,7 +138,12 @@ export class LoadBalancersClient extends NamedResource<
    * ```
    */
   get(id: number, options?: RequestOptions): Promise<GetLoadBalancerResponse> {
-    return this._get(path`/load_balancers/${id}`, getLoadBalancerResponseSchema, undefined, options);
+    return this._get(
+      path`/load_balancers/${id}`,
+      getLoadBalancerResponseSchema,
+      undefined,
+      options,
+    );
   }
 
   /**

@@ -19,7 +19,8 @@ const client = new HCloudClient();
 ```typescript
 const key =
   (await client.sshKeys.getByName("deploy")) ??
-  (await client.sshKeys.create({ name: "deploy", public_key: process.env.DEPLOY_PUBLIC_KEY! })).ssh_key;
+  (await client.sshKeys.create({ name: "deploy", public_key: process.env.DEPLOY_PUBLIC_KEY! }))
+    .ssh_key;
 
 const { server } = await client.servers.createAndWait({
   name: "web-1",
@@ -59,7 +60,13 @@ async function ensureNetwork(name: string) {
 const { firewall, actions } = await client.firewalls.create({
   name: "web",
   rules: [
-    { direction: "in", protocol: "tcp", port: "22", source_ips: ["203.0.113.7/32"], description: "SSH from office" },
+    {
+      direction: "in",
+      protocol: "tcp",
+      port: "22",
+      source_ips: ["203.0.113.7/32"],
+      description: "SSH from office",
+    },
     { direction: "in", protocol: "tcp", port: "80", source_ips: ["0.0.0.0/0", "::/0"] },
     { direction: "in", protocol: "tcp", port: "443", source_ips: ["0.0.0.0/0", "::/0"] },
   ],
@@ -98,7 +105,9 @@ try {
   await runUpgrade(server);
 } catch (error) {
   // Roll back
-  await client.actions.waitFor(await client.servers.rebuild(server.id, { image: snapshot.image.id }));
+  await client.actions.waitFor(
+    await client.servers.rebuild(server.id, { image: snapshot.image.id }),
+  );
   throw error;
 }
 ```
@@ -143,7 +152,11 @@ await client.actions.waitFor(
 
 // List every record of a zone
 for await (const rrset of client.dns.iterateRRSets("example.com")) {
-  console.log(rrset.name, rrset.type, rrset.records.map((record) => record.value));
+  console.log(
+    rrset.name,
+    rrset.type,
+    rrset.records.map((record) => record.value),
+  );
 }
 ```
 
@@ -186,7 +199,10 @@ const controller = new AbortController();
 process.once("SIGINT", () => controller.abort());
 
 try {
-  for await (const image of client.images.iterate({ type: "backup" }, { signal: controller.signal })) {
+  for await (const image of client.images.iterate(
+    { type: "backup" },
+    { signal: controller.signal },
+  )) {
     await archive(image);
   }
 } catch (error) {

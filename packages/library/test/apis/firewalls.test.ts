@@ -98,7 +98,10 @@ function setup(...replies: Parameters<typeof mockClient>[0][]) {
 
 describe("FirewallsClient", () => {
   test("list sends filters as query parameters", async () => {
-    const { firewalls, last } = setup({ firewalls: [firewall, otherFirewall], meta: metaFixture() });
+    const { firewalls, last } = setup({
+      firewalls: [firewall, otherFirewall],
+      meta: metaFixture(),
+    });
 
     const result = await firewalls.list({
       name: "Corporate Intranet Protection",
@@ -139,7 +142,10 @@ describe("FirewallsClient", () => {
 
   test("listAll follows pagination", async () => {
     const { firewalls, requests } = setup(
-      { firewalls: [firewall], meta: metaFixture({ next_page: 2, last_page: 2, total_entries: 2 }) },
+      {
+        firewalls: [firewall],
+        meta: metaFixture({ next_page: 2, last_page: 2, total_entries: 2 }),
+      },
       { firewalls: [otherFirewall], meta: metaFixture({ page: 2, previous_page: 1 }) },
     );
     const all = await firewalls.listAll();

@@ -295,7 +295,9 @@ export class HCloudServerError extends HCloudApiError {}
  */
 export class HCloudConnectionError extends HCloudError {
   constructor(message: string, options?: { cause?: unknown; code?: HCloudErrorCode }) {
-    super(message, options?.code ?? ErrorCode.NetworkError, 0, undefined, { cause: options?.cause });
+    super(message, options?.code ?? ErrorCode.NetworkError, 0, undefined, {
+      cause: options?.cause,
+    });
   }
 }
 

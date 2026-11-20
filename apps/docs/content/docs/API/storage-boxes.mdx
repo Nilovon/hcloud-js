@@ -25,42 +25,42 @@ const client = new HCloudClient();
 - Snapshots and subaccounts are addressed by the ID of their Storage Box plus their own ID.
 - Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /storage_boxes` |
-| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /storage_boxes` (all pages) |
-| `getByName(name)` | `GET /storage_boxes?name=` |
-| `get(id)` | `GET /storage_boxes/{id}` |
-| `create(params)` | `POST /storage_boxes` |
-| `update(id, params)` | `PUT /storage_boxes/{id}` |
-| `delete(id)` | `DELETE /storage_boxes/{id}` |
-| `listFolders(id, params?)` | `GET /storage_boxes/{id}/folders` |
-| `changeProtection(id, params)` | `POST /storage_boxes/{id}/actions/change_protection` |
-| `changeType(id, params)` | `POST /storage_boxes/{id}/actions/change_type` |
-| `resetPassword(id, params)` | `POST /storage_boxes/{id}/actions/reset_password` |
-| `updateAccessSettings(id, params)` | `POST /storage_boxes/{id}/actions/update_access_settings` |
-| `rollbackSnapshot(id, params)` | `POST /storage_boxes/{id}/actions/rollback_snapshot` |
-| `enableSnapshotPlan(id, params)` | `POST /storage_boxes/{id}/actions/enable_snapshot_plan` |
-| `disableSnapshotPlan(id)` | `POST /storage_boxes/{id}/actions/disable_snapshot_plan` |
-| `listActions(id, params?)` | `GET /storage_boxes/{id}/actions` |
-| `actions.list(params?)` / `actions.get(id)` | `GET /storage_boxes/actions`, `GET /storage_boxes/actions/{id}` |
-| `actions.waitFor(action)` / `actions.waitForAll(actions)` | polls `GET /storage_boxes/actions/{id}` |
-| `listSnapshots(storageBoxId, params?)` | `GET /storage_boxes/{id}/snapshots` |
-| `getSnapshot(storageBoxId, snapshotId)` | `GET /storage_boxes/{id}/snapshots/{snapshot_id}` |
-| `getSnapshotByName(storageBoxId, name)` | `GET /storage_boxes/{id}/snapshots?name=` |
-| `createSnapshot(storageBoxId, params?)` | `POST /storage_boxes/{id}/snapshots` |
-| `updateSnapshot(storageBoxId, snapshotId, params)` | `PUT /storage_boxes/{id}/snapshots/{snapshot_id}` |
-| `deleteSnapshot(storageBoxId, snapshotId)` | `DELETE /storage_boxes/{id}/snapshots/{snapshot_id}` |
-| `listSubaccounts(storageBoxId, params?)` | `GET /storage_boxes/{id}/subaccounts` |
-| `getSubaccount(storageBoxId, subaccountId)` | `GET /storage_boxes/{id}/subaccounts/{subaccount_id}` |
-| `getSubaccountByName(storageBoxId, name)` | `GET /storage_boxes/{id}/subaccounts?name=` |
-| `getSubaccountByUsername(storageBoxId, username)` | `GET /storage_boxes/{id}/subaccounts?username=` |
-| `createSubaccount(storageBoxId, params)` | `POST /storage_boxes/{id}/subaccounts` |
-| `updateSubaccount(storageBoxId, subaccountId, params)` | `PUT /storage_boxes/{id}/subaccounts/{subaccount_id}` |
-| `deleteSubaccount(storageBoxId, subaccountId)` | `DELETE /storage_boxes/{id}/subaccounts/{subaccount_id}` |
-| `changeSubaccountHomeDirectory(storageBoxId, subaccountId, params)` | `POST .../subaccounts/{subaccount_id}/actions/change_home_directory` |
-| `resetSubaccountPassword(storageBoxId, subaccountId, params)` | `POST .../subaccounts/{subaccount_id}/actions/reset_subaccount_password` |
-| `updateSubaccountAccessSettings(storageBoxId, subaccountId, params)` | `POST .../subaccounts/{subaccount_id}/actions/update_access_settings` |
+| Method                                                                               | Endpoint                                                                 |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `list(params?)`                                                                      | `GET /storage_boxes`                                                     |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /storage_boxes` (all pages)                                         |
+| `getByName(name)`                                                                    | `GET /storage_boxes?name=`                                               |
+| `get(id)`                                                                            | `GET /storage_boxes/{id}`                                                |
+| `create(params)`                                                                     | `POST /storage_boxes`                                                    |
+| `update(id, params)`                                                                 | `PUT /storage_boxes/{id}`                                                |
+| `delete(id)`                                                                         | `DELETE /storage_boxes/{id}`                                             |
+| `listFolders(id, params?)`                                                           | `GET /storage_boxes/{id}/folders`                                        |
+| `changeProtection(id, params)`                                                       | `POST /storage_boxes/{id}/actions/change_protection`                     |
+| `changeType(id, params)`                                                             | `POST /storage_boxes/{id}/actions/change_type`                           |
+| `resetPassword(id, params)`                                                          | `POST /storage_boxes/{id}/actions/reset_password`                        |
+| `updateAccessSettings(id, params)`                                                   | `POST /storage_boxes/{id}/actions/update_access_settings`                |
+| `rollbackSnapshot(id, params)`                                                       | `POST /storage_boxes/{id}/actions/rollback_snapshot`                     |
+| `enableSnapshotPlan(id, params)`                                                     | `POST /storage_boxes/{id}/actions/enable_snapshot_plan`                  |
+| `disableSnapshotPlan(id)`                                                            | `POST /storage_boxes/{id}/actions/disable_snapshot_plan`                 |
+| `listActions(id, params?)`                                                           | `GET /storage_boxes/{id}/actions`                                        |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /storage_boxes/actions`, `GET /storage_boxes/actions/{id}`          |
+| `actions.waitFor(action)` / `actions.waitForAll(actions)`                            | polls `GET /storage_boxes/actions/{id}`                                  |
+| `listSnapshots(storageBoxId, params?)`                                               | `GET /storage_boxes/{id}/snapshots`                                      |
+| `getSnapshot(storageBoxId, snapshotId)`                                              | `GET /storage_boxes/{id}/snapshots/{snapshot_id}`                        |
+| `getSnapshotByName(storageBoxId, name)`                                              | `GET /storage_boxes/{id}/snapshots?name=`                                |
+| `createSnapshot(storageBoxId, params?)`                                              | `POST /storage_boxes/{id}/snapshots`                                     |
+| `updateSnapshot(storageBoxId, snapshotId, params)`                                   | `PUT /storage_boxes/{id}/snapshots/{snapshot_id}`                        |
+| `deleteSnapshot(storageBoxId, snapshotId)`                                           | `DELETE /storage_boxes/{id}/snapshots/{snapshot_id}`                     |
+| `listSubaccounts(storageBoxId, params?)`                                             | `GET /storage_boxes/{id}/subaccounts`                                    |
+| `getSubaccount(storageBoxId, subaccountId)`                                          | `GET /storage_boxes/{id}/subaccounts/{subaccount_id}`                    |
+| `getSubaccountByName(storageBoxId, name)`                                            | `GET /storage_boxes/{id}/subaccounts?name=`                              |
+| `getSubaccountByUsername(storageBoxId, username)`                                    | `GET /storage_boxes/{id}/subaccounts?username=`                          |
+| `createSubaccount(storageBoxId, params)`                                             | `POST /storage_boxes/{id}/subaccounts`                                   |
+| `updateSubaccount(storageBoxId, subaccountId, params)`                               | `PUT /storage_boxes/{id}/subaccounts/{subaccount_id}`                    |
+| `deleteSubaccount(storageBoxId, subaccountId)`                                       | `DELETE /storage_boxes/{id}/subaccounts/{subaccount_id}`                 |
+| `changeSubaccountHomeDirectory(storageBoxId, subaccountId, params)`                  | `POST .../subaccounts/{subaccount_id}/actions/change_home_directory`     |
+| `resetSubaccountPassword(storageBoxId, subaccountId, params)`                        | `POST .../subaccounts/{subaccount_id}/actions/reset_subaccount_password` |
+| `updateSubaccountAccessSettings(storageBoxId, subaccountId, params)`                 | `POST .../subaccounts/{subaccount_id}/actions/update_access_settings`    |
 
 ## Storage Boxes
 
@@ -388,11 +388,7 @@ await client.storageBoxes.updateSubaccountAccessSettings(42, 45, { readonly: tru
 ## Types
 
 ```typescript
-import type {
-  StorageBox,
-  StorageBoxSnapshot,
-  StorageBoxSubaccount,
-} from "@nilovonjs/hcloud-js";
+import type { StorageBox, StorageBoxSnapshot, StorageBoxSubaccount } from "@nilovonjs/hcloud-js";
 
 type StorageBoxStatus = "active" | "initializing" | "locked";
 

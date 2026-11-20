@@ -16,23 +16,23 @@ const client = new HCloudClient();
 
 Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /floating_ips` |
-| `get(id)` | `GET /floating_ips/{id}` |
-| `getByName(name)` | `GET /floating_ips?name=` |
-| `getByIP(ip)` | `GET /floating_ips` (all pages) |
-| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /floating_ips` (all pages) |
-| `create(params)` | `POST /floating_ips` |
-| `update(id, params)` | `PUT /floating_ips/{id}` |
-| `delete(id)` | `DELETE /floating_ips/{id}` |
-| `assignToServer(id, params)` | `POST /floating_ips/{id}/actions/assign` |
-| `unassign(id)` | `POST /floating_ips/{id}/actions/unassign` |
-| `changeReverseDNS(id, params)` | `POST /floating_ips/{id}/actions/change_dns_ptr` |
-| `changeProtection(id, params)` | `POST /floating_ips/{id}/actions/change_protection` |
-| `listActions(id, params?)` | `GET /floating_ips/{id}/actions` |
-| `getAction(id, actionId)` | `GET /floating_ips/{id}/actions/{action_id}` |
-| `actions.list(params?)` / `actions.get(id)` | `GET /floating_ips/actions`, `GET /floating_ips/actions/{id}` |
+| Method                                                                               | Endpoint                                                      |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `list(params?)`                                                                      | `GET /floating_ips`                                           |
+| `get(id)`                                                                            | `GET /floating_ips/{id}`                                      |
+| `getByName(name)`                                                                    | `GET /floating_ips?name=`                                     |
+| `getByIP(ip)`                                                                        | `GET /floating_ips` (all pages)                               |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /floating_ips` (all pages)                               |
+| `create(params)`                                                                     | `POST /floating_ips`                                          |
+| `update(id, params)`                                                                 | `PUT /floating_ips/{id}`                                      |
+| `delete(id)`                                                                         | `DELETE /floating_ips/{id}`                                   |
+| `assignToServer(id, params)`                                                         | `POST /floating_ips/{id}/actions/assign`                      |
+| `unassign(id)`                                                                       | `POST /floating_ips/{id}/actions/unassign`                    |
+| `changeReverseDNS(id, params)`                                                       | `POST /floating_ips/{id}/actions/change_dns_ptr`              |
+| `changeProtection(id, params)`                                                       | `POST /floating_ips/{id}/actions/change_protection`           |
+| `listActions(id, params?)`                                                           | `GET /floating_ips/{id}/actions`                              |
+| `getAction(id, actionId)`                                                            | `GET /floating_ips/{id}/actions/{action_id}`                  |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /floating_ips/actions`, `GET /floating_ips/actions/{id}` |
 
 ## List Floating IPs
 

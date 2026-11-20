@@ -44,13 +44,13 @@ HCloudError
 
 ## Common properties
 
-| Property | Description |
-| --- | --- |
-| `message` | Human readable message |
-| `code` | Machine readable code: API codes are lowercase (`not_found`), SDK codes uppercase (`TIMEOUT`) |
-| `statusCode` | HTTP status, `0` if the error did not come from a response |
-| `details` | Additional details, e.g. invalid fields |
-| `cause` | The underlying error, if any |
+| Property     | Description                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| `message`    | Human readable message                                                                        |
+| `code`       | Machine readable code: API codes are lowercase (`not_found`), SDK codes uppercase (`TIMEOUT`) |
+| `statusCode` | HTTP status, `0` if the error did not come from a response                                    |
+| `details`    | Additional details, e.g. invalid fields                                                       |
+| `cause`      | The underlying error, if any                                                                  |
 
 `error.is(code)` and the `isHCloudError()` guard help with code checks:
 
@@ -84,11 +84,11 @@ try {
   await client.servers.create({ name: "web 1", server_type: "cx22", image: "ubuntu-24.04" });
 } catch (error) {
   if (error instanceof HCloudApiError) {
-    console.error(error.status);     // 422
-    console.error(error.code);       // "invalid_input"
-    console.error(error.method);     // "POST"
-    console.error(error.url);        // "https://api.hetzner.cloud/v1/servers"
-    console.error(error.requestId);  // correlation ID - include it in support requests
+    console.error(error.status); // 422
+    console.error(error.code); // "invalid_input"
+    console.error(error.method); // "POST"
+    console.error(error.url); // "https://api.hetzner.cloud/v1/servers"
+    console.error(error.requestId); // correlation ID - include it in support requests
 
     for (const field of error.getFieldErrors()) {
       console.error(`${field.name}: ${field.messages.join(", ")}`);
@@ -162,27 +162,27 @@ See [Waiting for Actions](/docs/actions#handling-failures).
 
 ## Error codes
 
-| Code | Class | Meaning |
-| --- | --- | --- |
-| `unauthorized` | `HCloudUnauthorizedError` | Token missing or invalid |
-| `forbidden`, `token_readonly` | `HCloudForbiddenError` | Insufficient permissions |
-| `not_found` | `HCloudNotFoundError` | Resource does not exist |
-| `invalid_input`, `json_error` | `HCloudInvalidInputError` / `HCloudApiError` | Request was malformed |
-| `uniqueness_error` | `HCloudConflictError` | A resource with this name exists already |
-| `conflict` | `HCloudConflictError` | Resource changed during the request (retried automatically) |
-| `locked` | `HCloudApiError` | Another action is running on the resource |
-| `protected` | `HCloudApiError` | The resource is protected against this change |
-| `resource_limit_exceeded` | `HCloudApiError` | Project limit reached |
-| `resource_unavailable` | `HCloudApiError` | Resource currently not available |
-| `rate_limit_exceeded` | `HCloudRateLimitError` | Too many requests (retried automatically) |
-| `server_error`, `service_error` | `HCloudServerError` | Error inside the API |
-| `INVALID_TOKEN` | `HCloudError` | No token configured |
-| `TIMEOUT` | `HCloudTimeoutError` | Request timed out |
-| `NETWORK_ERROR` | `HCloudConnectionError` | Request could not be sent |
-| `ABORTED` | `HCloudAbortError` | Cancelled through an `AbortSignal` |
-| `VALIDATION_ERROR` | `HCloudValidationError` | Schema validation failed |
-| `ACTION_TIMEOUT` | `HCloudActionTimeoutError` | Action did not finish in time |
-| `WAIT_TIMEOUT` | `HCloudError` | A resource did not reach the expected state in time |
+| Code                            | Class                                        | Meaning                                                     |
+| ------------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| `unauthorized`                  | `HCloudUnauthorizedError`                    | Token missing or invalid                                    |
+| `forbidden`, `token_readonly`   | `HCloudForbiddenError`                       | Insufficient permissions                                    |
+| `not_found`                     | `HCloudNotFoundError`                        | Resource does not exist                                     |
+| `invalid_input`, `json_error`   | `HCloudInvalidInputError` / `HCloudApiError` | Request was malformed                                       |
+| `uniqueness_error`              | `HCloudConflictError`                        | A resource with this name exists already                    |
+| `conflict`                      | `HCloudConflictError`                        | Resource changed during the request (retried automatically) |
+| `locked`                        | `HCloudApiError`                             | Another action is running on the resource                   |
+| `protected`                     | `HCloudApiError`                             | The resource is protected against this change               |
+| `resource_limit_exceeded`       | `HCloudApiError`                             | Project limit reached                                       |
+| `resource_unavailable`          | `HCloudApiError`                             | Resource currently not available                            |
+| `rate_limit_exceeded`           | `HCloudRateLimitError`                       | Too many requests (retried automatically)                   |
+| `server_error`, `service_error` | `HCloudServerError`                          | Error inside the API                                        |
+| `INVALID_TOKEN`                 | `HCloudError`                                | No token configured                                         |
+| `TIMEOUT`                       | `HCloudTimeoutError`                         | Request timed out                                           |
+| `NETWORK_ERROR`                 | `HCloudConnectionError`                      | Request could not be sent                                   |
+| `ABORTED`                       | `HCloudAbortError`                           | Cancelled through an `AbortSignal`                          |
+| `VALIDATION_ERROR`              | `HCloudValidationError`                      | Schema validation failed                                    |
+| `ACTION_TIMEOUT`                | `HCloudActionTimeoutError`                   | Action did not finish in time                               |
+| `WAIT_TIMEOUT`                  | `HCloudError`                                | A resource did not reach the expected state in time         |
 
 The complete list of API error codes is part of the
 [Hetzner documentation](https://docs.hetzner.cloud/reference/cloud#errors).

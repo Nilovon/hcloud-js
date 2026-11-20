@@ -113,7 +113,11 @@ const loadBalancer = {
         },
       ],
     },
-    { type: "ip", ip: { ip: "203.0.113.1" }, health_status: [{ listen_port: 443, status: "unknown" }] },
+    {
+      type: "ip",
+      ip: { ip: "203.0.113.1" },
+      health_status: [{ listen_port: 443, status: "unknown" }],
+    },
   ],
   algorithm: { type: "round_robin" },
 };
@@ -188,7 +192,10 @@ describe("LoadBalancersClient", () => {
   });
 
   test("getByName returns the exact match or undefined", async () => {
-    const { loadBalancers, last } = setup({ load_balancers: [loadBalancer] }, { load_balancers: [] });
+    const { loadBalancers, last } = setup(
+      { load_balancers: [loadBalancer] },
+      { load_balancers: [] },
+    );
     expect<unknown>(await loadBalancers.getByName("Web Frontend")).toEqual(loadBalancer);
     expect(last().query).toEqual({ name: ["Web Frontend"] });
 
@@ -524,7 +531,10 @@ describe("LoadBalancersClient", () => {
       type: "label_selector",
       label_selector: { selector: "env=prod" },
     });
-    expect(last().body).toEqual({ type: "label_selector", label_selector: { selector: "env=prod" } });
+    expect(last().body).toEqual({
+      type: "label_selector",
+      label_selector: { selector: "env=prod" },
+    });
 
     await loadBalancers.addTarget(4711, { type: "ip", ip: { ip: "203.0.113.1" } });
     expect(last().body).toEqual({ type: "ip", ip: { ip: "203.0.113.1" } });

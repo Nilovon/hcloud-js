@@ -217,9 +217,20 @@ export class BaseClient {
       if (hasBody) headers.set("Content-Type", "application/json");
       headers.set("Authorization", `Bearer ${await this.#resolveToken()}`);
 
-      const request: RequestContext = { method, url, path: config.path, headers, body, attempt, api };
+      const request: RequestContext = {
+        method,
+        url,
+        path: config.path,
+        headers,
+        body,
+        attempt,
+        api,
+      };
       await this.#hooks.onRequest?.(request);
-      this.#log?.(`→ ${method} ${url.pathname}${url.search}`, attempt > 0 ? { attempt } : undefined);
+      this.#log?.(
+        `→ ${method} ${url.pathname}${url.search}`,
+        attempt > 0 ? { attempt } : undefined,
+      );
 
       const startedAt = Date.now();
       const requestSignal = createRequestSignal(timeout, config.signal);
@@ -346,6 +357,7 @@ export class BaseClient {
 }
 
 function readEnv(name: string): string | undefined {
-  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
+    ?.env;
   return env?.[name];
 }

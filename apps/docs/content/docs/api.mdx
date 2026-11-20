@@ -7,29 +7,29 @@ Every API resource has a sub-client on `HCloudClient`.
 
 ## Resources
 
-| Client | Resource | Notes |
-| --- | --- | --- |
-| [`client.servers`](/docs/API/servers) | Servers | All server actions, metrics, `createAndWait()`, `waitForStatus()` |
-| [`client.serverTypes`](/docs/API/server-types) | Server types | Read-only |
-| [`client.images`](/docs/API/images) | Images, snapshots, backups | |
-| [`client.isos`](/docs/API/isos) | ISOs | Read-only |
-| [`client.placementGroups`](/docs/API/placement-groups) | Placement groups | |
-| [`client.sshKeys`](/docs/API/ssh-keys) | SSH keys | |
-| [`client.volumes`](/docs/API/volumes) | Volumes | |
-| [`client.networks`](/docs/API/networks) | Networks, subnets, routes | |
-| [`client.firewalls`](/docs/API/firewalls) | Firewalls | |
-| [`client.floatingIPs`](/docs/API/floating-ips) | Floating IPs | |
-| [`client.primaryIPs`](/docs/API/primary-ips) | Primary IPs | |
-| [`client.loadBalancers`](/docs/API/load-balancers) | Load balancers | Services, targets, metrics |
-| [`client.loadBalancerTypes`](/docs/API/load-balancer-types) | Load balancer types | Read-only |
-| [`client.certificates`](/docs/API/certificates) | TLS certificates | |
-| [`client.dns`](/docs/API/dns) | DNS zones and RRSets | |
-| [`client.storageBoxes`](/docs/API/storage-boxes) | Storage Boxes | Snapshots, subaccounts. Served by `api.hetzner.com` |
-| [`client.storageBoxTypes`](/docs/API/storage-box-types) | Storage Box types | Read-only |
-| [`client.locations`](/docs/API/locations) | Locations | Read-only |
-| [`client.datacenters`](/docs/API/datacenters) | Datacenters | Deprecated by Hetzner |
-| [`client.pricing`](/docs/API/pricing) | Prices | Read-only |
-| [`client.actions`](/docs/API/actions) | Actions | `waitFor()`, `waitForAll()` |
+| Client                                                      | Resource                   | Notes                                                             |
+| ----------------------------------------------------------- | -------------------------- | ----------------------------------------------------------------- |
+| [`client.servers`](/docs/API/servers)                       | Servers                    | All server actions, metrics, `createAndWait()`, `waitForStatus()` |
+| [`client.serverTypes`](/docs/API/server-types)              | Server types               | Read-only                                                         |
+| [`client.images`](/docs/API/images)                         | Images, snapshots, backups |                                                                   |
+| [`client.isos`](/docs/API/isos)                             | ISOs                       | Read-only                                                         |
+| [`client.placementGroups`](/docs/API/placement-groups)      | Placement groups           |                                                                   |
+| [`client.sshKeys`](/docs/API/ssh-keys)                      | SSH keys                   |                                                                   |
+| [`client.volumes`](/docs/API/volumes)                       | Volumes                    |                                                                   |
+| [`client.networks`](/docs/API/networks)                     | Networks, subnets, routes  |                                                                   |
+| [`client.firewalls`](/docs/API/firewalls)                   | Firewalls                  |                                                                   |
+| [`client.floatingIPs`](/docs/API/floating-ips)              | Floating IPs               |                                                                   |
+| [`client.primaryIPs`](/docs/API/primary-ips)                | Primary IPs                |                                                                   |
+| [`client.loadBalancers`](/docs/API/load-balancers)          | Load balancers             | Services, targets, metrics                                        |
+| [`client.loadBalancerTypes`](/docs/API/load-balancer-types) | Load balancer types        | Read-only                                                         |
+| [`client.certificates`](/docs/API/certificates)             | TLS certificates           |                                                                   |
+| [`client.dns`](/docs/API/dns)                               | DNS zones and RRSets       |                                                                   |
+| [`client.storageBoxes`](/docs/API/storage-boxes)            | Storage Boxes              | Snapshots, subaccounts. Served by `api.hetzner.com`               |
+| [`client.storageBoxTypes`](/docs/API/storage-box-types)     | Storage Box types          | Read-only                                                         |
+| [`client.locations`](/docs/API/locations)                   | Locations                  | Read-only                                                         |
+| [`client.datacenters`](/docs/API/datacenters)               | Datacenters                | Deprecated by Hetzner                                             |
+| [`client.pricing`](/docs/API/pricing)                       | Prices                     | Read-only                                                         |
+| [`client.actions`](/docs/API/actions)                       | Actions                    | `waitFor()`, `waitForAll()`                                       |
 
 ## Conventions
 
@@ -51,13 +51,13 @@ await client.sshKeys.delete(7); // endpoints answering 204 resolve to undefined
 
 Every listable resource additionally has:
 
-| Method | Returns |
-| --- | --- |
-| `listAll(params?)` | `Item[]` - all pages |
-| `iterate(params?)` | `AsyncGenerator<Item>` - lazily, page by page |
-| `iteratePages(params?)` | `AsyncGenerator<ListResponse>` |
-| `first(params?)` | `Item \| undefined` |
-| `getByName(name)` | `Item \| undefined` (resources with a name filter) |
+| Method                  | Returns                                            |
+| ----------------------- | -------------------------------------------------- |
+| `listAll(params?)`      | `Item[]` - all pages                               |
+| `iterate(params?)`      | `AsyncGenerator<Item>` - lazily, page by page      |
+| `iteratePages(params?)` | `AsyncGenerator<ListResponse>`                     |
+| `first(params?)`        | `Item \| undefined`                                |
+| `getByName(name)`       | `Item \| undefined` (resources with a name filter) |
 
 See [Pagination](/docs/pagination).
 

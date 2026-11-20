@@ -48,6 +48,23 @@ export interface CallSpec<S extends z.ZodType | null> {
 export type CallResult<S extends z.ZodType | null> = S extends z.ZodType ? z.output<S> : void;
 
 /**
+ * Schema mismatches that were reported already, per client. The same mismatch
+ * is only reported once to keep logs readable.
+ */
+const reportedWarnings = new WeakMap<BaseClient, Set<string>>();
+
+function shouldWarn(client: BaseClient, key: string): boolean {
+  let reported = reportedWarnings.get(client);
+  if (!reported) {
+    reported = new Set();
+    reportedWarnings.set(client, reported);
+  }
+  if (reported.has(key)) return false;
+  reported.add(key);
+  return true;
+}
+
+/**
  * Base class of all resource clients.
  */
 export abstract class ApiResource {
@@ -106,6 +123,10 @@ export abstract class ApiResource {
           target: "response",
         });
         if (responseValidation === "throw") throw error;
+        const signature = error.issues.map((issue) => issue.path.join(".")).join(",");
+        if (!shouldWarn(this.client, `${method} ${url.replace(/\d+/g, ":id")} ${signature}`)) {
+          return data as CallResult<S>;
+        }
         this.client.config.onWarning(
           `${error.message}. The response is returned as-is. ` +
             "This usually means the API changed - please update @nilovonjs/hcloud-js or report an issue.",

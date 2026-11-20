@@ -264,7 +264,12 @@ describe("StorageBoxesClient", () => {
       });
 
       expect(
-        storageBoxes.create({ name: "", password: "x", location: "fsn1", storage_box_type: "bx11" }),
+        storageBoxes.create({
+          name: "",
+          password: "x",
+          location: "fsn1",
+          storage_box_type: "bx11",
+        }),
       ).rejects.toBeInstanceOf(HCloudValidationError);
       expect(
         // @ts-expect-error password is required
@@ -359,11 +364,13 @@ describe("StorageBoxesClient", () => {
       const result = await storageBoxes.actions.waitFor(created);
 
       expect(result.status).toBe("success");
-      expect(requests.map((request) => `${request.method} ${request.host}${request.path}`)).toEqual([
-        "POST api.hetzner.com/storage_boxes",
-        "GET api.hetzner.com/storage_boxes/actions/1",
-        "GET api.hetzner.com/storage_boxes/actions/1",
-      ]);
+      expect(requests.map((request) => `${request.method} ${request.host}${request.path}`)).toEqual(
+        [
+          "POST api.hetzner.com/storage_boxes",
+          "GET api.hetzner.com/storage_boxes/actions/1",
+          "GET api.hetzner.com/storage_boxes/actions/1",
+        ],
+      );
     });
 
     test("listActions", async () => {

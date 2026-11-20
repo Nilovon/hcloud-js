@@ -20,26 +20,26 @@ const client = new HCloudClient();
 - Servers and load balancers are attached to a network through their own clients
   (`client.servers.attachToNetwork()`, `client.loadBalancers.attachToNetwork()`).
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /networks` |
-| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /networks` (paginated for you) |
-| `getByName(name)` | `GET /networks?name=...` |
-| `get(id)` | `GET /networks/{id}` |
-| `create(params)` | `POST /networks` |
-| `update(id, params)` | `PUT /networks/{id}` |
-| `delete(id)` | `DELETE /networks/{id}` |
-| `listMembers(id, params?)` | `GET /networks/{id}/members` |
-| `iterateMembers(id, params?)` / `listAllMembers(id, params?)` | `GET /networks/{id}/members` (all pages) |
-| `addSubnet(id, params)` | `POST /networks/{id}/actions/add_subnet` |
-| `deleteSubnet(id, params)` | `POST /networks/{id}/actions/delete_subnet` |
-| `addRoute(id, params)` | `POST /networks/{id}/actions/add_route` |
-| `deleteRoute(id, params)` | `POST /networks/{id}/actions/delete_route` |
-| `changeIpRange(id, params)` | `POST /networks/{id}/actions/change_ip_range` |
-| `changeProtection(id, params)` | `POST /networks/{id}/actions/change_protection` |
-| `listActions(id, params?)` | `GET /networks/{id}/actions` |
-| `getAction(id, actionId)` | `GET /networks/{id}/actions/{action_id}` |
-| `actions.list(params?)` / `actions.get(id)` | `GET /networks/actions`, `GET /networks/actions/{id}` |
+| Method                                                                               | Endpoint                                              |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `list(params?)`                                                                      | `GET /networks`                                       |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /networks` (paginated for you)                   |
+| `getByName(name)`                                                                    | `GET /networks?name=...`                              |
+| `get(id)`                                                                            | `GET /networks/{id}`                                  |
+| `create(params)`                                                                     | `POST /networks`                                      |
+| `update(id, params)`                                                                 | `PUT /networks/{id}`                                  |
+| `delete(id)`                                                                         | `DELETE /networks/{id}`                               |
+| `listMembers(id, params?)`                                                           | `GET /networks/{id}/members`                          |
+| `iterateMembers(id, params?)` / `listAllMembers(id, params?)`                        | `GET /networks/{id}/members` (all pages)              |
+| `addSubnet(id, params)`                                                              | `POST /networks/{id}/actions/add_subnet`              |
+| `deleteSubnet(id, params)`                                                           | `POST /networks/{id}/actions/delete_subnet`           |
+| `addRoute(id, params)`                                                               | `POST /networks/{id}/actions/add_route`               |
+| `deleteRoute(id, params)`                                                            | `POST /networks/{id}/actions/delete_route`            |
+| `changeIpRange(id, params)`                                                          | `POST /networks/{id}/actions/change_ip_range`         |
+| `changeProtection(id, params)`                                                       | `POST /networks/{id}/actions/change_protection`       |
+| `listActions(id, params?)`                                                           | `GET /networks/{id}/actions`                          |
+| `getAction(id, actionId)`                                                            | `GET /networks/{id}/actions/{action_id}`              |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /networks/actions`, `GET /networks/actions/{id}` |
 
 ## Networks
 

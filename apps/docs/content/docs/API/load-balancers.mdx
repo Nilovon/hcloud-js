@@ -16,32 +16,32 @@ const client = new HCloudClient();
 
 Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /load_balancers` |
-| `get(id)` | `GET /load_balancers/{id}` |
-| `getByName(name)` | `GET /load_balancers?name=` |
-| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /load_balancers` (all pages) |
-| `create(params)` | `POST /load_balancers` |
-| `update(id, params)` | `PUT /load_balancers/{id}` |
-| `delete(id)` | `DELETE /load_balancers/{id}` |
-| `getMetrics(id, params)` | `GET /load_balancers/{id}/metrics` |
-| `addService(id, params)` | `POST /load_balancers/{id}/actions/add_service` |
-| `updateService(id, listenPort, params)` | `POST /load_balancers/{id}/actions/update_service` |
-| `deleteService(id, listenPort)` | `POST /load_balancers/{id}/actions/delete_service` |
-| `addTarget(id, params)` | `POST /load_balancers/{id}/actions/add_target` |
-| `removeTarget(id, params)` | `POST /load_balancers/{id}/actions/remove_target` |
-| `changeAlgorithm(id, params)` | `POST /load_balancers/{id}/actions/change_algorithm` |
-| `changeReverseDNS(id, params)` | `POST /load_balancers/{id}/actions/change_dns_ptr` |
-| `changeProtection(id, params)` | `POST /load_balancers/{id}/actions/change_protection` |
-| `changeType(id, params)` | `POST /load_balancers/{id}/actions/change_type` |
-| `attachToNetwork(id, params)` | `POST /load_balancers/{id}/actions/attach_to_network` |
-| `detachFromNetwork(id, networkId)` | `POST /load_balancers/{id}/actions/detach_from_network` |
-| `enablePublicInterface(id)` | `POST /load_balancers/{id}/actions/enable_public_interface` |
-| `disablePublicInterface(id)` | `POST /load_balancers/{id}/actions/disable_public_interface` |
-| `listActions(id, params?)` | `GET /load_balancers/{id}/actions` |
-| `getAction(id, actionId)` | `GET /load_balancers/{id}/actions/{action_id}` |
-| `actions.list(params?)` / `actions.get(id)` | `GET /load_balancers/actions`, `GET /load_balancers/actions/{id}` |
+| Method                                                                               | Endpoint                                                          |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `list(params?)`                                                                      | `GET /load_balancers`                                             |
+| `get(id)`                                                                            | `GET /load_balancers/{id}`                                        |
+| `getByName(name)`                                                                    | `GET /load_balancers?name=`                                       |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /load_balancers` (all pages)                                 |
+| `create(params)`                                                                     | `POST /load_balancers`                                            |
+| `update(id, params)`                                                                 | `PUT /load_balancers/{id}`                                        |
+| `delete(id)`                                                                         | `DELETE /load_balancers/{id}`                                     |
+| `getMetrics(id, params)`                                                             | `GET /load_balancers/{id}/metrics`                                |
+| `addService(id, params)`                                                             | `POST /load_balancers/{id}/actions/add_service`                   |
+| `updateService(id, listenPort, params)`                                              | `POST /load_balancers/{id}/actions/update_service`                |
+| `deleteService(id, listenPort)`                                                      | `POST /load_balancers/{id}/actions/delete_service`                |
+| `addTarget(id, params)`                                                              | `POST /load_balancers/{id}/actions/add_target`                    |
+| `removeTarget(id, params)`                                                           | `POST /load_balancers/{id}/actions/remove_target`                 |
+| `changeAlgorithm(id, params)`                                                        | `POST /load_balancers/{id}/actions/change_algorithm`              |
+| `changeReverseDNS(id, params)`                                                       | `POST /load_balancers/{id}/actions/change_dns_ptr`                |
+| `changeProtection(id, params)`                                                       | `POST /load_balancers/{id}/actions/change_protection`             |
+| `changeType(id, params)`                                                             | `POST /load_balancers/{id}/actions/change_type`                   |
+| `attachToNetwork(id, params)`                                                        | `POST /load_balancers/{id}/actions/attach_to_network`             |
+| `detachFromNetwork(id, networkId)`                                                   | `POST /load_balancers/{id}/actions/detach_from_network`           |
+| `enablePublicInterface(id)`                                                          | `POST /load_balancers/{id}/actions/enable_public_interface`       |
+| `disablePublicInterface(id)`                                                         | `POST /load_balancers/{id}/actions/disable_public_interface`      |
+| `listActions(id, params?)`                                                           | `GET /load_balancers/{id}/actions`                                |
+| `getAction(id, actionId)`                                                            | `GET /load_balancers/{id}/actions/{action_id}`                    |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /load_balancers/actions`, `GET /load_balancers/actions/{id}` |
 
 ## List Load Balancers
 

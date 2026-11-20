@@ -31,7 +31,8 @@ try {
   await client.sshKeys.create({ name: "", public_key: "" });
 } catch (error) {
   if (error instanceof HCloudValidationError) {
-    for (const issue of error.issues) console.log(`Invalid ${issue.path.join(".")}: ${issue.message}`);
+    for (const issue of error.issues)
+      console.log(`Invalid ${issue.path.join(".")}: ${issue.message}`);
   }
 }
 
@@ -45,7 +46,8 @@ try {
 // 4. One handler for everything.
 function describe(error: unknown): string {
   if (error instanceof HCloudRateLimitError) return `rate limited, retry in ${error.retryAfter}s`;
-  if (error instanceof HCloudApiError) return `API error ${error.status} ${error.code}: ${error.message}`;
+  if (error instanceof HCloudApiError)
+    return `API error ${error.status} ${error.code}: ${error.message}`;
   if (isHCloudError(error)) return `SDK error ${error.code}: ${error.message}`;
   return String(error);
 }

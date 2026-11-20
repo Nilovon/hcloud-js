@@ -65,7 +65,10 @@ describe("PlacementGroupsClient", () => {
   });
 
   test("getByName returns the exact match or undefined", async () => {
-    const { placementGroups, last } = setup({ placement_groups: [placementGroup] }, { placement_groups: [] });
+    const { placementGroups, last } = setup(
+      { placement_groups: [placementGroup] },
+      { placement_groups: [] },
+    );
     expect(await placementGroups.getByName("my Placement Group")).toEqual(placementGroup);
     expect(last().query).toEqual({ name: ["my Placement Group"] });
 

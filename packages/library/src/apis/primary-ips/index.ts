@@ -148,7 +148,10 @@ export class PrimaryIPsClient extends NamedResource<
    * });
    * ```
    */
-  create(params: CreatePrimaryIPParams, options?: RequestOptions): Promise<CreatePrimaryIPResponse> {
+  create(
+    params: CreatePrimaryIPParams,
+    options?: RequestOptions,
+  ): Promise<CreatePrimaryIPResponse> {
     return this._post(
       "/primary_ips",
       createPrimaryIPResponseSchema,

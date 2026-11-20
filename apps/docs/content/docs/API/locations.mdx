@@ -17,11 +17,11 @@ const client = new HCloudClient();
 const { locations, meta } = await client.locations.list({ sort: "name:asc" });
 ```
 
-| Parameter | Description |
-| --- | --- |
-| `name` | Exact name |
-| `sort` | `id`, `name`, each with `:asc` / `:desc` |
-| `page`, `per_page` | Pagination |
+| Parameter          | Description                              |
+| ------------------ | ---------------------------------------- |
+| `name`             | Exact name                               |
+| `sort`             | `id`, `name`, each with `:asc` / `:desc` |
+| `page`, `per_page` | Pagination                               |
 
 Pagination helpers: `listAll()`, `iterate()`, `iteratePages()`, `first()`.
 

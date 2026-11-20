@@ -16,7 +16,11 @@ describe("retries", () => {
     [502, "bad_gateway"],
     [504, "timeout"],
   ])("retries HTTP %i (%s)", async (status, code) => {
-    const { client, requests } = mockClient([apiError(status, code), apiError(status, code), { ok: 1 }]);
+    const { client, requests } = mockClient([
+      apiError(status, code),
+      apiError(status, code),
+      { ok: 1 },
+    ]);
     expect(await client.post<{ ok: number }>("/servers", {})).toEqual({ ok: 1 });
     expect(requests).toHaveLength(3);
   });
@@ -104,7 +108,10 @@ describe("retries", () => {
   test("honors Retry-After", async () => {
     const delays: number[] = [];
     const { client } = mockClient(
-      [apiError(429, "rate_limit_exceeded", "slow down", { headers: { "retry-after": "0.02" } }), {}],
+      [
+        apiError(429, "rate_limit_exceeded", "slow down", { headers: { "retry-after": "0.02" } }),
+        {},
+      ],
       { retry: { baseDelay: 5000 }, hooks: { onRetry: (ctx) => void delays.push(ctx.delayMs) } },
     );
     await client.get("/servers");
@@ -130,7 +137,10 @@ describe("retry helpers", () => {
     expect(resolveRetryOptions()).toEqual(DEFAULT_RETRY_OPTIONS);
     expect(resolveRetryOptions(false).maxRetries).toBe(0);
     expect(resolveRetryOptions(3).maxRetries).toBe(3);
-    expect(resolveRetryOptions({ baseDelay: 10 }, 2)).toMatchObject({ baseDelay: 10, maxRetries: 2 });
+    expect(resolveRetryOptions({ baseDelay: 10 }, 2)).toMatchObject({
+      baseDelay: 10,
+      maxRetries: 2,
+    });
     expect(resolveRetryOptions({ maxRetries: undefined }).maxRetries).toBe(5);
   });
 

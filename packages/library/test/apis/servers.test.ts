@@ -280,7 +280,12 @@ describe("ServersClient", () => {
       next_actions: [],
       root_password: null,
     });
-    const params = { name: "a", server_type: "cx11", image: "ubuntu-24.04", datacenter: "fsn1-dc8" };
+    const params = {
+      name: "a",
+      server_type: "cx11",
+      image: "ubuntu-24.04",
+      datacenter: "fsn1-dc8",
+    };
     await servers.create(params);
     expect(last().body).toEqual({ name: "a", server_type: "cx11", image: "ubuntu-24.04" });
   });
@@ -677,7 +682,11 @@ describe("ServersClient", () => {
         image: { ...image, status: "creating", name: null, description: "my image" },
         action: serverAction("create_image"),
       });
-      const params = { description: "my image", type: "snapshot", labels: { key: "value" } } as const;
+      const params = {
+        description: "my image",
+        type: "snapshot",
+        labels: { key: "value" },
+      } as const;
       const result = await servers.createImage(42, params);
       expect(result.image.description).toBe("my image");
       expect(result.action.command).toBe("create_image");
@@ -694,7 +703,10 @@ describe("ServersClient", () => {
         { action: serverAction("rebuild_server"), root_password: "YItygq1v3GYjjMomLaKc" },
         { action: serverAction("rebuild_server"), root_password: null },
       );
-      const result = await servers.rebuild(42, { image: "ubuntu-20.04", user_data: "#cloud-config" });
+      const result = await servers.rebuild(42, {
+        image: "ubuntu-20.04",
+        user_data: "#cloud-config",
+      });
       expect(result.root_password).toBe("YItygq1v3GYjjMomLaKc");
       expect(last().method).toBe("POST");
       expect(last().path).toBe("/servers/42/actions/rebuild");

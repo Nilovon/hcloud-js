@@ -23,17 +23,17 @@ const { images, meta } = await client.images.list({
 });
 ```
 
-| Parameter | Description |
-| --- | --- |
-| `name` | Exact name. System images share their name across architectures |
-| `type` | `system`, `app`, `snapshot`, `backup` - one or many |
-| `status` | `available`, `creating`, `unavailable` - one or many |
-| `architecture` | `x86`, `arm` - one or many |
-| `bound_to` | Server IDs, for images of type `backup` - one or many |
-| `include_deprecated` | Include deprecated images. Default: `false` |
-| `label_selector` | [Label selector](/docs/pagination#label-selectors) |
-| `sort` | `id`, `name`, `created`, each with `:asc` / `:desc` |
-| `page`, `per_page` | Pagination |
+| Parameter            | Description                                                     |
+| -------------------- | --------------------------------------------------------------- |
+| `name`               | Exact name. System images share their name across architectures |
+| `type`               | `system`, `app`, `snapshot`, `backup` - one or many             |
+| `status`             | `available`, `creating`, `unavailable` - one or many            |
+| `architecture`       | `x86`, `arm` - one or many                                      |
+| `bound_to`           | Server IDs, for images of type `backup` - one or many           |
+| `include_deprecated` | Include deprecated images. Default: `false`                     |
+| `label_selector`     | [Label selector](/docs/pagination#label-selectors)              |
+| `sort`               | `id`, `name`, `created`, each with `:asc` / `:desc`             |
+| `page`, `per_page`   | Pagination                                                      |
 
 Pagination helpers: `listAll()`, `iterate()`, `iteratePages()`, `first()`.
 

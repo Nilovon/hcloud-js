@@ -19,21 +19,21 @@ const client = new HCloudClient();
   `actions`. Wait for them with `client.actions.waitForAll()`.
 - `firewall.rules` is a flat list; every rule has a `direction` (`"in"` or `"out"`).
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /firewalls` |
-| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /firewalls` (paginated for you) |
-| `getByName(name)` | `GET /firewalls?name=...` |
-| `get(id)` | `GET /firewalls/{id}` |
-| `create(params)` | `POST /firewalls` |
-| `update(id, params)` | `PUT /firewalls/{id}` |
-| `delete(id)` | `DELETE /firewalls/{id}` |
-| `setRules(id, params)` | `POST /firewalls/{id}/actions/set_rules` |
-| `applyToResources(id, params)` | `POST /firewalls/{id}/actions/apply_to_resources` |
-| `removeFromResources(id, params)` | `POST /firewalls/{id}/actions/remove_from_resources` |
-| `listActions(id, params?)` | `GET /firewalls/{id}/actions` |
-| `getAction(id, actionId)` | `GET /firewalls/{id}/actions/{action_id}` |
-| `actions.list(params?)` / `actions.get(id)` | `GET /firewalls/actions`, `GET /firewalls/actions/{id}` |
+| Method                                                                               | Endpoint                                                |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `list(params?)`                                                                      | `GET /firewalls`                                        |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /firewalls` (paginated for you)                    |
+| `getByName(name)`                                                                    | `GET /firewalls?name=...`                               |
+| `get(id)`                                                                            | `GET /firewalls/{id}`                                   |
+| `create(params)`                                                                     | `POST /firewalls`                                       |
+| `update(id, params)`                                                                 | `PUT /firewalls/{id}`                                   |
+| `delete(id)`                                                                         | `DELETE /firewalls/{id}`                                |
+| `setRules(id, params)`                                                               | `POST /firewalls/{id}/actions/set_rules`                |
+| `applyToResources(id, params)`                                                       | `POST /firewalls/{id}/actions/apply_to_resources`       |
+| `removeFromResources(id, params)`                                                    | `POST /firewalls/{id}/actions/remove_from_resources`    |
+| `listActions(id, params?)`                                                           | `GET /firewalls/{id}/actions`                           |
+| `getAction(id, actionId)`                                                            | `GET /firewalls/{id}/actions/{action_id}`               |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /firewalls/actions`, `GET /firewalls/actions/{id}` |
 
 ## Firewalls
 
@@ -114,14 +114,14 @@ await client.firewalls.delete(12345);
 
 ## Rules
 
-| Field | Description |
-| --- | --- |
-| `direction` | `"in"` or `"out"` |
-| `protocol` | `"tcp"`, `"udp"`, `"icmp"`, `"esp"` or `"gre"` |
-| `port` | Port (`"80"`) or port range (`"1024-5000"`). Required for `tcp` and `udp`, not allowed otherwise. |
-| `source_ips` | CIDRs traffic is allowed from, for rules with direction `in` |
-| `destination_ips` | CIDRs traffic is allowed to, for rules with direction `out` |
-| `description` | Optional description |
+| Field             | Description                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------- |
+| `direction`       | `"in"` or `"out"`                                                                                 |
+| `protocol`        | `"tcp"`, `"udp"`, `"icmp"`, `"esp"` or `"gre"`                                                    |
+| `port`            | Port (`"80"`) or port range (`"1024-5000"`). Required for `tcp` and `udp`, not allowed otherwise. |
+| `source_ips`      | CIDRs traffic is allowed from, for rules with direction `in`                                      |
+| `destination_ips` | CIDRs traffic is allowed to, for rules with direction `out`                                       |
+| `description`     | Optional description                                                                              |
 
 ### Set rules
 

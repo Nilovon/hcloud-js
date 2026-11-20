@@ -16,11 +16,11 @@ const client = new HCloudClient();
 
 Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /load_balancer_types` |
-| `get(id)` | `GET /load_balancer_types/{id}` |
-| `getByName(name)` | `GET /load_balancer_types?name=` |
+| Method                                                                               | Endpoint                               |
+| ------------------------------------------------------------------------------------ | -------------------------------------- |
+| `list(params?)`                                                                      | `GET /load_balancer_types`             |
+| `get(id)`                                                                            | `GET /load_balancer_types/{id}`        |
+| `getByName(name)`                                                                    | `GET /load_balancer_types?name=`       |
 | `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /load_balancer_types` (all pages) |
 
 ## List Load Balancer types

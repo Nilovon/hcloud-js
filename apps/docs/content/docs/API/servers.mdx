@@ -19,44 +19,44 @@ const client = new HCloudClient();
 - Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
 - Most mutating calls return an `action`. Wait for it with `client.actions.waitFor()`.
 
-| Method | Endpoint |
-| --- | --- |
-| `list(params?)` | `GET /servers` |
-| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /servers` (paginated) |
-| `getByName(name)` | `GET /servers?name=` |
-| `get(id)` | `GET /servers/{id}` |
-| `create(params)` | `POST /servers` |
-| `createAndWait(params, waitOptions?)` | `POST /servers`, then waits for all actions |
-| `update(id, params)` | `PUT /servers/{id}` |
-| `delete(id)` | `DELETE /servers/{id}` |
-| `waitForStatus(id, status, options?)` | polls `GET /servers/{id}` |
-| `getMetrics(id, params)` | `GET /servers/{id}/metrics` |
-| `listActions(id, params?)` | `GET /servers/{id}/actions` |
-| `getAction(id, actionId)` | `GET /servers/{id}/actions/{action_id}` |
-| `actions.list(params?)` / `actions.get(id)` | `GET /servers/actions`, `GET /servers/actions/{id}` |
-| `powerOn(id)` | `POST /servers/{id}/actions/poweron` |
-| `powerOff(id)` | `POST /servers/{id}/actions/poweroff` |
-| `reboot(id)` | `POST /servers/{id}/actions/reboot` |
-| `reset(id)` | `POST /servers/{id}/actions/reset` |
-| `shutdown(id)` | `POST /servers/{id}/actions/shutdown` |
-| `resetRootPassword(id)` | `POST /servers/{id}/actions/reset_password` |
-| `enableRescueMode(id, params?)` | `POST /servers/{id}/actions/enable_rescue` |
-| `disableRescueMode(id)` | `POST /servers/{id}/actions/disable_rescue` |
-| `createImage(id, params?)` | `POST /servers/{id}/actions/create_image` |
-| `rebuild(id, params)` | `POST /servers/{id}/actions/rebuild` |
-| `changeType(id, params)` | `POST /servers/{id}/actions/change_type` |
-| `changeProtection(id, params)` | `POST /servers/{id}/actions/change_protection` |
-| `enableBackups(id)` | `POST /servers/{id}/actions/enable_backup` |
-| `disableBackups(id)` | `POST /servers/{id}/actions/disable_backup` |
-| `attachISO(id, params)` | `POST /servers/{id}/actions/attach_iso` |
-| `detachISO(id)` | `POST /servers/{id}/actions/detach_iso` |
-| `changeReverseDNS(id, params)` | `POST /servers/{id}/actions/change_dns_ptr` |
-| `requestConsole(id)` | `POST /servers/{id}/actions/request_console` |
-| `attachToNetwork(id, params)` | `POST /servers/{id}/actions/attach_to_network` |
-| `detachFromNetwork(id, params)` | `POST /servers/{id}/actions/detach_from_network` |
-| `changeAliasIPs(id, params)` | `POST /servers/{id}/actions/change_alias_ips` |
-| `addToPlacementGroup(id, params)` | `POST /servers/{id}/actions/add_to_placement_group` |
-| `removeFromPlacementGroup(id)` | `POST /servers/{id}/actions/remove_from_placement_group` |
+| Method                                                                               | Endpoint                                                 |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| `list(params?)`                                                                      | `GET /servers`                                           |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /servers` (paginated)                               |
+| `getByName(name)`                                                                    | `GET /servers?name=`                                     |
+| `get(id)`                                                                            | `GET /servers/{id}`                                      |
+| `create(params)`                                                                     | `POST /servers`                                          |
+| `createAndWait(params, waitOptions?)`                                                | `POST /servers`, then waits for all actions              |
+| `update(id, params)`                                                                 | `PUT /servers/{id}`                                      |
+| `delete(id)`                                                                         | `DELETE /servers/{id}`                                   |
+| `waitForStatus(id, status, options?)`                                                | polls `GET /servers/{id}`                                |
+| `getMetrics(id, params)`                                                             | `GET /servers/{id}/metrics`                              |
+| `listActions(id, params?)`                                                           | `GET /servers/{id}/actions`                              |
+| `getAction(id, actionId)`                                                            | `GET /servers/{id}/actions/{action_id}`                  |
+| `actions.list(params?)` / `actions.get(id)`                                          | `GET /servers/actions`, `GET /servers/actions/{id}`      |
+| `powerOn(id)`                                                                        | `POST /servers/{id}/actions/poweron`                     |
+| `powerOff(id)`                                                                       | `POST /servers/{id}/actions/poweroff`                    |
+| `reboot(id)`                                                                         | `POST /servers/{id}/actions/reboot`                      |
+| `reset(id)`                                                                          | `POST /servers/{id}/actions/reset`                       |
+| `shutdown(id)`                                                                       | `POST /servers/{id}/actions/shutdown`                    |
+| `resetRootPassword(id)`                                                              | `POST /servers/{id}/actions/reset_password`              |
+| `enableRescueMode(id, params?)`                                                      | `POST /servers/{id}/actions/enable_rescue`               |
+| `disableRescueMode(id)`                                                              | `POST /servers/{id}/actions/disable_rescue`              |
+| `createImage(id, params?)`                                                           | `POST /servers/{id}/actions/create_image`                |
+| `rebuild(id, params)`                                                                | `POST /servers/{id}/actions/rebuild`                     |
+| `changeType(id, params)`                                                             | `POST /servers/{id}/actions/change_type`                 |
+| `changeProtection(id, params)`                                                       | `POST /servers/{id}/actions/change_protection`           |
+| `enableBackups(id)`                                                                  | `POST /servers/{id}/actions/enable_backup`               |
+| `disableBackups(id)`                                                                 | `POST /servers/{id}/actions/disable_backup`              |
+| `attachISO(id, params)`                                                              | `POST /servers/{id}/actions/attach_iso`                  |
+| `detachISO(id)`                                                                      | `POST /servers/{id}/actions/detach_iso`                  |
+| `changeReverseDNS(id, params)`                                                       | `POST /servers/{id}/actions/change_dns_ptr`              |
+| `requestConsole(id)`                                                                 | `POST /servers/{id}/actions/request_console`             |
+| `attachToNetwork(id, params)`                                                        | `POST /servers/{id}/actions/attach_to_network`           |
+| `detachFromNetwork(id, params)`                                                      | `POST /servers/{id}/actions/detach_from_network`         |
+| `changeAliasIPs(id, params)`                                                         | `POST /servers/{id}/actions/change_alias_ips`            |
+| `addToPlacementGroup(id, params)`                                                    | `POST /servers/{id}/actions/add_to_placement_group`      |
+| `removeFromPlacementGroup(id)`                                                       | `POST /servers/{id}/actions/remove_from_placement_group` |
 
 ## Servers
 
@@ -358,23 +358,23 @@ await client.servers.removeFromPlacementGroup(12345);
 import type { Server, ServerStatus } from "@nilovonjs/hcloud-js";
 ```
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id`, `name`, `created` | `number`, `string`, `string` | |
-| `status` | `ServerStatus` | `running`, `initializing`, `starting`, `stopping`, `off`, `deleting`, `migrating`, `rebuilding`, `unknown` |
-| `public_net` | `ServerPublicNet` | `ipv4` and `ipv6` are `null` if the server has none, `floating_ips` and `firewalls` hold IDs |
-| `private_net` | `ServerPrivateNet[]` | `network` (ID), `ip`, `alias_ips`, `mac_address` |
-| `server_type` | `ServerType` | |
-| `location` | `Location` | |
-| `datacenter` | `Datacenter \| undefined` | Deprecated: [removed from the API](https://docs.hetzner.cloud/changelog#2026-07-01-removing-datacenters), use `location` |
-| `image` | `Image \| null` | `null` if the image was deleted |
-| `iso` | `ISO \| null` | |
-| `placement_group` | `PlacementGroup \| null \| undefined` | |
-| `rescue_enabled`, `locked` | `boolean` | |
-| `backup_window` | `string \| null` | e.g. `"22-02"`, `null` if backups are disabled |
-| `outgoing_traffic`, `ingoing_traffic`, `included_traffic` | `number \| null` | Bytes in the current billing period |
-| `primary_disk_size` | `number` | GB |
-| `protection` | `ServerProtection` | `delete`, `rebuild` |
-| `labels` | `Labels` | |
-| `volumes` | `number[]` | IDs |
-| `load_balancers` | `number[] \| undefined` | IDs |
+| Field                                                     | Type                                  | Notes                                                                                                                    |
+| --------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `id`, `name`, `created`                                   | `number`, `string`, `string`          |                                                                                                                          |
+| `status`                                                  | `ServerStatus`                        | `running`, `initializing`, `starting`, `stopping`, `off`, `deleting`, `migrating`, `rebuilding`, `unknown`               |
+| `public_net`                                              | `ServerPublicNet`                     | `ipv4` and `ipv6` are `null` if the server has none, `floating_ips` and `firewalls` hold IDs                             |
+| `private_net`                                             | `ServerPrivateNet[]`                  | `network` (ID), `ip`, `alias_ips`, `mac_address`                                                                         |
+| `server_type`                                             | `ServerType`                          |                                                                                                                          |
+| `location`                                                | `Location`                            |                                                                                                                          |
+| `datacenter`                                              | `Datacenter \| undefined`             | Deprecated: [removed from the API](https://docs.hetzner.cloud/changelog#2026-07-01-removing-datacenters), use `location` |
+| `image`                                                   | `Image \| null`                       | `null` if the image was deleted                                                                                          |
+| `iso`                                                     | `ISO \| null`                         |                                                                                                                          |
+| `placement_group`                                         | `PlacementGroup \| null \| undefined` |                                                                                                                          |
+| `rescue_enabled`, `locked`                                | `boolean`                             |                                                                                                                          |
+| `backup_window`                                           | `string \| null`                      | e.g. `"22-02"`, `null` if backups are disabled                                                                           |
+| `outgoing_traffic`, `ingoing_traffic`, `included_traffic` | `number \| null`                      | Bytes in the current billing period                                                                                      |
+| `primary_disk_size`                                       | `number`                              | GB                                                                                                                       |
+| `protection`                                              | `ServerProtection`                    | `delete`, `rebuild`                                                                                                      |
+| `labels`                                                  | `Labels`                              |                                                                                                                          |
+| `volumes`                                                 | `number[]`                            | IDs                                                                                                                      |
+| `load_balancers`                                          | `number[] \| undefined`               | IDs                                                                                                                      |

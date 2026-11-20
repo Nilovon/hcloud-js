@@ -22,12 +22,12 @@ const { isos, meta } = await client.isos.list({
 });
 ```
 
-| Parameter | Description |
-| --- | --- |
-| `name` | Exact name |
-| `architecture` | `x86`, `arm` - one or many |
+| Parameter                       | Description                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| `name`                          | Exact name                                                                            |
+| `architecture`                  | `x86`, `arm` - one or many                                                            |
 | `include_architecture_wildcard` | Also return custom ISOs, which have no architecture, when filtering by `architecture` |
-| `page`, `per_page` | Pagination |
+| `page`, `per_page`              | Pagination                                                                            |
 
 Pagination helpers: `listAll()`, `iterate()`, `iteratePages()`, `first()`.
 

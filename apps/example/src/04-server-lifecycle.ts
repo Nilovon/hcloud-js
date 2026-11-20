@@ -33,7 +33,9 @@ try {
   await client.actions.waitFor(await client.servers.powerOn(server.id));
 
   console.log("Updating labels...");
-  await client.servers.update(server.id, { labels: { "managed-by": "hcloud-js-example", step: "done" } });
+  await client.servers.update(server.id, {
+    labels: { "managed-by": "hcloud-js-example", step: "done" },
+  });
 } finally {
   console.log("Deleting server...");
   await client.actions.waitFor(await client.servers.delete(server.id));

@@ -281,7 +281,12 @@ export class DNSClient extends ApiResource {
    * ```
    */
   exportZone(idOrName: ZoneIdOrName, options?: RequestOptions): Promise<ExportZoneResponse> {
-    return this._get(path`/zones/${idOrName}/zonefile`, exportZoneResponseSchema, undefined, options);
+    return this._get(
+      path`/zones/${idOrName}/zonefile`,
+      exportZoneResponseSchema,
+      undefined,
+      options,
+    );
   }
 
   // ---------------------------------------------------------------------------
