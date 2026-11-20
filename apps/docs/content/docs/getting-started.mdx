@@ -1,107 +1,136 @@
 ---
 title: Getting Started
-description: Start using hcloud-js in your project
+description: The core concepts of hcloud-js in five minutes
 ---
 
-# Getting Started
-
-This guide will help you get started with hcloud-js.
-
-## Creating a Client
-
-First, import and create an `HCloudClient` instance:
+## Create a client
 
 ```typescript
-import { HCloudClient } from '@nilovonjs/hcloud-js';
+import { HCloudClient } from "@nilovonjs/hcloud-js";
 
-const client = new HCloudClient({
-  token: 'your-api-token'
-});
+const client = new HCloudClient(); // token from HCLOUD_TOKEN
 ```
 
-## Configuration Options
+Every API resource has its own sub-client: `client.servers`, `client.networks`,
+`client.firewalls`, `client.dns`, `client.storageBoxes` and so on. See the
+[API reference](/docs/api) for the full list.
 
-The client accepts the following configuration options:
+## Read resources
+
+Methods mirror the REST API and return the API's response envelope:
 
 ```typescript
-const client = new HCloudClient({
-  token: 'your-api-token',        // Required: Your Hetzner Cloud API token
-  baseUrl: 'https://api.hetzner.cloud/v1', // Optional: API base URL (default)
-  timeout: 30000                  // Optional: Request timeout in milliseconds (default: 30000)
+const { servers, meta } = await client.servers.list({
+  status: ["running"],
+  label_selector: "env=production",
+  sort: "name:asc",
 });
+
+const { server } = await client.servers.get(42);
 ```
 
-## Getting Your API Token
-
-1. Log in to your [Hetzner Cloud Console](https://console.hetzner.cloud/)
-2. Navigate to **Security** → **API Tokens**
-3. Click **Generate API Token**
-4. Copy the token and store it securely
-
-:::warning
-Never commit your API token to version control. Use environment variables or a secure secret management system.
-:::
-
-## Environment Variables
-
-It's recommended to store your API token in an environment variable:
+On top of that, every listable resource has convenience helpers that return
+plain items:
 
 ```typescript
-import { HCloudClient } from '@nilovonjs/hcloud-js';
+// All pages at once
+const allServers = await client.servers.listAll();
 
-const client = new HCloudClient({
-  token: process.env.HCLOUD_TOKEN!
-});
-```
-
-## Your First Request
-
-Let's start by listing your servers:
-
-```typescript
-import { HCloudClient } from '@nilovonjs/hcloud-js';
-
-const client = new HCloudClient({
-  token: process.env.HCLOUD_TOKEN!
-});
-
-async function main() {
-  try {
-    const response = await client.servers.list();
-    console.log(`Found ${response.servers.length} server(s)`);
-    
-    response.servers.forEach(server => {
-      console.log(`- ${server.name} (${server.status})`);
-    });
-  } catch (error) {
-    console.error('Error:', error);
-  }
+// Lazily, page by page
+for await (const server of client.servers.iterate()) {
+  console.log(server.name);
 }
 
-main();
+// Lookup by name: the item or undefined
+const web = await client.servers.getByName("web-1");
+
+// First match
+const newestSnapshot = await client.images.first({ type: "snapshot", sort: "created:desc" });
 ```
 
-## Error Handling
+More in [Pagination](/docs/pagination).
 
-All errors are thrown as `HCloudError` instances:
+## Create and change resources
+
+Request parameters are fully typed and validated before the request is sent:
 
 ```typescript
-import { HCloudClient, HCloudError } from '@nilovonjs/hcloud-js';
+const { ssh_key } = await client.sshKeys.create({
+  name: "laptop",
+  public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...",
+});
+
+const { server, root_password } = await client.servers.create({
+  name: "web-1",
+  server_type: "cx22",
+  image: "ubuntu-24.04",
+  location: "nbg1",
+  ssh_keys: [ssh_key.id],
+  labels: { env: "production" },
+});
+```
+
+## Wait for actions
+
+Most changes in the Hetzner Cloud are asynchronous: the API answers immediately
+with an **action** that is still running. Pass the response to `waitFor()` to
+block until it has finished:
+
+```typescript
+await client.actions.waitFor(await client.servers.powerOff(server.id));
+
+// Responses with several actions (action + next_actions) work as well
+const created = await client.servers.create({ name: "web-2", server_type: "cx22", image: "ubuntu-24.04" });
+await client.actions.waitForAll(created);
+
+// Or in one step
+const { server: ready } = await client.servers.createAndWait({
+  name: "web-3",
+  server_type: "cx22",
+  image: "ubuntu-24.04",
+});
+```
+
+More in [Waiting for Actions](/docs/actions).
+
+## Handle errors
+
+All errors extend `HCloudError`. Specific subclasses tell you what went wrong:
+
+```typescript
+import { HCloudNotFoundError, HCloudRateLimitError } from "@nilovonjs/hcloud-js";
 
 try {
-  const server = await client.servers.get(999999);
+  await client.servers.get(1);
 } catch (error) {
-  if (error instanceof HCloudError) {
-    console.error('API Error:', error.message);
-    console.error('Status Code:', error.statusCode);
-    console.error('Error Code:', error.code);
+  if (error instanceof HCloudNotFoundError) {
+    console.log("No such server");
+  } else if (error instanceof HCloudRateLimitError) {
+    console.log(`Slow down, retry in ${error.retryAfter}s`);
+  } else {
+    throw error;
   }
 }
 ```
 
-## Next Steps
+Transient failures (rate limits, conflicts, gateway errors) are retried
+automatically. More in [Error Handling](/docs/error-handling).
 
-- Learn about [Servers API](/docs/API/servers)
-- Explore [utility functions](/docs/utils) for pagination, action polling, and more
-- Check out [code examples](/docs/examples)
-- Browse [all available APIs](/docs/api)
+## Cancel and time out
+
+Every method takes request options as its last argument:
+
+```typescript
+const controller = new AbortController();
+
+const promise = client.servers.listAll({}, { signal: controller.signal, timeout: 10_000 });
+controller.abort();
+```
+
+## Next steps
+
+<Cards>
+  <Card title="Configuration" href="/docs/configuration" />
+  <Card title="Recipes" href="/docs/examples" />
+  <Card title="API Reference" href="/docs/api" />
+</Cards>

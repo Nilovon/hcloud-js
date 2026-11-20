@@ -1,436 +1,380 @@
 ---
 title: Servers API
-description: Manage your Hetzner Cloud servers
+description: Create, manage and control servers
 ---
 
 # Servers API
 
-The Servers API allows you to create, manage, and control your Hetzner Cloud servers.
-
-## List Servers
-
-Returns all Server objects.
+`client.servers` manages [servers](https://docs.hetzner.cloud/reference/cloud#servers): virtual
+machines that can be provisioned.
 
 ```typescript
-const servers = await client.servers.list();
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
 ```
 
-### Parameters
+- Raw endpoint methods return the API envelope (`{ server }`, `{ action }`, ...), convenience
+  methods (`getByName`, `first`, `listAll`, `waitForStatus`) return the bare `Server`.
+- Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+- Most mutating calls return an `action`. Wait for it with `client.actions.waitFor()`.
+
+| Method | Endpoint |
+| --- | --- |
+| `list(params?)` | `GET /servers` |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /servers` (paginated) |
+| `getByName(name)` | `GET /servers?name=` |
+| `get(id)` | `GET /servers/{id}` |
+| `create(params)` | `POST /servers` |
+| `createAndWait(params, waitOptions?)` | `POST /servers`, then waits for all actions |
+| `update(id, params)` | `PUT /servers/{id}` |
+| `delete(id)` | `DELETE /servers/{id}` |
+| `waitForStatus(id, status, options?)` | polls `GET /servers/{id}` |
+| `getMetrics(id, params)` | `GET /servers/{id}/metrics` |
+| `listActions(id, params?)` | `GET /servers/{id}/actions` |
+| `getAction(id, actionId)` | `GET /servers/{id}/actions/{action_id}` |
+| `actions.list(params?)` / `actions.get(id)` | `GET /servers/actions`, `GET /servers/actions/{id}` |
+| `powerOn(id)` | `POST /servers/{id}/actions/poweron` |
+| `powerOff(id)` | `POST /servers/{id}/actions/poweroff` |
+| `reboot(id)` | `POST /servers/{id}/actions/reboot` |
+| `reset(id)` | `POST /servers/{id}/actions/reset` |
+| `shutdown(id)` | `POST /servers/{id}/actions/shutdown` |
+| `resetRootPassword(id)` | `POST /servers/{id}/actions/reset_password` |
+| `enableRescueMode(id, params?)` | `POST /servers/{id}/actions/enable_rescue` |
+| `disableRescueMode(id)` | `POST /servers/{id}/actions/disable_rescue` |
+| `createImage(id, params?)` | `POST /servers/{id}/actions/create_image` |
+| `rebuild(id, params)` | `POST /servers/{id}/actions/rebuild` |
+| `changeType(id, params)` | `POST /servers/{id}/actions/change_type` |
+| `changeProtection(id, params)` | `POST /servers/{id}/actions/change_protection` |
+| `enableBackups(id)` | `POST /servers/{id}/actions/enable_backup` |
+| `disableBackups(id)` | `POST /servers/{id}/actions/disable_backup` |
+| `attachISO(id, params)` | `POST /servers/{id}/actions/attach_iso` |
+| `detachISO(id)` | `POST /servers/{id}/actions/detach_iso` |
+| `changeReverseDNS(id, params)` | `POST /servers/{id}/actions/change_dns_ptr` |
+| `requestConsole(id)` | `POST /servers/{id}/actions/request_console` |
+| `attachToNetwork(id, params)` | `POST /servers/{id}/actions/attach_to_network` |
+| `detachFromNetwork(id, params)` | `POST /servers/{id}/actions/detach_from_network` |
+| `changeAliasIPs(id, params)` | `POST /servers/{id}/actions/change_alias_ips` |
+| `addToPlacementGroup(id, params)` | `POST /servers/{id}/actions/add_to_placement_group` |
+| `removeFromPlacementGroup(id)` | `POST /servers/{id}/actions/remove_from_placement_group` |
+
+## Servers
+
+### List servers
+
+Returns one page of servers. Filters: `name`, `label_selector`, `status`, `sort`
+(`id`, `name`, `created`), `page`, `per_page`.
 
 ```typescript
-interface ListServersParams {
-  name?: string;                    // Filter by name
-  label_selector?: string;          // Filter by labels
-  sort?: string | string[];         // Sort results
-  status?: ServerStatus | ServerStatus[]; // Filter by status
-  page?: number;                    // Page number
-  per_page?: number;                // Items per page (default: 25)
+const { servers, meta } = await client.servers.list({
+  status: ["running", "off"],
+  label_selector: "environment=production",
+  sort: "name:asc",
+});
+```
+
+### All servers
+
+The inherited helpers follow the pagination for you and accept the same filters.
+
+```typescript
+// Everything in one array
+const all = await client.servers.listAll({ status: "running" });
+
+// Item by item, fetching pages lazily
+for await (const server of client.servers.iterate({ label_selector: "environment=production" })) {
+  console.log(server.name, server.public_net.ipv4?.ip);
+}
+
+// Page by page
+for await (const page of client.servers.iteratePages({ per_page: 25 })) {
+  console.log(page.servers.length, page.meta?.pagination?.total_entries);
+}
+
+// First match or undefined
+const newest = await client.servers.first({ sort: "created:desc" });
+```
+
+### Get a server
+
+```typescript
+const { server } = await client.servers.get(12345);
+console.log(server.status, server.location.name, server.server_type.name);
+
+// By name: the server or undefined
+const web = await client.servers.getByName("web-1");
+```
+
+### Create a server
+
+`name`, `server_type` and `image` are required. Server type, image, location and SSH keys are
+referenced by ID or name. `root_password` is `null` if SSH keys were passed.
+
+```typescript
+const { server, action, next_actions, root_password } = await client.servers.create({
+  name: "web-1",
+  server_type: "cx22",
+  image: "ubuntu-24.04",
+  location: "nbg1",
+  ssh_keys: ["my-ssh-key"],
+  networks: [4711],
+  firewalls: [{ firewall: 38 }],
+  volumes: [1234],
+  automount: true,
+  placement_group: 897,
+  public_net: { enable_ipv4: true, enable_ipv6: false },
+  user_data: "#cloud-config\npackages:\n  - nginx\n",
+  labels: { environment: "production" },
+  start_after_create: true,
+});
+
+// The server is not ready yet: wait for `action` and `next_actions`
+await client.actions.waitForAll({ action, next_actions });
+```
+
+### Create a server and wait
+
+`createAndWait()` creates the server, waits for `action` and all `next_actions` and returns the
+create response with the freshly fetched server and the finished actions. The optional second
+argument takes the same polling options as `client.actions.waitFor()`.
+
+```typescript
+const { server, root_password } = await client.servers.createAndWait(
+  { name: "web-1", server_type: "cx22", image: "ubuntu-24.04" },
+  { timeout: 120_000, onProgress: (action) => console.log(action.command, action.progress) },
+);
+console.log(server.status); // "running"
+```
+
+It throws `HCloudActionError` if an action fails and `HCloudActionTimeoutError` on timeout.
+
+### Update a server
+
+Updates the name and/or labels.
+
+```typescript
+const { server } = await client.servers.update(12345, {
+  name: "web-2",
+  labels: { environment: "staging" },
+});
+```
+
+### Delete a server
+
+```typescript
+const { action } = await client.servers.delete(12345);
+await client.actions.waitFor(action);
+```
+
+### Wait for a status
+
+`waitForStatus()` polls the server until it has the given status (or one of several) and returns
+it. Options: `pollInterval` (default `1000` ms), `timeout` (default `300000` ms), `signal`.
+On timeout it throws an `HCloudError` with the code `WAIT_TIMEOUT`.
+
+```typescript
+// The shutdown action finishes once the ACPI request was sent, not once the server is off
+await client.servers.shutdown(12345);
+const server = await client.servers.waitForStatus(12345, "off", { timeout: 60_000 });
+```
+
+### Metrics
+
+`type` is one or more of `"cpu"`, `"disk"`, `"network"`. `start` and `end` accept a `Date` or an
+ISO 8601 string, `step` is the resolution in seconds.
+
+```typescript
+const { metrics } = await client.servers.getMetrics(12345, {
+  type: ["cpu", "network"],
+  start: new Date(Date.now() - 60 * 60 * 1000),
+  end: new Date(),
+  step: 60,
+});
+
+for (const [timestamp, value] of metrics.time_series.cpu?.values ?? []) {
+  console.log(new Date(timestamp * 1000), value);
 }
 ```
 
-### Example
+## Actions
+
+Every method in this section returns `{ action }` unless noted otherwise.
 
 ```typescript
-// List all servers
-const servers = await client.servers.list();
+const { action } = await client.servers.powerOn(12345);
+const finished = await client.actions.waitFor(action);
 
-// List with filters
-const runningServers = await client.servers.list({
-  status: ['running'],
-  label_selector: 'environment=production',
-  sort: ['name:asc']
+// or in one go
+await client.actions.waitFor(await client.servers.reboot(12345));
+```
+
+### Action history
+
+```typescript
+// Actions of one server
+const { actions } = await client.servers.listActions(12345, {
+  status: "running",
+  sort: "started:desc",
 });
+const { action } = await client.servers.getAction(12345, 67890);
+
+// Actions of all servers
+const running = await client.servers.actions.listAll({ status: "running" });
+const { action: other } = await client.servers.actions.get(67890);
 ```
 
-## Get Server
+`client.servers.actions` also offers `waitFor()` and `waitForAll()`, which poll
+`/servers/actions` instead of the global `/actions` endpoint.
 
-Returns a specific Server object.
+### Power
 
 ```typescript
-const server = await client.servers.get(12345);
+await client.servers.powerOn(12345); // start
+await client.servers.shutdown(12345); // graceful shutdown (ACPI)
+await client.servers.reboot(12345); // graceful reboot (ACPI)
+await client.servers.reset(12345); // hard reset
+await client.servers.powerOff(12345); // cut power, may lead to data loss
 ```
 
-### Example
+### Root password
+
+Requires a running server with the qemu guest agent.
 
 ```typescript
-const server = await client.servers.get(12345);
-console.log(server.server.name);
-console.log(server.server.status);
-console.log(server.server.public_net.ipv4?.ip);
+const { action, root_password } = await client.servers.resetRootPassword(12345);
 ```
 
-## Create Server
+### Rescue mode
 
-Creates a new Server.
+The server boots into the rescue system on the next reboot.
 
 ```typescript
-const server = await client.servers.create({
-  name: 'my-server',
-  server_type: 'cpx11',
-  image: 'ubuntu-22.04',
-  location: 'nbg1'
+const { action, root_password } = await client.servers.enableRescueMode(12345, {
+  type: "linux64",
+  ssh_keys: [2323], // SSH key IDs
 });
+await client.servers.reboot(12345);
+
+await client.servers.disableRescueMode(12345);
 ```
 
-### Parameters
+### Images and rebuild
 
 ```typescript
-interface CreateServerParams {
-  name: string;                     // Required: Server name
-  server_type: string | number;     // Required: Server type (ID or name)
-  image: string | number;           // Required: Image (ID or name)
-  location?: string;                // Optional: Location name
-  networks?: number[];              // Optional: Network IDs to attach
-  volumes?: number[];               // Optional: Volume IDs to attach
-  ssh_keys?: (string | number)[];  // Optional: SSH key IDs or names
-  user_data?: string;               // Optional: Cloud-init user data
-  labels?: Record<string, string>;  // Optional: Labels
-  automount?: boolean;              // Optional: Auto-mount volumes
-  start_after_create?: boolean;     // Optional: Start server after creation (default: true)
-  // ... more options
-}
-```
-
-### Example
-
-```typescript
-const server = await client.servers.create({
-  name: 'my-server',
-  server_type: 'cpx11',
-  image: 'ubuntu-22.04',
-  location: 'nbg1',
-  ssh_keys: [123],
-  labels: {
-    environment: 'production',
-    team: 'backend'
-  }
+// Snapshot (default) or backup. Returns the action and the image being created.
+const { action, image } = await client.servers.createImage(12345, {
+  type: "snapshot",
+  description: "before-upgrade",
+  labels: { reason: "upgrade" },
 });
+await client.actions.waitFor(action);
 
-console.log(`Server created: ${server.server.name}`);
-console.log(`Action ID: ${server.action.id}`);
-```
-
-## Update Server
-
-Updates a Server. You can update a Server's name and labels.
-
-```typescript
-const updated = await client.servers.update(12345, {
-  name: 'new-name',
-  labels: { environment: 'production' }
+// Overwrite the disk with an image. `root_password` is null if the server has SSH keys.
+const rebuilt = await client.servers.rebuild(12345, {
+  image: "ubuntu-24.04",
+  user_data: "#cloud-config\n",
 });
+console.log(rebuilt.root_password);
 ```
 
-## Delete Server
+### Server type
 
-Deletes a Server. This immediately removes the Server from your account.
-
-```typescript
-const result = await client.servers.delete(12345);
-console.log(`Delete action ID: ${result.action.id}`);
-```
-
-## Server Actions
-
-Server Actions allow you to control and manage your servers. All actions return an `Action` object that you can poll to track progress.
-
-### List Server Actions
-
-Get all actions for a specific server:
+The server must be powered off. `upgrade_disk: false` keeps the disk size, which allows
+downgrading later.
 
 ```typescript
-const actions = await client.servers.listActions(12345, {
-  status: ['running', 'success'],  // Filter by status
-  sort: ['started:desc'],          // Sort by start time
-  page: 1,
-  per_page: 50
-});
-```
-
-### Get Server Action
-
-Get details of a specific action:
-
-```typescript
-const action = await client.servers.getAction(12345, 67890);
-console.log(`Command: ${action.action.command}`);
-console.log(`Status: ${action.action.status}`);
-console.log(`Progress: ${action.action.progress}%`);
-```
-
-### Power Management
-
-Control server power state:
-
-```typescript
-// Power on - Starts a Server by turning its power on
-const powerOnAction = await client.servers.powerOn(12345);
-console.log(`Power on action ID: ${powerOnAction.action.id}`);
-
-// Power off - Cuts power to a Server (forceful stop)
-const powerOffAction = await client.servers.powerOff(12345);
-
-// Reboot - Reboots a Server gracefully (ACPI request)
-const rebootAction = await client.servers.reboot(12345);
-
-// Reset - Cuts power and starts again (hard reboot)
-const resetAction = await client.servers.reset(12345);
-
-// Shutdown - Shuts down a Server gracefully (ACPI shutdown)
-const shutdownAction = await client.servers.shutdown(12345);
-```
-
-### ISO Management
-
-Manage ISO attachments for servers:
-
-```typescript
-// Attach ISO - Attaches an ISO to a Server
-const attachAction = await client.servers.attachISO(12345, {
-  iso: 'debian-12'  // ISO name or ID
-});
-
-// Detach ISO - Detaches an ISO from a Server
-const detachAction = await client.servers.detachISO(12345);
-```
-
-### Rescue Mode
-
-Enable and disable the Hetzner Rescue System:
-
-```typescript
-// Enable rescue mode - Enables the Hetzner Rescue System
-const rescue = await client.servers.enableRescueMode(12345, {
-  type: 'linux64',              // Optional: Rescue system type (default: 'linux64')
-  ssh_keys: [123, 456]          // Optional: SSH key IDs to use
-});
-if (rescue.root_password) {
-  console.log(`Root password: ${rescue.root_password}`);
-}
-
-// Disable rescue mode - Disables the Hetzner Rescue System
-const disableAction = await client.servers.disableRescueMode(12345);
-```
-
-### Image Management
-
-Create images and rebuild servers:
-
-```typescript
-// Create image/snapshot - Creates an Image (snapshot) from a Server
-const image = await client.servers.createImage(12345, {
-  type: 'snapshot',                              // Optional: 'snapshot' or 'backup' (default: 'snapshot')
-  description: 'My server snapshot',             // Optional: Description
-  labels: { environment: 'production' }          // Optional: Labels
-});
-console.log(`Created image: ${image.image.name} (ID: ${image.image.id})`);
-
-// Rebuild from image - Rebuilds a Server overwriting its disk with the content of an Image
-const rebuildAction = await client.servers.rebuild(12345, {
-  image: 'ubuntu-22.04'  // Image name or ID
+const { action } = await client.servers.changeType(12345, {
+  server_type: "cx32",
+  upgrade_disk: false,
 });
 ```
 
 ### Protection
 
-Control server protection settings:
-
 ```typescript
-// Change protection - Changes the Protection configuration of a Server
-const protectionAction = await client.servers.changeProtection(12345, {
-  delete: true,   // Optional: Prevent deletion
-  rebuild: true   // Optional: Prevent rebuild
-});
-```
-
-### Type Changes
-
-Change server resources (CPU, RAM, Disk):
-
-```typescript
-// Change server type - Changes the type (Cores, RAM and Disk) of a Server
-const changeTypeAction = await client.servers.changeType(12345, {
-  server_type: 'cpx21',    // Required: New server type name or ID
-  upgrade_disk: true        // Optional: Upgrade disk when changing type (default: false)
-});
+await client.servers.changeProtection(12345, { delete: true, rebuild: true });
 ```
 
 ### Backups
 
-Enable and configure automatic backups:
+The backup window is chosen by Hetzner and reported as `server.backup_window`.
 
 ```typescript
-// Enable backups - Enables and configures automatic Backups for a Server
-const enableBackupsAction = await client.servers.enableBackups(12345, {
-  backup_window: '22-02'  // Optional: Backup window (HH:mm format, e.g., '22-02' for 10pm-2am)
-});
-
-// Disable backups - Disables automatic Backups for a Server
-const disableBackupsAction = await client.servers.disableBackups(12345);
+await client.servers.enableBackups(12345);
+await client.servers.disableBackups(12345); // deletes all existing backups
 ```
 
-### Network Management
-
-Manage server network connections:
+### ISOs
 
 ```typescript
-// Attach to network - Attaches a Server to a Network
-const attachNetworkAction = await client.servers.attachToNetwork(12345, {
-  network: 67890,                    // Required: Network ID
-  ip: '10.0.0.2',                    // Optional: IP address to assign
-  alias_ips: ['10.0.0.3', '10.0.0.4'] // Optional: Alias IPs to assign
-});
-
-// Detach from network - Detaches a Server from a Network
-const detachNetworkAction = await client.servers.detachFromNetwork(12345, {
-  network: 67890  // Required: Network ID
-});
-
-// Change alias IPs - Changes the alias IPs of a Network the Server is attached to
-const changeAliasIPsAction = await client.servers.changeAliasIPs(12345, {
-  network: 67890,                    // Required: Network ID
-  alias_ips: ['10.0.0.5', '10.0.0.6'] // Required: New alias IPs array
-});
-
-// Change reverse DNS - Changes the hostname for the primary IPs (IPv4 and IPv6)
-const changeDNSAction = await client.servers.changeReverseDNS(12345, {
-  ip: '1.2.3.4',                     // Required: IP address
-  dns_ptr: 'server.example.com'      // Required: Hostname (null to remove)
-});
+await client.servers.attachISO(12345, { iso: "FreeBSD-11.0-RELEASE-amd64-dvd1" });
+await client.servers.detachISO(12345);
 ```
 
-### Console Access
-
-Request remote console access:
+### Reverse DNS
 
 ```typescript
-// Request console - Requests credentials for remote access via VNC/SPICE over websocket
-const console = await client.servers.requestConsole(12345, {
-  type: 'vnc'  // Optional: 'vnc' or 'spice' (default: 'vnc')
-});
-console.log(`Password: ${console.password}`);
-console.log(`WebSocket URL: ${console.wss_url}`);
+await client.servers.changeReverseDNS(12345, { ip: "1.2.3.4", dns_ptr: "web-1.example.com" });
+
+// Reset to the default
+await client.servers.changeReverseDNS(12345, { ip: "1.2.3.4", dns_ptr: null });
 ```
 
-### Password Reset
+### Console
 
-Reset the root password for Linux systems:
+Returns credentials for VNC over websocket. They are valid for a limited time only.
 
 ```typescript
-// Reset root password - Resets the root password (requires qemu guest agent, server must be powered on)
-const reset = await client.servers.resetRootPassword(12345);
-if (reset.root_password) {
-  console.log(`New root password: ${reset.root_password}`);
-} else {
-  console.log('Password reset initiated (check server logs)');
-}
+const { wss_url, password } = await client.servers.requestConsole(12345);
 ```
 
-### Placement Groups
-
-Manage server placement groups:
+### Networks
 
 ```typescript
-// Add to placement group - Adds a Server to a Placement Group
-const addGroupAction = await client.servers.addToPlacementGroup(12345, {
-  placement_group: 67890  // Required: Placement Group ID
+await client.servers.attachToNetwork(12345, {
+  network: 4711,
+  ip: "10.0.1.1", // optional
+  alias_ips: ["10.0.1.2"], // optional
+  ip_range: "10.0.1.0/24", // optional: subnet to attach to
 });
 
-// Remove from placement group - Removes a Server from a Placement Group
-const removeGroupAction = await client.servers.removeFromPlacementGroup(12345);
+await client.servers.changeAliasIPs(12345, { network: 4711, alias_ips: ["10.0.1.2", "10.0.1.3"] });
+
+await client.servers.detachFromNetwork(12345, { network: 4711 });
 ```
 
+### Placement groups
 
-## Get Server Metrics
-
-Returns Metrics for a Server. The Server must have a public network interface attached.
+The server must be powered off to be added to a placement group.
 
 ```typescript
-const now = new Date();
-const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-
-// Get CPU and network metrics
-const metrics = await client.servers.getMetrics(12345, {
-  type: ['cpu', 'network'],  // Required: Metric type(s) - can be single string or array
-  start: oneHourAgo.toISOString(),  // Required: Start time (ISO 8601)
-  end: now.toISOString(),           // Required: End time (ISO 8601)
-  step: 60                          // Optional: Resolution in seconds
-});
-
-// Access time series data
-metrics.metrics.time_series.forEach(series => {
-  console.log(`Metric: ${series.name}`);
-  console.log(`Values: ${series.values.length} data points`);
-  if (series.values.length > 0) {
-    console.log(`Latest value: ${series.values[series.values.length - 1]}`);
-  }
-});
+await client.servers.addToPlacementGroup(12345, { placement_group: 897 });
+await client.servers.removeFromPlacementGroup(12345);
 ```
 
-### Parameters
+## The `Server` object
 
 ```typescript
-interface GetServerMetricsParams {
-  type: string | string[];  // Required: Metric type - 'cpu', 'disk', 'network'
-  start: string;            // Required: Start time (ISO 8601 format)
-  end: string;              // Required: End time (ISO 8601 format)
-  step?: number;            // Optional: Resolution in seconds
-}
+import type { Server, ServerStatus } from "@nilovonjs/hcloud-js";
 ```
 
-### Available Metric Types
-
-- `'cpu'` - CPU usage metrics
-- `'disk'` - Disk I/O metrics
-- `'network'` - Network traffic metrics
-
-### Example: Monitoring Server Performance
-
-```typescript
-// Get metrics for the last hour
-const now = new Date();
-const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-
-const metrics = await client.servers.getMetrics(12345, {
-  type: ['cpu', 'disk', 'network'],
-  start: oneHourAgo.toISOString(),
-  end: now.toISOString(),
-  step: 300  // 5-minute intervals
-});
-
-// Analyze CPU usage
-const cpuSeries = metrics.metrics.time_series.find(s => s.name === 'cpu');
-if (cpuSeries && cpuSeries.values.length > 0) {
-  const avgCpu = cpuSeries.values.reduce((a, b) => a + b, 0) / cpuSeries.values.length;
-  console.log(`Average CPU usage: ${avgCpu.toFixed(2)}%`);
-}
-```
-
-## Types
-
-```typescript
-type ServerStatus = 
-  | 'running' 
-  | 'initializing' 
-  | 'starting' 
-  | 'stopping' 
-  | 'off' 
-  | 'deleting' 
-  | 'migrating' 
-  | 'rebuilding' 
-  | 'unknown';
-
-interface Server {
-  id: number;
-  name: string;
-  status: ServerStatus;
-  created: string;
-  public_net: PublicNet;
-  private_net: PrivateNet[];
-  server_type: ServerType;
-  datacenter: Datacenter;
-  image: ServerImage;
-  iso: ISO | null;
-  // ... more fields
-}
-```
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id`, `name`, `created` | `number`, `string`, `string` | |
+| `status` | `ServerStatus` | `running`, `initializing`, `starting`, `stopping`, `off`, `deleting`, `migrating`, `rebuilding`, `unknown` |
+| `public_net` | `ServerPublicNet` | `ipv4` and `ipv6` are `null` if the server has none, `floating_ips` and `firewalls` hold IDs |
+| `private_net` | `ServerPrivateNet[]` | `network` (ID), `ip`, `alias_ips`, `mac_address` |
+| `server_type` | `ServerType` | |
+| `location` | `Location` | |
+| `datacenter` | `Datacenter \| undefined` | Deprecated: [removed from the API](https://docs.hetzner.cloud/changelog#2026-07-01-removing-datacenters), use `location` |
+| `image` | `Image \| null` | `null` if the image was deleted |
+| `iso` | `ISO \| null` | |
+| `placement_group` | `PlacementGroup \| null \| undefined` | |
+| `rescue_enabled`, `locked` | `boolean` | |
+| `backup_window` | `string \| null` | e.g. `"22-02"`, `null` if backups are disabled |
+| `outgoing_traffic`, `ingoing_traffic`, `included_traffic` | `number \| null` | Bytes in the current billing period |
+| `primary_disk_size` | `number` | GB |
+| `protection` | `ServerProtection` | `delete`, `rebuild` |
+| `labels` | `Labels` | |
+| `volumes` | `number[]` | IDs |
+| `load_balancers` | `number[] \| undefined` | IDs |

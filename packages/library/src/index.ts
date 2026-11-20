@@ -86,8 +86,7 @@ export {
   MAX_PER_PAGE,
   getAllPages,
   paginate,
-  type ItemOf,
-  type ItemsKey,
+  type PaginatedList,
   type PaginationIteratorOptions,
 } from "./core/pagination";
 

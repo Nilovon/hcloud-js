@@ -41,17 +41,9 @@ export interface PaginatedResponse {
 }
 
 /**
- * Keys of `R` holding arrays, i.e. the possible item keys of a list response.
+ * Paginated list response holding its items under the key `K`.
  */
-export type ItemsKey<R> = {
-  [K in keyof R]-?: NonNullable<R[K]> extends readonly unknown[] ? K : never;
-}[keyof R] &
-  string;
-
-/**
- * Item type of the list stored under key `K` of response `R`.
- */
-export type ItemOf<R, K extends keyof R> = NonNullable<R[K]> extends readonly (infer T)[] ? T : never;
+export type PaginatedList<K extends string, Item> = PaginatedResponse & { [P in K]: Item[] };
 
 /**
  * Iterate over all pages of a list endpoint, starting at `params.page` (default `1`).
@@ -101,11 +93,11 @@ export interface PaginationIteratorOptions {
  * }
  * ```
  */
-export function paginate<R extends PaginatedResponse, K extends ItemsKey<R>>(
-  listFn: (params: PageParams) => Promise<R>,
+export function paginate<K extends string, Item>(
+  listFn: (params: PageParams) => Promise<PaginatedList<K, Item>>,
   itemsKey: K,
   options?: PaginationIteratorOptions,
-): AsyncGenerator<ItemOf<R, K>[], void, undefined>;
+): AsyncGenerator<Item[], void, undefined>;
 export function paginate<T>(
   listFn: (params: PageParams) => Promise<PaginatedResponse & Record<string, unknown>>,
   itemsKey: string,
@@ -137,11 +129,11 @@ export async function* paginate(
  * const servers = await getAllPages((params) => client.servers.list(params), "servers");
  * ```
  */
-export function getAllPages<R extends PaginatedResponse, K extends ItemsKey<R>>(
-  listFn: (params: PageParams) => Promise<R>,
+export function getAllPages<K extends string, Item>(
+  listFn: (params: PageParams) => Promise<PaginatedList<K, Item>>,
   itemsKey: K,
   options?: PaginationIteratorOptions,
-): Promise<ItemOf<R, K>[]>;
+): Promise<Item[]>;
 export function getAllPages<T>(
   listFn: (params: PageParams) => Promise<PaginatedResponse & Record<string, unknown>>,
   itemsKey: string,

@@ -3,174 +3,96 @@
  * @see https://docs.hetzner.cloud/reference/cloud#locations
  */
 
-import type { HCloudClient } from "../../client/index";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { DatacentersClient } from "../datacenters/index";
 import type {
-  ListLocationsParams,
-  ListLocationsResponse,
-  GetLocationResponse,
+  GetDataCenterResponse,
   ListDataCentersParams,
   ListDataCentersResponse,
-  GetDataCenterResponse,
-} from "../../apis/locations/types";
-import { validate } from "../../validation/index";
-import {
-  listLocationsResponseSchema,
-  getLocationResponseSchema,
-  listDataCentersResponseSchema,
-  getDataCenterResponseSchema,
-} from "../../apis/locations/schemas";
+} from "../datacenters/types";
+import { getLocationResponseSchema, listLocationsResponseSchema } from "./schemas";
+import type {
+  GetLocationResponse,
+  ListLocationsParams,
+  ListLocationsResponse,
+  Location,
+} from "./types";
 
 /**
  * Locations API client
+ *
+ * Locations are the geographical sites resources are created in, e.g. `fsn1`.
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#locations
  */
-export class LocationsClient {
-  constructor(private readonly client: HCloudClient) {}
+export class LocationsClient extends NamedResource<Location, ListLocationsParams, "locations"> {
+  protected readonly itemsKey = "locations";
 
   /**
-   * Returns all Location objects.
+   * Returns a page of locations.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of locations with pagination metadata
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#locations-list-locations
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
+   * const { locations } = await client.locations.list({ sort: "name:asc" });
    *
-   * // List all locations
-   * const result = await client.locations.list();
-   *
-   * // List locations with filters
-   * const locations = await client.locations.list({
-   *   name: 'nbg1',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
-   * });
+   * // Find a location by its name
+   * const fsn1 = await client.locations.getByName("fsn1");
    * ```
    */
-  async list(params?: ListLocationsParams): Promise<ListLocationsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/locations", queryParams);
-
-    return validate(listLocationsResponseSchema, response, {
-      context: "List locations response",
-      detailed: true,
-    });
+  list(params?: ListLocationsParams, options?: RequestOptions): Promise<ListLocationsResponse> {
+    return this._get("/locations", listLocationsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific Location object.
+   * Returns a specific location.
    *
-   * @param id - ID or name of the Location
-   * @returns Promise resolving to the location
+   * @param id - ID of the location
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#locations-get-a-location
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a location by ID or name
-   * const location = await client.locations.get('nbg1');
-   * console.log(location.location.name);
+   * const { location } = await client.locations.get(1);
+   * console.log(location.name, location.network_zone);
    * ```
    */
-  async get(id: number | string): Promise<GetLocationResponse> {
-    const response = await this.client.get<unknown>(`/locations/${id}`);
-
-    return validate(getLocationResponseSchema, response, {
-      context: "Get location response",
-      detailed: true,
-    });
+  get(id: number, options?: RequestOptions): Promise<GetLocationResponse> {
+    return this._get(path`/locations/${id}`, getLocationResponseSchema, undefined, options);
   }
 
   /**
-   * Returns all Datacenter objects.
+   * Returns a page of datacenters.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of datacenters with pagination metadata
-   * @see https://docs.hetzner.cloud/reference/cloud#data-centers-list-data-centers
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all datacenters
-   * const result = await client.locations.listDataCenters();
-   *
-   * // List datacenters with filters
-   * const datacenters = await client.locations.listDataCenters({
-   *   name: 'nbg1-dc3',
-   *   sort: ['name:asc']
-   * });
-   * ```
+   * @deprecated The Datacenters API is removed by Hetzner after 2026-10-01. Use `list()` instead.
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/changelog#2026-06-02-datacenters-deprecated
    */
-  async listDataCenters(params?: ListDataCentersParams): Promise<ListDataCentersResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/datacenters", queryParams);
-
-    return validate(listDataCentersResponseSchema, response, {
-      context: "List datacenters response",
-      detailed: true,
-    });
+  listDataCenters(
+    params?: ListDataCentersParams,
+    options?: RequestOptions,
+  ): Promise<ListDataCentersResponse> {
+    return new DatacentersClient(this.client).list(params, options);
   }
 
   /**
-   * Returns a specific Datacenter object.
+   * Returns a specific datacenter.
    *
-   * @param id - ID or name of the Datacenter
-   * @returns Promise resolving to the datacenter
-   * @see https://docs.hetzner.cloud/reference/cloud#data-centers-get-a-data-center
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a datacenter by ID or name
-   * const datacenter = await client.locations.getDataCenter('nbg1-dc3');
-   * console.log(datacenter.datacenter.name);
-   * ```
+   * @deprecated The Datacenters API is removed by Hetzner after 2026-10-01. Use `get()` instead.
+   * @param id - ID of the datacenter
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/changelog#2026-06-02-datacenters-deprecated
    */
-  async getDataCenter(id: number | string): Promise<GetDataCenterResponse> {
-    const response = await this.client.get<unknown>(`/datacenters/${id}`);
-
-    return validate(getDataCenterResponseSchema, response, {
-      context: "Get datacenter response",
-      detailed: true,
-    });
+  getDataCenter(id: number, options?: RequestOptions): Promise<GetDataCenterResponse> {
+    return new DatacentersClient(this.client).get(id, options);
   }
 }

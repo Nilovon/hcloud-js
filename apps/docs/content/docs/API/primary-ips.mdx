@@ -1,0 +1,204 @@
+---
+title: Primary IPs API
+description: Manage Primary IPs of servers and load balancers
+---
+
+# Primary IPs API
+
+`client.primaryIPs` manages Primary IPs: the public IPs of servers and load balancers. A Primary IP
+belongs to a `location` and can only be assigned to resources in that location.
+
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
+```
+
+- Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+- Hetzner removed the `datacenter` property of Primary IPs. Use `location` instead; `datacenter`
+  is only kept as an optional, deprecated field of the response type.
+
+| Method | Endpoint |
+| --- | --- |
+| `list(params?)` | `GET /primary_ips` |
+| `get(id)` | `GET /primary_ips/{id}` |
+| `getByName(name)` | `GET /primary_ips?name=` |
+| `getByIP(ip)` | `GET /primary_ips?ip=` |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /primary_ips` (all pages) |
+| `create(params)` | `POST /primary_ips` |
+| `update(id, params)` | `PUT /primary_ips/{id}` |
+| `delete(id)` | `DELETE /primary_ips/{id}` |
+| `assignToResource(id, params)` | `POST /primary_ips/{id}/actions/assign` |
+| `unassign(id)` | `POST /primary_ips/{id}/actions/unassign` |
+| `changeReverseDNS(id, params)` | `POST /primary_ips/{id}/actions/change_dns_ptr` |
+| `changeProtection(id, params)` | `POST /primary_ips/{id}/actions/change_protection` |
+| `listActions(id, params?)` | `GET /primary_ips/{id}/actions` |
+| `getAction(id, actionId)` | `GET /primary_ips/{id}/actions/{action_id}` |
+| `actions.list(params?)` / `actions.get(id)` | `GET /primary_ips/actions`, `GET /primary_ips/actions/{id}` |
+
+## List Primary IPs
+
+Returns one page of Primary IPs. Filters: `name`, `label_selector`, `ip`, `sort` (`id`, `created`),
+`page`, `per_page`.
+
+```typescript
+const { primary_ips, meta } = await client.primaryIPs.list({
+  label_selector: "environment=production",
+  sort: "created:desc",
+});
+```
+
+## Get a Primary IP
+
+```typescript
+const { primary_ip } = await client.primaryIPs.get(12345);
+console.log(primary_ip.ip, primary_ip.location.name, primary_ip.assignee_type);
+```
+
+`assignee_type` is `"server"`, `"load_balancer"` or `"unassigned"` (then `assignee_id` is `null`).
+
+## Find by name or IP
+
+Both return the Primary IP or `undefined`.
+
+```typescript
+const byName = await client.primaryIPs.getByName("my-primary-ip");
+const byIP = await client.primaryIPs.getByIP("131.232.99.1");
+```
+
+## All Primary IPs
+
+`iterate()`, `iteratePages()` and `listAll()` follow the pagination for you, `first()` returns the
+first match or `undefined`.
+
+```typescript
+const all = await client.primaryIPs.listAll({ label_selector: "environment=production" });
+
+for await (const primaryIP of client.primaryIPs.iterate()) {
+  console.log(primaryIP.name, primaryIP.ip);
+}
+
+const newest = await client.primaryIPs.first({ sort: "created:desc" });
+```
+
+## Create a Primary IP
+
+Pass `name`, `type` and either `location` or an assignee (`assignee_id` together with
+`assignee_type`). `action` is only set if the Primary IP is assigned on creation.
+
+```typescript
+// In a location
+const { primary_ip } = await client.primaryIPs.create({
+  name: "my-primary-ip",
+  type: "ipv4",
+  location: "fsn1",
+  auto_delete: false,
+  labels: { environment: "production" },
+});
+
+// Assigned to a server
+const created = await client.primaryIPs.create({
+  name: "my-primary-ip",
+  type: "ipv6",
+  assignee_id: 42,
+  assignee_type: "server",
+});
+if (created.action) await client.actions.waitFor(created.action);
+```
+
+To use a Primary IP for a load balancer, create it in a location and pass its ID when creating
+the [load balancer](/docs/API/load-balancers).
+
+## Update a Primary IP
+
+Updates `name`, `auto_delete` and/or `labels`.
+
+```typescript
+const { primary_ip } = await client.primaryIPs.update(12345, {
+  name: "new-name",
+  auto_delete: true,
+});
+```
+
+## Delete a Primary IP
+
+Resolves without a value. An assigned Primary IP is unassigned first.
+
+```typescript
+await client.primaryIPs.delete(12345);
+```
+
+## Actions
+
+These methods return `{ action }`. Wait for the action with `client.actions.waitFor()`.
+
+### Assign to a resource
+
+`assignee_type` is required. A server must be powered off to change its Primary IP.
+
+```typescript
+const { action } = await client.primaryIPs.assignToResource(12345, {
+  assignee_id: 42,
+  assignee_type: "server",
+});
+await client.actions.waitFor(action);
+```
+
+### Unassign
+
+```typescript
+await client.actions.waitFor(await client.primaryIPs.unassign(12345));
+```
+
+### Change reverse DNS
+
+A `dns_ptr` of `null` resets the entry to its default value.
+
+```typescript
+await client.primaryIPs.changeReverseDNS(12345, {
+  ip: "131.232.99.1",
+  dns_ptr: "server.example.com",
+});
+```
+
+### Change protection
+
+```typescript
+await client.primaryIPs.changeProtection(12345, { delete: true });
+```
+
+## Listing actions
+
+```typescript
+// Actions of one Primary IP
+const { actions } = await client.primaryIPs.listActions(12345, { status: "running" });
+const { action } = await client.primaryIPs.getAction(12345, 67890);
+
+// Actions of all Primary IPs
+const running = await client.primaryIPs.actions.listAll({ status: "running" });
+const one = await client.primaryIPs.actions.get(67890);
+```
+
+## Types
+
+```typescript
+import type { PrimaryIP, CreatePrimaryIPParams } from "@nilovonjs/hcloud-js";
+
+interface PrimaryIP {
+  id: number;
+  name: string;
+  ip: string;
+  type: "ipv4" | "ipv6";
+  assignee_id: number | null;
+  assignee_type: string; // "server" | "load_balancer" | "unassigned"
+  auto_delete: boolean;
+  blocked: boolean;
+  location: Location;
+  /** @deprecated Removed from the API, use `location`. */
+  datacenter?: Datacenter | null;
+  dns_ptr: { ip: string; dns_ptr: string }[];
+  labels: Record<string, string>;
+  protection: { delete: boolean };
+  created: string;
+}
+```

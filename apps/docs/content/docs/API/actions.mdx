@@ -1,92 +1,116 @@
 ---
-title: Actions API
-description: Monitor and retrieve action status
+title: Actions
+description: Track asynchronous operations and wait for them to finish
 ---
 
-# Actions API
-
-The Actions API allows you to monitor and retrieve action status.
-
-:::warning
-The `list()` method may return a 410 error as the Hetzner Cloud API has removed the ability to list arbitrary actions. Use resource-specific action endpoints instead (e.g., `client.servers.listActions(serverId)`).
-:::
-
-## Get Action
-
-Returns a specific Action object.
+Actions represent asynchronous operations. Almost every mutating call returns
+one. For a guided introduction see [Waiting for Actions](/docs/actions).
 
 ```typescript
-const action = await client.actions.get(12345);
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
 ```
 
-### Example
+## The action object
 
 ```typescript
-const action = await client.actions.get(12345);
-
-console.log(`Command: ${action.action.command}`);
-console.log(`Status: ${action.action.status}`);
-console.log(`Progress: ${action.action.progress}%`);
-
-if (action.action.status === 'success') {
-  console.log(`Completed in ${action.action.finished}`);
-} else if (action.action.status === 'error') {
-  console.error(`Error: ${action.action.error?.message}`);
-}
-
-// Show resources affected by this action
-action.action.resources.forEach(resource => {
-  console.log(`  - ${resource.type} #${resource.id}`);
-});
-```
-
-## Getting Action IDs
-
-Action IDs are returned when you perform operations on resources. For example:
-
-```typescript
-// Creating a server returns an action
-const server = await client.servers.create({...});
-const actionId = server.action.id;
-
-// Monitor the action
-const action = await client.actions.get(actionId);
-```
-
-## Resource-Specific Actions
-
-Most resources provide their own action endpoints:
-
-```typescript
-// List actions for a server
-const actions = await client.servers.listActions(12345);
-
-// List actions for a network
-const actions = await client.networks.listActions(12345);
-
-// Get a specific action for a server
-const action = await client.servers.getAction(12345, 67890);
-```
-
-## Types
-
-```typescript
-type ActionStatus = 'running' | 'success' | 'error';
-
 interface Action {
   id: number;
-  command: string;
-  status: ActionStatus;
-  progress: number;
-  started: string;
+  command: string;                          // e.g. "start_server"
+  status: "running" | "success" | "error";
+  progress: number;                         // 0-100
+  started: string;                          // ISO 8601
   finished: string | null;
-  resources: Array<{
-    id: number;
-    type: string;
-  }>;
-  error: {
-    code: string;
-    message: string;
-  } | null;
+  resources: { id: number; type: string }[];
+  error?: { code: string; message: string } | null;
 }
 ```
+
+## `get(id)`
+
+`GET /actions/{id}`
+
+```typescript
+const { action } = await client.actions.get(12345);
+console.log(action.status, action.progress);
+```
+
+## `list(params?)`
+
+`GET /actions`
+
+The global endpoint only returns the actions whose IDs you pass. To browse
+actions, use the `actions` sub-client of a resource (see below).
+
+```typescript
+const { actions } = await client.actions.list({ id: [1, 2, 3] });
+```
+
+| Parameter | Description |
+| --- | --- |
+| `id` | One or more action IDs |
+| `status` | `"running"`, `"success"`, `"error"` (one or more) |
+| `sort` | `id`, `command`, `status`, `started`, `finished`, each with `:asc` / `:desc` |
+| `page`, `per_page` | Pagination |
+
+## `waitFor(action, options?)`
+
+Polls until the action has finished and returns it. Accepts an action, an ID
+or a response containing an `action`.
+
+```typescript
+const action = await client.actions.waitFor(await client.servers.powerOn(42));
+```
+
+Throws `HCloudActionError` if the action fails and `HCloudActionTimeoutError`
+if it does not finish in time.
+
+## `waitForAll(actions, options?)`
+
+Waits for several actions, polling them together in one request per poll.
+Accepts an array of actions or IDs, or a response containing `action`,
+`actions` and/or `next_actions`. Returns the finished actions in input order.
+
+```typescript
+const created = await client.servers.create({ name: "web-1", server_type: "cx22", image: "ubuntu-24.04" });
+const finished = await client.actions.waitForAll(created);
+```
+
+### Wait options
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `pollInterval` | backoff from 500ms to 5s | Milliseconds or `(attempt) => ms` |
+| `timeout` | `300000` | Maximum time to wait in milliseconds |
+| `throwOnError` | `true` | Throw when an action fails |
+| `onProgress` | - | `(action) => void`, called after every poll |
+| `signal` | - | `AbortSignal` to stop waiting |
+
+## Resource action clients
+
+Every resource with actions exposes the same client scoped to its resource
+type: `client.servers.actions`, `client.volumes.actions`,
+`client.networks.actions`, `client.firewalls.actions`,
+`client.floatingIPs.actions`, `client.primaryIPs.actions`,
+`client.loadBalancers.actions`, `client.certificates.actions`,
+`client.images.actions`, `client.dns.actions` and `client.storageBoxes.actions`.
+
+```typescript
+// GET /servers/actions
+const { actions } = await client.servers.actions.list({ status: "running", sort: "started:desc" });
+
+// GET /servers/actions/{id}
+const { action } = await client.servers.actions.get(12345);
+
+// Pagination helpers
+const all = await client.volumes.actions.listAll({ status: "error" });
+for await (const action of client.networks.actions.iterate()) {
+  console.log(action.command);
+}
+```
+
+<Callout>
+  Storage Box actions live on a different API host. Always wait for them with
+  `client.storageBoxes.actions.waitFor(...)`.
+</Callout>

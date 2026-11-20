@@ -1,246 +1,362 @@
 ---
 title: Load Balancers API
-description: Configure load balancers
+description: Manage Load Balancers, their services and targets
 ---
 
 # Load Balancers API
 
-The Load Balancers API allows you to configure load balancers with services and targets.
+`client.loadBalancers` manages Load Balancers: they distribute the traffic of their services
+(`http`, `https` or `tcp` listeners) to their targets (servers, label selectors or IPs).
+
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
+```
+
+Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+
+| Method | Endpoint |
+| --- | --- |
+| `list(params?)` | `GET /load_balancers` |
+| `get(id)` | `GET /load_balancers/{id}` |
+| `getByName(name)` | `GET /load_balancers?name=` |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /load_balancers` (all pages) |
+| `create(params)` | `POST /load_balancers` |
+| `update(id, params)` | `PUT /load_balancers/{id}` |
+| `delete(id)` | `DELETE /load_balancers/{id}` |
+| `getMetrics(id, params)` | `GET /load_balancers/{id}/metrics` |
+| `addService(id, params)` | `POST /load_balancers/{id}/actions/add_service` |
+| `updateService(id, listenPort, params)` | `POST /load_balancers/{id}/actions/update_service` |
+| `deleteService(id, listenPort)` | `POST /load_balancers/{id}/actions/delete_service` |
+| `addTarget(id, params)` | `POST /load_balancers/{id}/actions/add_target` |
+| `removeTarget(id, params)` | `POST /load_balancers/{id}/actions/remove_target` |
+| `changeAlgorithm(id, params)` | `POST /load_balancers/{id}/actions/change_algorithm` |
+| `changeReverseDNS(id, params)` | `POST /load_balancers/{id}/actions/change_dns_ptr` |
+| `changeProtection(id, params)` | `POST /load_balancers/{id}/actions/change_protection` |
+| `changeType(id, params)` | `POST /load_balancers/{id}/actions/change_type` |
+| `attachToNetwork(id, params)` | `POST /load_balancers/{id}/actions/attach_to_network` |
+| `detachFromNetwork(id, networkId)` | `POST /load_balancers/{id}/actions/detach_from_network` |
+| `enablePublicInterface(id)` | `POST /load_balancers/{id}/actions/enable_public_interface` |
+| `disablePublicInterface(id)` | `POST /load_balancers/{id}/actions/disable_public_interface` |
+| `listActions(id, params?)` | `GET /load_balancers/{id}/actions` |
+| `getAction(id, actionId)` | `GET /load_balancers/{id}/actions/{action_id}` |
+| `actions.list(params?)` / `actions.get(id)` | `GET /load_balancers/actions`, `GET /load_balancers/actions/{id}` |
 
 ## List Load Balancers
 
-Returns all Load Balancer objects.
+Returns one page of Load Balancers. Filters: `name`, `label_selector`, `sort` (`id`, `name`,
+`created`), `page`, `per_page`.
 
 ```typescript
-const loadBalancers = await client.loadBalancers.list();
-```
-
-## Get Load Balancer
-
-Returns a specific Load Balancer object.
-
-```typescript
-const lb = await client.loadBalancers.get(12345);
-```
-
-## Create Load Balancer
-
-Creates a new Load Balancer.
-
-```typescript
-const lb = await client.loadBalancers.create({
-  name: 'my-lb',
-  load_balancer_type: 'lb11',
-  location: 'nbg1',
-  algorithm: { type: 'round_robin' },
-  services: [{
-    protocol: 'http',
-    listen_port: 80,
-    destination_port: 80,
-    health_check: {
-      protocol: 'http',
-      port: 80,
-      interval: 15,
-      timeout: 10,
-      retries: 3
-    }
-  }],
-  targets: [{
-    type: 'server',
-    server: { id: 12345 }
-  }]
+const { load_balancers, meta } = await client.loadBalancers.list({
+  label_selector: "environment=production",
+  sort: "name:asc",
 });
 ```
 
-## Update Load Balancer
-
-Updates a Load Balancer.
+## Get a Load Balancer
 
 ```typescript
-const updated = await client.loadBalancers.update(12345, {
-  name: 'new-name',
-  labels: { environment: 'production' }
+const { load_balancer } = await client.loadBalancers.get(12345);
+console.log(load_balancer.public_net.ipv4.ip, load_balancer.load_balancer_type.name);
+```
+
+## Find by name
+
+Returns the Load Balancer or `undefined`.
+
+```typescript
+const loadBalancer = await client.loadBalancers.getByName("web-frontend");
+```
+
+## All Load Balancers
+
+`iterate()`, `iteratePages()` and `listAll()` follow the pagination for you, `first()` returns the
+first match or `undefined`.
+
+```typescript
+const all = await client.loadBalancers.listAll({ label_selector: "environment=production" });
+
+for await (const loadBalancer of client.loadBalancers.iterate()) {
+  console.log(loadBalancer.name, loadBalancer.targets.length);
+}
+
+const newest = await client.loadBalancers.first({ sort: "created:desc" });
+```
+
+## Create a Load Balancer
+
+Pass `name`, `load_balancer_type` (ID or name) and either `location` or `network_zone`. Services and
+targets can be passed right away or added later. The response contains the Load Balancer and the
+`action` tracking its creation.
+
+```typescript
+const { load_balancer, action } = await client.loadBalancers.create({
+  name: "web-frontend",
+  load_balancer_type: "lb11",
+  location: "nbg1",
+  algorithm: { type: "round_robin" },
+  network: 4711, // attach to a Network
+  services: [{ protocol: "http", listen_port: 80, destination_port: 80 }],
+  targets: [{ type: "label_selector", label_selector: { selector: "role=web" } }],
+  labels: { environment: "production" },
+});
+await client.actions.waitFor(action);
+```
+
+### Existing Primary IPs
+
+`public_net` assigns existing Primary IPs (by ID) instead of allocating new addresses. For an
+omitted IP version a new Primary IP is allocated. Primary IPs can only be assigned on creation.
+
+```typescript
+const created = await client.loadBalancers.create({
+  name: "web-frontend",
+  load_balancer_type: "lb11",
+  location: "nbg1",
+  public_net: { ipv4: 4712, ipv6: 4713 },
+});
+await client.actions.waitFor(created);
+```
+
+The IDs of the assigned Primary IPs are available as `load_balancer.public_net.ipv4.id` and
+`load_balancer.public_net.ipv6.id`.
+
+## Update a Load Balancer
+
+Updates `name` and/or `labels`.
+
+```typescript
+const { load_balancer } = await client.loadBalancers.update(12345, {
+  name: "new-name",
+  labels: { environment: "production" },
 });
 ```
 
-## Delete Load Balancer
+## Delete a Load Balancer
 
-Deletes a Load Balancer.
+Returns the `action` tracking the deletion. (Until October 2026 the API answered with an empty
+response.)
 
 ```typescript
-await client.loadBalancers.delete(12345);
+const { action } = await client.loadBalancers.delete(12345);
+await client.actions.waitFor(action);
 ```
 
-## Service Management
+## Metrics
 
-### Add Service
+`type` is one or more of `open_connections`, `connections_per_second`, `requests_per_second` and
+`bandwidth`. `start` and `end` accept a `Date` or an ISO-8601 string, `step` is the resolution in
+seconds.
 
-Adds a service to a Load Balancer.
+```typescript
+const { metrics } = await client.loadBalancers.getMetrics(12345, {
+  type: ["open_connections", "requests_per_second"],
+  start: new Date(Date.now() - 60 * 60 * 1000),
+  end: new Date(),
+  step: 60,
+});
+
+for (const [timestamp, value] of metrics.time_series.open_connections?.values ?? []) {
+  console.log(new Date(timestamp * 1000), value);
+}
+```
+
+## Actions
+
+The methods below return `{ action }`. Wait for the action with `client.actions.waitFor()`.
+
+```typescript
+const { action } = await client.loadBalancers.changeAlgorithm(12345, { type: "round_robin" });
+await client.actions.waitFor(action);
+
+// or in one go
+await client.actions.waitFor(await client.loadBalancers.enablePublicInterface(12345));
+```
+
+### Services
+
+A service is identified by its `listen_port`. Only `protocol` is required, `listen_port` and
+`destination_port` are required for `tcp` services. Fields you leave out are not sent, so the API
+defaults apply.
 
 ```typescript
 await client.loadBalancers.addService(12345, {
-  protocol: 'http',
+  protocol: "https",
   listen_port: 443,
-  destination_port: 443,
+  destination_port: 80,
+  proxyprotocol: false,
+  http: {
+    certificates: [897], // Certificate IDs
+    redirect_http: true,
+    sticky_sessions: true,
+    cookie_name: "HCLBSTICKY",
+    cookie_lifetime: 300,
+    timeout_idle: 60,
+  },
   health_check: {
-    protocol: 'http',
-    port: 443
-  }
+    protocol: "http",
+    port: 80,
+    interval: 15,
+    timeout: 10,
+    retries: 3,
+    http: { domain: "example.com", path: "/health", status_codes: ["2??", "3??"], tls: false },
+  },
 });
+
+// Change single fields of the service listening on port 443
+await client.loadBalancers.updateService(12345, 443, {
+  destination_port: 8080,
+  http: { timeout_idle: 120 },
+});
+
+await client.loadBalancers.deleteService(12345, 443);
 ```
 
-### Update Service
+### Targets
 
-Updates a service of a Load Balancer.
-
-```typescript
-await client.loadBalancers.updateService(12345, {
-  listen_port: 443,
-  health_check: {
-    interval: 20
-  }
-});
-```
-
-### Delete Service
-
-Deletes a service from a Load Balancer.
-
-```typescript
-await client.loadBalancers.deleteService(12345, {
-  listen_port: 443
-});
-```
-
-## Target Management
-
-### Add Target
-
-Adds a target to a Load Balancer.
+A target is a server, a label selector (all servers matching it) or an IP. `use_private_ip` routes
+the traffic through a shared Network and is available for servers and label selectors.
 
 ```typescript
 await client.loadBalancers.addTarget(12345, {
-  type: 'server',
-  server: { id: 12345 }
+  type: "server",
+  server: { id: 67890 },
+  use_private_ip: true,
 });
+await client.loadBalancers.addTarget(12345, {
+  type: "label_selector",
+  label_selector: { selector: "role=web" },
+});
+await client.loadBalancers.addTarget(12345, { type: "ip", ip: { ip: "203.0.113.1" } });
+
+await client.loadBalancers.removeTarget(12345, { type: "server", server: { id: 67890 } });
 ```
 
-### Remove Target
+### Target health
 
-Removes a target from a Load Balancer.
+`health_status` holds one entry per service. For a label selector the resolved servers are listed
+in `targets`. If a health check failed, `detail` says why (`layer4_no_connection`,
+`layer4_timeout`, `layer7_timeout`, `unexpected_http_status`, `unexpected_http_content` or
+`unspecified`) and `http_status_code` holds the unexpected status code.
 
 ```typescript
-await client.loadBalancers.removeTarget(12345, {
-  type: 'server',
-  server: { id: 12345 }
-});
+const { load_balancer } = await client.loadBalancers.get(12345);
+
+for (const target of load_balancer.targets) {
+  for (const entry of target.targets ?? [target]) {
+    for (const health of entry.health_status ?? []) {
+      if (health.status !== "unhealthy") continue;
+      console.log(entry.server?.id, health.listen_port, health.detail, health.http_status_code);
+    }
+  }
+}
 ```
 
-## Network Management
-
-### Attach to Network
-
-Attaches a Load Balancer to a Network.
+### Change algorithm
 
 ```typescript
-await client.loadBalancers.attachToNetwork(12345, {
-  network: 67890,
-  ip: '10.0.0.2'
-});
+await client.loadBalancers.changeAlgorithm(12345, { type: "least_connections" });
 ```
 
-### Detach from Network
+### Change reverse DNS
 
-Detaches a Load Balancer from a Network.
-
-```typescript
-await client.loadBalancers.detachFromNetwork(12345, {
-  network: 67890
-});
-```
-
-## Other Actions
-
-### Change Algorithm
-
-Changes the algorithm of a Load Balancer.
-
-```typescript
-await client.loadBalancers.changeAlgorithm(12345, {
-  type: 'least_connections'
-});
-```
-
-### Change Protection
-
-Changes the Protection configuration.
-
-```typescript
-await client.loadBalancers.changeProtection(12345, {
-  delete: true
-});
-```
-
-### Change Type
-
-Changes the type of a Load Balancer.
-
-```typescript
-await client.loadBalancers.changeType(12345, {
-  load_balancer_type: 'lb21'
-});
-```
-
-### Change Reverse DNS
-
-Changes the reverse DNS entry.
+A `dns_ptr` of `null` resets the entry to its default value.
 
 ```typescript
 await client.loadBalancers.changeReverseDNS(12345, {
-  ip: '1.2.3.4',
-  dns_ptr: 'lb.example.com'
+  ip: "131.232.99.1",
+  dns_ptr: "lb1.example.com",
 });
 ```
 
-### Enable/Disable Public Interface
+### Change protection
 
 ```typescript
-await client.loadBalancers.enablePublicInterface(12345);
+await client.loadBalancers.changeProtection(12345, { delete: true });
+```
+
+### Change type
+
+`load_balancer_type` is the ID or name of the new [Load Balancer type](./load-balancer-types).
+
+```typescript
+await client.loadBalancers.changeType(12345, { load_balancer_type: "lb21" });
+```
+
+### Networks
+
+`ip` requests a specific address, `ip_range` picks the subnet to attach to.
+
+```typescript
+await client.loadBalancers.attachToNetwork(12345, { network: 4711, ip: "10.0.1.1" });
+await client.loadBalancers.detachFromNetwork(12345, 4711);
+```
+
+### Public interface
+
+```typescript
 await client.loadBalancers.disablePublicInterface(12345);
+await client.loadBalancers.enablePublicInterface(12345);
 ```
 
-## Get Metrics
-
-Returns Metrics for a Load Balancer.
+## Listing actions
 
 ```typescript
-const metrics = await client.loadBalancers.getMetrics(12345, {
-  type: 'open_connections',
-  start: '2024-01-01T00:00:00Z',
-  end: '2024-01-01T23:59:59Z'
-});
+// Actions of one Load Balancer
+const { actions } = await client.loadBalancers.listActions(12345, { status: "running" });
+const { action } = await client.loadBalancers.getAction(12345, 67890);
+
+// Actions of all Load Balancers
+const running = await client.loadBalancers.actions.listAll({ status: "running" });
+const one = await client.loadBalancers.actions.get(67890);
 ```
 
 ## Types
 
 ```typescript
-type LoadBalancerAlgorithmType = 'round_robin' | 'least_connections';
-type LoadBalancerServiceProtocol = 'http' | 'https' | 'tcp';
-type LoadBalancerTargetType = 'server' | 'label_selector' | 'ip';
+import type {
+  LoadBalancer,
+  LoadBalancerService,
+  LoadBalancerTarget,
+  CreateLoadBalancerParams,
+} from "@nilovonjs/hcloud-js";
 
 interface LoadBalancer {
   id: number;
   name: string;
-  load_balancer_type: LoadBalancerType;
+  public_net: {
+    enabled: boolean;
+    ipv4: { id?: number | null; ip: string | null; dns_ptr: string | null; blocked?: boolean };
+    ipv6: { id?: number | null; ip: string | null; dns_ptr: string | null; blocked?: boolean };
+  };
+  private_net: { network: number; ip: string | null }[];
   location: Location;
-  algorithm: { type: LoadBalancerAlgorithmType };
+  load_balancer_type: LoadBalancerType;
+  algorithm: { type: "round_robin" | "least_connections" };
   services: LoadBalancerService[];
   targets: LoadBalancerTarget[];
-  public_net: { enabled: boolean; ipv4: { ip: string }; ipv6: { ip: string } };
-  private_net?: Array<{ network: number; ip: string }>;
-  protection: LoadBalancerProtection;
+  protection: { delete: boolean };
   labels: Record<string, string>;
   created: string;
-  // ... more fields
+  included_traffic: number; // bytes
+  ingoing_traffic: number | null;
+  outgoing_traffic: number | null;
+}
+
+interface LoadBalancerTarget {
+  type: "server" | "label_selector" | "ip";
+  server?: { id: number } | null;
+  label_selector?: { selector: string } | null;
+  ip?: { ip: string } | null;
+  use_private_ip?: boolean;
+  health_status?: {
+    listen_port: number;
+    status: "healthy" | "unhealthy" | "unknown";
+    detail?: string | null;
+    http_status_code?: number | null;
+  }[];
+  targets?: LoadBalancerResolvedTarget[]; // servers a label selector resolved to
 }
 ```

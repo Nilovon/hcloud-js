@@ -3,324 +3,297 @@
  * @see https://docs.hetzner.cloud/reference/cloud#certificates
  */
 
-import type { HCloudClient } from "../../client/index";
-import type {
-  ListCertificatesParams,
-  ListCertificatesResponse,
-  CreateCertificateParams,
-  CreateCertificateResponse,
-  GetCertificateResponse,
-  UpdateCertificateParams,
-  UpdateCertificateResponse,
-  DeleteCertificateResponse,
-  ListCertificateActionsParams,
-  ListCertificateActionsResponse,
-  GetCertificateActionResponse,
-  RetryCertificateIssuanceResponse,
-} from "../../apis/certificates/types";
-import { validate } from "../../validation/index";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { ResourceActionsClient } from "../actions/index";
 import {
-  listCertificatesResponseSchema,
+  actionResponseSchema,
+  getActionResponseSchema,
+  listActionsResponseSchema,
+} from "../actions/schemas";
+import {
   createCertificateRequestSchema,
   createCertificateResponseSchema,
+  createManagedCertificateRequestSchema,
+  createManagedCertificateResponseSchema,
   getCertificateResponseSchema,
+  listCertificatesResponseSchema,
   updateCertificateRequestSchema,
   updateCertificateResponseSchema,
-  deleteCertificateResponseSchema,
-  listCertificateActionsResponseSchema,
-  getCertificateActionResponseSchema,
-  retryCertificateIssuanceResponseSchema,
-} from "../../apis/certificates/schemas";
+} from "./schemas";
+import type {
+  Certificate,
+  CreateCertificateParams,
+  CreateCertificateResponse,
+  CreateManagedCertificateParams,
+  CreateManagedCertificateResponse,
+  GetCertificateActionResponse,
+  GetCertificateResponse,
+  ListCertificateActionsParams,
+  ListCertificateActionsResponse,
+  ListCertificatesParams,
+  ListCertificatesResponse,
+  RetryCertificateIssuanceResponse,
+  UpdateCertificateParams,
+  UpdateCertificateResponse,
+} from "./types";
 
 /**
  * Certificates API client
+ *
+ * TLS/SSL Certificates are used by Load Balancers to terminate HTTPS. They are
+ * either uploaded or managed (issued and renewed by Hetzner via Let's Encrypt).
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#certificates
  */
-export class CertificatesClient {
-  constructor(private readonly client: HCloudClient) {}
+export class CertificatesClient extends NamedResource<
+  Certificate,
+  ListCertificatesParams,
+  "certificates"
+> {
+  protected readonly itemsKey = "certificates";
 
   /**
-   * Returns all Certificate objects.
+   * Actions of all Certificates: `list()`, `get()`, `waitFor()` and `waitForAll()`.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of certificates with pagination metadata
+   * @example
+   * ```typescript
+   * const { actions } = await client.certificates.actions.list({ status: "running" });
+   * ```
+   */
+  public readonly actions = new ResourceActionsClient(this.client, "/certificates");
+
+  /**
+   * Returns a page of Certificates.
+   *
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#certificates-list-certificates
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all certificates
-   * const result = await client.certificates.list();
-   *
-   * // List certificates with filters
-   * const managedCerts = await client.certificates.list({
-   *   type: ['managed'],
-   *   label_selector: 'environment=production',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
+   * const { certificates } = await client.certificates.list({
+   *   type: "managed",
+   *   label_selector: "environment=production",
+   *   sort: "name:asc",
    * });
+   *
+   * // All Certificates across all pages
+   * const all = await client.certificates.listAll();
    * ```
    */
-  async list(params?: ListCertificatesParams): Promise<ListCertificatesResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
+  list(
+    params?: ListCertificatesParams,
+    options?: RequestOptions,
+  ): Promise<ListCertificatesResponse> {
+    return this._get("/certificates", listCertificatesResponseSchema, params, options);
+  }
 
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.type) {
-      queryParams.type = Array.isArray(params.type) ? params.type : [params.type];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/certificates", queryParams);
-
-    return validate(listCertificatesResponseSchema, response, {
-      context: "List certificates response",
-      detailed: true,
-    });
+  /**
+   * Returns a specific Certificate.
+   *
+   * @param id - ID of the Certificate
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#certificates-get-a-certificate
+   *
+   * @example
+   * ```typescript
+   * const { certificate } = await client.certificates.get(12345);
+   * console.log(certificate.not_valid_after);
+   * ```
+   */
+  get(id: number, options?: RequestOptions): Promise<GetCertificateResponse> {
+    return this._get(path`/certificates/${id}`, getCertificateResponseSchema, undefined, options);
   }
 
   /**
    * Creates a new Certificate.
    *
-   * @param params - Parameters for creating the certificate
-   * @returns Promise resolving to the created certificate with action
+   * Without `type` (or with `type: "uploaded"`) a certificate and its private
+   * key are uploaded. With `type: "managed"` a certificate for `domain_names`
+   * is issued by Hetzner; the response then contains the issuance `action`
+   * (see also {@link CertificatesClient.createManaged}).
+   *
+   * @param params - Name and either `certificate` + `private_key` or `type: "managed"` + `domain_names`
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#certificates-create-a-certificate
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Create an uploaded certificate
-   * const result = await client.certificates.create({
-   *   name: 'my-certificate',
-   *   type: 'uploaded',
-   *   certificate: '-----BEGIN CERTIFICATE-----...',
-   *   private_key: '-----BEGIN PRIVATE KEY-----...'
-   * });
-   *
-   * // Create a managed certificate
-   * const result = await client.certificates.create({
-   *   name: 'my-managed-cert',
-   *   type: 'managed',
-   *   domain_names: ['example.com', 'www.example.com']
+   * const { certificate } = await client.certificates.create({
+   *   name: "my-certificate",
+   *   certificate: "-----BEGIN CERTIFICATE-----\n...",
+   *   private_key: "-----BEGIN PRIVATE KEY-----\n...",
    * });
    * ```
    */
-  async create(params: CreateCertificateParams): Promise<CreateCertificateResponse> {
-    const validatedParams = validate(createCertificateRequestSchema, params, {
-      context: "Create certificate request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>("/certificates", validatedParams);
-
-    return validate(createCertificateResponseSchema, response, {
-      context: "Create certificate response",
-      detailed: true,
-    });
+  create(
+    params: CreateCertificateParams,
+    options?: RequestOptions,
+  ): Promise<CreateCertificateResponse> {
+    return this._post(
+      "/certificates",
+      createCertificateResponseSchema,
+      params,
+      createCertificateRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Returns a specific Certificate object.
+   * Creates a new managed Certificate, issued and renewed by Hetzner. The
+   * domains must use Hetzner DNS.
    *
-   * @param id - ID of the Certificate
-   * @returns Promise resolving to the certificate
-   * @see https://docs.hetzner.cloud/reference/cloud#certificates-get-a-certificate
+   * Same endpoint as {@link CertificatesClient.create}, but the response is
+   * guaranteed to contain the issuance `action`.
+   *
+   * @param params - Name, domain names and optional labels
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#certificates-create-a-certificate
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const certificate = await client.certificates.get(12345);
-   * console.log(certificate.certificate.name);
+   * const { certificate, action } = await client.certificates.createManaged({
+   *   name: "my-managed-certificate",
+   *   domain_names: ["example.com", "www.example.com"],
+   * });
+   * await client.actions.waitFor(action);
    * ```
    */
-  async get(id: number): Promise<GetCertificateResponse> {
-    const response = await this.client.get<unknown>(`/certificates/${id}`);
-
-    return validate(getCertificateResponseSchema, response, {
-      context: "Get certificate response",
-      detailed: true,
-    });
+  createManaged(
+    params: Omit<CreateManagedCertificateParams, "type">,
+    options?: RequestOptions,
+  ): Promise<CreateManagedCertificateResponse> {
+    return this._post(
+      "/certificates",
+      createManagedCertificateResponseSchema,
+      { ...params, type: "managed" },
+      createManagedCertificateRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Updates a Certificate.
-   *
-   * You can update a Certificate's name and labels.
+   * Updates the name and/or labels of a Certificate.
    *
    * @param id - ID of the Certificate
-   * @param params - Parameters to update (name and/or labels)
-   * @returns Promise resolving to the updated certificate
+   * @param params - Fields to update
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#certificates-update-a-certificate
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const updated = await client.certificates.update(12345, {
-   *   name: 'new-certificate-name',
-   *   labels: { environment: 'production' }
+   * const { certificate } = await client.certificates.update(12345, {
+   *   name: "new-name",
+   *   labels: { environment: "production" },
    * });
    * ```
    */
-  async update(id: number, params: UpdateCertificateParams): Promise<UpdateCertificateResponse> {
-    const validatedParams = validate(updateCertificateRequestSchema, params, {
-      context: "Update certificate request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(`/certificates/${id}`, validatedParams);
-
-    return validate(updateCertificateResponseSchema, response, {
-      context: "Update certificate response",
-      detailed: true,
-    });
+  update(
+    id: number,
+    params: UpdateCertificateParams,
+    options?: RequestOptions,
+  ): Promise<UpdateCertificateResponse> {
+    return this._put(
+      path`/certificates/${id}`,
+      updateCertificateResponseSchema,
+      params,
+      updateCertificateRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Deletes a Certificate.
+   * Deletes a Certificate. It must not be in use by a Load Balancer.
    *
    * @param id - ID of the Certificate
-   * @returns Promise resolving to the delete action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#certificates-delete-a-certificate
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.certificates.delete(12345);
-   * console.log(`Delete action ID: ${result.action.id}`);
+   * await client.certificates.delete(12345);
    * ```
    */
-  async delete(id: number): Promise<DeleteCertificateResponse> {
-    const response = await this.client.delete<unknown>(`/certificates/${id}`);
-
-    return validate(deleteCertificateResponseSchema, response, {
-      context: "Delete certificate response",
-      detailed: true,
-    });
+  delete(id: number, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/certificates/${id}`, null, options);
   }
 
   /**
-   * Returns all Action objects for a Certificate.
+   * Returns a page of actions of a Certificate.
    *
    * @param id - ID of the Certificate
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of actions with pagination metadata
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#certificates-list-actions-for-a-certificate
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const actions = await client.certificates.listActions(12345, {
-   *   status: ['running'],
-   *   sort: ['started:desc']
+   * const { actions } = await client.certificates.listActions(12345, {
+   *   status: "running",
+   *   sort: "started:desc",
    * });
    * ```
    */
-  async listActions(
+  listActions(
     id: number,
     params?: ListCertificateActionsParams,
+    options?: RequestOptions,
   ): Promise<ListCertificateActionsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.id !== undefined) {
-      const ids = Array.isArray(params.id) ? params.id : [params.id];
-      queryParams.id = ids.map(String);
-    }
-
-    if (params?.status) {
-      queryParams.status = Array.isArray(params.status) ? params.status : [params.status];
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>(`/certificates/${id}/actions`, queryParams);
-
-    return validate(listCertificateActionsResponseSchema, response, {
-      context: "List certificate actions response",
-      detailed: true,
-    });
+    return this._get(path`/certificates/${id}/actions`, listActionsResponseSchema, params, options);
   }
 
   /**
-   * Returns a specific Action object for a Certificate.
+   * Returns a specific action of a Certificate.
    *
    * @param id - ID of the Certificate
-   * @param actionId - ID of the Action
-   * @returns Promise resolving to the action
+   * @param actionId - ID of the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#certificates-get-an-action-for-a-certificate
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const action = await client.certificates.getAction(12345, 67890);
-   * console.log(action.action.command);
+   * const { action } = await client.certificates.getAction(12345, 67890);
+   * console.log(action.status);
    * ```
    */
-  async getAction(id: number, actionId: number): Promise<GetCertificateActionResponse> {
-    const response = await this.client.get<unknown>(`/certificates/${id}/actions/${actionId}`);
-
-    return validate(getCertificateActionResponseSchema, response, {
-      context: "Get certificate action response",
-      detailed: true,
-    });
+  getAction(
+    id: number,
+    actionId: number,
+    options?: RequestOptions,
+  ): Promise<GetCertificateActionResponse> {
+    return this._get(
+      path`/certificates/${id}/actions/${actionId}`,
+      getActionResponseSchema,
+      undefined,
+      options,
+    );
   }
 
   /**
-   * Retries the issuance or renewal of a managed Certificate.
-   *
-   * Only works for managed Certificates in state `verification_process`.
+   * Retries a failed issuance or renewal of a managed Certificate.
    *
    * @param id - ID of the Certificate
-   * @returns Promise resolving to the retry action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#certificates-retry-issuance-or-renewal
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.certificates.retryIssuance(12345);
-   * console.log(`Retry action ID: ${result.action.id}`);
+   * const { action } = await client.certificates.retryIssuance(12345);
+   * await client.actions.waitFor(action);
    * ```
    */
-  async retryIssuance(id: number): Promise<RetryCertificateIssuanceResponse> {
-    const response = await this.client.post<unknown>(`/certificates/${id}/actions/retry`, {});
-
-    return validate(retryCertificateIssuanceResponseSchema, response, {
-      context: "Retry certificate issuance response",
-      detailed: true,
-    });
+  retryIssuance(id: number, options?: RequestOptions): Promise<RetryCertificateIssuanceResponse> {
+    return this._post(
+      path`/certificates/${id}/actions/retry`,
+      actionResponseSchema,
+      undefined,
+      undefined,
+      options,
+    );
   }
 }

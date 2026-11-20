@@ -1,32 +1,38 @@
 /**
  * Types for Hetzner Cloud Certificates API
- * Types are inferred from Zod schemas
  * @see https://docs.hetzner.cloud/reference/cloud#certificates
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
+import type { z } from "zod";
+import type {
+  ActionResponse,
+  GetActionResponse,
+  ListActionsParams,
+  ListActionsResponse,
+} from "../actions/types";
+import type { OneOrMany, PageParams, SortParam } from "../common/types";
+import type {
+  certificateSchema,
+  certificateStatusErrorSchema,
   certificateStatusSchema,
   certificateTypeSchema,
-  listCertificatesResponseSchema,
+  certificateUsedBySchema,
   createCertificateRequestSchema,
   createCertificateResponseSchema,
+  createManagedCertificateRequestSchema,
+  createManagedCertificateResponseSchema,
+  createUploadedCertificateRequestSchema,
   getCertificateResponseSchema,
+  listCertificatesResponseSchema,
   updateCertificateRequestSchema,
   updateCertificateResponseSchema,
-  deleteCertificateResponseSchema,
-  listCertificateActionsResponseSchema,
-  getCertificateActionResponseSchema,
-  retryCertificateIssuanceResponseSchema,
-  certificateSchema,
-} from "../../apis/certificates/schemas";
-import { actionSchema } from "../../apis/actions/schemas";
-import type { z } from "zod";
+} from "./schemas";
 
 /**
- * Certificate status values
+ * Hetzner Cloud Certificate
+ * @see https://docs.hetzner.cloud/reference/cloud#certificates
  */
-export type CertificateStatus = z.infer<typeof certificateStatusSchema>;
+export type Certificate = z.infer<typeof certificateSchema>;
 
 /**
  * Certificate type values
@@ -34,56 +40,48 @@ export type CertificateStatus = z.infer<typeof certificateStatusSchema>;
 export type CertificateType = z.infer<typeof certificateTypeSchema>;
 
 /**
- * Hetzner Cloud Certificate
- * @see https://docs.hetzner.cloud/reference/cloud#certificates-list-certificates
+ * Issuance and renewal status of a managed Certificate
  */
-export type Certificate = z.infer<typeof certificateSchema>;
+export type CertificateStatus = z.infer<typeof certificateStatusSchema>;
 
 /**
- * Pagination metadata
- * @see https://docs.hetzner.cloud/reference/cloud#pagination
- * Re-exported from servers module for consistency
+ * Error of a failed issuance or renewal of a managed Certificate
  */
-export type { PaginationMeta } from "../../apis/servers/types";
+export type CertificateStatusError = z.infer<typeof certificateStatusErrorSchema>;
 
 /**
- * Action information
- * Re-exported from servers module for consistency
+ * Resource using a Certificate
  */
-export type Action = z.infer<typeof actionSchema>;
+export type CertificateUsedBy = z.infer<typeof certificateUsedBySchema>;
+
+/**
+ * Fields Certificates can be sorted by
+ */
+export type CertificateSort = SortParam<"id" | "name" | "created">;
 
 /**
  * List Certificates query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#certificates-list-certificates
  */
-export interface ListCertificatesParams {
+export interface ListCertificatesParams extends PageParams {
   /**
-   * Can be used to filter Certificates by their name. The response will only contain the Certificate matching the specified name.
+   * Only return the Certificate with this exact name.
    */
   name?: string;
   /**
-   * Can be used to filter Certificates by labels. The response will only contain Certificates matching the label selector.
+   * Only return Certificates matching the label selector.
    * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, created, created:asc, created:desc
+   * Only return Certificates of the given type(s).
+   */
+  type?: OneOrMany<CertificateType>;
+  /**
+   * Sort the result.
    * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  sort?: string | string[];
-  /**
-   * Can be used multiple times. The response will only contain Certificates matching the specified type.
-   * Choices: uploaded, managed
-   */
-  type?: CertificateType | CertificateType[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
+  sort?: OneOrMany<CertificateSort>;
 }
 
 /**
@@ -93,16 +91,38 @@ export interface ListCertificatesParams {
 export type ListCertificatesResponse = z.infer<typeof listCertificatesResponseSchema>;
 
 /**
- * Create Certificate request parameters
+ * Create Certificate request parameters: an uploaded (default) or a managed Certificate
  * @see https://docs.hetzner.cloud/reference/cloud#certificates-create-a-certificate
  */
-export type CreateCertificateParams = z.infer<typeof createCertificateRequestSchema>;
+export type CreateCertificateParams = z.input<typeof createCertificateRequestSchema>;
 
 /**
- * Create Certificate response
+ * Create uploaded Certificate request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#certificates-create-a-certificate
+ */
+export type CreateUploadedCertificateParams = z.input<
+  typeof createUploadedCertificateRequestSchema
+>;
+
+/**
+ * Create managed Certificate request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#certificates-create-a-certificate
+ */
+export type CreateManagedCertificateParams = z.input<typeof createManagedCertificateRequestSchema>;
+
+/**
+ * Create Certificate response. `action` is only present for managed Certificates.
  * @see https://docs.hetzner.cloud/reference/cloud#certificates-create-a-certificate
  */
 export type CreateCertificateResponse = z.infer<typeof createCertificateResponseSchema>;
+
+/**
+ * Create managed Certificate response
+ * @see https://docs.hetzner.cloud/reference/cloud#certificates-create-a-certificate
+ */
+export type CreateManagedCertificateResponse = z.infer<
+  typeof createManagedCertificateResponseSchema
+>;
 
 /**
  * Get Certificate response
@@ -114,7 +134,7 @@ export type GetCertificateResponse = z.infer<typeof getCertificateResponseSchema
  * Update Certificate request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#certificates-update-a-certificate
  */
-export type UpdateCertificateParams = z.infer<typeof updateCertificateRequestSchema>;
+export type UpdateCertificateParams = z.input<typeof updateCertificateRequestSchema>;
 
 /**
  * Update Certificate response
@@ -123,54 +143,25 @@ export type UpdateCertificateParams = z.infer<typeof updateCertificateRequestSch
 export type UpdateCertificateResponse = z.infer<typeof updateCertificateResponseSchema>;
 
 /**
- * Delete Certificate response
- * @see https://docs.hetzner.cloud/reference/cloud#certificates-delete-a-certificate
- */
-export type DeleteCertificateResponse = z.infer<typeof deleteCertificateResponseSchema>;
-
-/**
  * List Certificate Actions query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#certificates-list-actions-for-a-certificate
  */
-export interface ListCertificateActionsParams {
-  /**
-   * Can be used multiple times. The response will only contain Actions matching the specified IDs.
-   */
-  id?: number | number[];
-  /**
-   * Can be used multiple times. The response will only contain Actions matching the specified status.
-   * Choices: running, success, error
-   */
-  status?: "running" | "success" | "error" | Array<"running" | "success" | "error">;
-  /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, command, command:asc, command:desc, status, status:asc, status:desc, progress, progress:asc, progress:desc, started, started:asc, started:desc, finished, finished:asc, finished:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
-}
+export type ListCertificateActionsParams = ListActionsParams;
 
 /**
  * List Certificate Actions response
  * @see https://docs.hetzner.cloud/reference/cloud#certificates-list-actions-for-a-certificate
  */
-export type ListCertificateActionsResponse = z.infer<typeof listCertificateActionsResponseSchema>;
+export type ListCertificateActionsResponse = ListActionsResponse;
 
 /**
  * Get Certificate Action response
  * @see https://docs.hetzner.cloud/reference/cloud#certificates-get-an-action-for-a-certificate
  */
-export type GetCertificateActionResponse = z.infer<typeof getCertificateActionResponseSchema>;
+export type GetCertificateActionResponse = GetActionResponse;
 
 /**
  * Retry Certificate Issuance/Renewal response
  * @see https://docs.hetzner.cloud/reference/cloud#certificates-retry-issuance-or-renewal
  */
-export type RetryCertificateIssuanceResponse = z.infer<typeof retryCertificateIssuanceResponseSchema>;
+export type RetryCertificateIssuanceResponse = ActionResponse;

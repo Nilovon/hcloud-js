@@ -1,0 +1,190 @@
+---
+title: Floating IPs API
+description: Manage Floating IPs and assign them to servers
+---
+
+# Floating IPs API
+
+`client.floatingIPs` manages Floating IPs: additional public IPs that can be moved between servers.
+A Floating IP has a `home_location`; routing is optimized for that location.
+
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
+```
+
+Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+
+| Method | Endpoint |
+| --- | --- |
+| `list(params?)` | `GET /floating_ips` |
+| `get(id)` | `GET /floating_ips/{id}` |
+| `getByName(name)` | `GET /floating_ips?name=` |
+| `getByIP(ip)` | `GET /floating_ips` (all pages) |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /floating_ips` (all pages) |
+| `create(params)` | `POST /floating_ips` |
+| `update(id, params)` | `PUT /floating_ips/{id}` |
+| `delete(id)` | `DELETE /floating_ips/{id}` |
+| `assignToServer(id, params)` | `POST /floating_ips/{id}/actions/assign` |
+| `unassign(id)` | `POST /floating_ips/{id}/actions/unassign` |
+| `changeReverseDNS(id, params)` | `POST /floating_ips/{id}/actions/change_dns_ptr` |
+| `changeProtection(id, params)` | `POST /floating_ips/{id}/actions/change_protection` |
+| `listActions(id, params?)` | `GET /floating_ips/{id}/actions` |
+| `getAction(id, actionId)` | `GET /floating_ips/{id}/actions/{action_id}` |
+| `actions.list(params?)` / `actions.get(id)` | `GET /floating_ips/actions`, `GET /floating_ips/actions/{id}` |
+
+## List Floating IPs
+
+Returns one page of Floating IPs. Filters: `name`, `label_selector`, `sort` (`id`, `created`),
+`page`, `per_page`.
+
+```typescript
+const { floating_ips, meta } = await client.floatingIPs.list({
+  label_selector: "environment=production",
+  sort: "created:desc",
+});
+```
+
+## Get a Floating IP
+
+```typescript
+const { floating_ip } = await client.floatingIPs.get(12345);
+console.log(floating_ip.ip, floating_ip.server, floating_ip.home_location.name);
+```
+
+## Find by name or IP
+
+Both return the Floating IP or `undefined`. The API has no filter for the address, so `getByIP()`
+goes through all pages until it finds a match. IPv6 Floating IPs are matched by their network.
+
+```typescript
+const byName = await client.floatingIPs.getByName("web-frontend");
+const byIP = await client.floatingIPs.getByIP("131.232.99.1");
+const byNetwork = await client.floatingIPs.getByIP("2001:db8::/64");
+```
+
+## All Floating IPs
+
+`iterate()`, `iteratePages()` and `listAll()` follow the pagination for you, `first()` returns the
+first match or `undefined`.
+
+```typescript
+const all = await client.floatingIPs.listAll({ label_selector: "environment=production" });
+
+for await (const floatingIP of client.floatingIPs.iterate()) {
+  console.log(floatingIP.name, floatingIP.ip);
+}
+
+const newest = await client.floatingIPs.first({ sort: "created:desc" });
+```
+
+## Create a Floating IP
+
+Pass `type` and either `home_location` or `server`. `action` is only set if the Floating IP is
+assigned to a server on creation.
+
+```typescript
+// In a location
+const { floating_ip } = await client.floatingIPs.create({
+  type: "ipv4",
+  home_location: "fsn1",
+  name: "web-frontend",
+  description: "Web Frontend",
+  labels: { environment: "production" },
+});
+
+// Assigned to a server
+const created = await client.floatingIPs.create({ type: "ipv6", server: 42 });
+if (created.action) await client.actions.waitFor(created.action);
+```
+
+## Update a Floating IP
+
+Updates `name`, `description` and/or `labels`.
+
+```typescript
+const { floating_ip } = await client.floatingIPs.update(12345, {
+  name: "new-name",
+  labels: { environment: "production" },
+});
+```
+
+## Delete a Floating IP
+
+Resolves without a value. An assigned Floating IP is unassigned first.
+
+```typescript
+await client.floatingIPs.delete(12345);
+```
+
+## Actions
+
+These methods return `{ action }`. Wait for the action with `client.actions.waitFor()`.
+
+### Assign to a server
+
+```typescript
+const { action } = await client.floatingIPs.assignToServer(12345, { server: 42 });
+await client.actions.waitFor(action);
+
+// or in one go
+await client.actions.waitFor(await client.floatingIPs.assignToServer(12345, { server: 42 }));
+```
+
+### Unassign
+
+```typescript
+const { action } = await client.floatingIPs.unassign(12345);
+await client.actions.waitFor(action);
+```
+
+### Change reverse DNS
+
+A `dns_ptr` of `null` resets the entry to its default value.
+
+```typescript
+await client.floatingIPs.changeReverseDNS(12345, {
+  ip: "131.232.99.1",
+  dns_ptr: "server.example.com",
+});
+```
+
+### Change protection
+
+```typescript
+await client.floatingIPs.changeProtection(12345, { delete: true });
+```
+
+## Listing actions
+
+```typescript
+// Actions of one Floating IP
+const { actions } = await client.floatingIPs.listActions(12345, { status: "running" });
+const { action } = await client.floatingIPs.getAction(12345, 67890);
+
+// Actions of all Floating IPs
+const running = await client.floatingIPs.actions.listAll({ status: "running" });
+const one = await client.floatingIPs.actions.get(67890);
+```
+
+## Types
+
+```typescript
+import type { FloatingIP, CreateFloatingIPParams } from "@nilovonjs/hcloud-js";
+
+interface FloatingIP {
+  id: number;
+  name: string;
+  description: string | null;
+  ip: string;
+  type: "ipv4" | "ipv6";
+  server: number | null; // ID of the assigned server
+  dns_ptr: { ip: string; dns_ptr: string }[];
+  home_location: Location;
+  blocked: boolean;
+  protection: { delete: boolean };
+  labels: Record<string, string>;
+  created: string;
+}
+```

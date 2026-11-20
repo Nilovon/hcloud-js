@@ -1,0 +1,27 @@
+{
+  "title": "Resources",
+  "defaultOpen": true,
+  "pages": [
+    "servers",
+    "server-types",
+    "images",
+    "isos",
+    "placement-groups",
+    "ssh-keys",
+    "volumes",
+    "networks",
+    "firewalls",
+    "floating-ips",
+    "primary-ips",
+    "load-balancers",
+    "load-balancer-types",
+    "certificates",
+    "dns",
+    "storage-boxes",
+    "storage-box-types",
+    "locations",
+    "datacenters",
+    "pricing",
+    "actions"
+  ]
+}

@@ -1,33 +1,36 @@
 /**
  * Types for Hetzner Cloud Firewalls API
- * Types are inferred from Zod schemas
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls
  */
 
-// biome-ignore assist/source/organizeImports: we need to import the schemas first
-import {
-  listFirewallsResponseSchema,
+import type { z } from "zod";
+import type {
+  ActionsResponse,
+  GetActionResponse,
+  ListActionsParams,
+  ListActionsResponse,
+} from "../actions/types";
+import type { OneOrMany, PageParams, SortParam } from "../common/types";
+import type {
+  applyFirewallToResourcesRequestSchema,
   createFirewallRequestSchema,
   createFirewallResponseSchema,
-  getFirewallResponseSchema,
-  updateFirewallRequestSchema,
-  updateFirewallResponseSchema,
-  deleteFirewallResponseSchema,
-  listFirewallActionsResponseSchema,
-  getFirewallActionResponseSchema,
-  applyFirewallToResourcesRequestSchema,
-  applyFirewallToResourcesResponseSchema,
-  removeFirewallFromResourcesRequestSchema,
-  removeFirewallFromResourcesResponseSchema,
-  setFirewallRulesRequestSchema,
-  setFirewallRulesResponseSchema,
-  firewallSchema,
-  firewallRuleSchema,
+  firewallAppliedToResourceSchema,
+  firewallEffectiveResourceSchema,
+  firewallResourceRequestSchema,
+  firewallResourceTypeSchema,
   firewallRuleDirectionSchema,
   firewallRuleProtocolSchema,
-  firewallAppliedToResourceSchema,
-} from "../../apis/firewalls/schemas";
-import type { z } from "zod";
+  firewallRuleRequestSchema,
+  firewallRuleSchema,
+  firewallSchema,
+  getFirewallResponseSchema,
+  listFirewallsResponseSchema,
+  removeFirewallFromResourcesRequestSchema,
+  setFirewallRulesRequestSchema,
+  updateFirewallRequestSchema,
+  updateFirewallResponseSchema,
+} from "./schemas";
 
 /**
  * Firewall rule direction
@@ -40,46 +43,66 @@ export type FirewallRuleDirection = z.infer<typeof firewallRuleDirectionSchema>;
 export type FirewallRuleProtocol = z.infer<typeof firewallRuleProtocolSchema>;
 
 /**
- * Firewall rule
+ * Firewall rule as returned by the API
  */
 export type FirewallRule = z.infer<typeof firewallRuleSchema>;
 
 /**
- * Firewall applied to resource
+ * Firewall rule of a request. A {@link FirewallRule} returned by the API is accepted as well.
+ */
+export type FirewallRuleInput = z.input<typeof firewallRuleRequestSchema>;
+
+/**
+ * Type of a resource a firewall is applied to
+ */
+export type FirewallResourceType = z.infer<typeof firewallResourceTypeSchema>;
+
+/**
+ * Resource a firewall is effectively applied to through a label selector
+ */
+export type FirewallEffectiveResource = z.infer<typeof firewallEffectiveResourceSchema>;
+
+/**
+ * Resource a firewall is applied to, as returned by the API
  */
 export type FirewallAppliedToResource = z.infer<typeof firewallAppliedToResourceSchema>;
 
 /**
- * Firewall
+ * Resource of a request a firewall is applied to or removed from. A
+ * {@link FirewallAppliedToResource} returned by the API is accepted as well.
+ */
+export type FirewallResourceInput = z.input<typeof firewallResourceRequestSchema>;
+
+/**
+ * Hetzner Cloud Firewall
+ * @see https://docs.hetzner.cloud/reference/cloud#firewalls
  */
 export type Firewall = z.infer<typeof firewallSchema>;
+
+/**
+ * Fields firewalls can be sorted by
+ */
+export type FirewallSort = SortParam<"id" | "name" | "created">;
 
 /**
  * List Firewalls query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls-list-firewalls
  */
-export interface ListFirewallsParams {
+export interface ListFirewallsParams extends PageParams {
   /**
-   * Can be used to filter Firewalls by their name. The response will only contain the Firewall matching the specified name.
+   * Only return the firewall with this exact name.
    */
   name?: string;
   /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, name, name:asc, name:desc, created, created:asc, created:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter Firewalls by labels. The response will only contain Firewalls matching the label selector.
+   * Only return firewalls matching the label selector.
+   * @see https://docs.hetzner.cloud/reference/cloud#label-selector
    */
   label_selector?: string;
   /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
+   * Sort the result.
+   * @see https://docs.hetzner.cloud/reference/cloud#sorting
    */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
+  sort?: OneOrMany<FirewallSort>;
 }
 
 /**
@@ -89,10 +112,10 @@ export interface ListFirewallsParams {
 export type ListFirewallsResponse = z.infer<typeof listFirewallsResponseSchema>;
 
 /**
- * Create Firewall parameters
+ * Create Firewall request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls-create-a-firewall
  */
-export type CreateFirewallParams = z.infer<typeof createFirewallRequestSchema>;
+export type CreateFirewallParams = z.input<typeof createFirewallRequestSchema>;
 
 /**
  * Create Firewall response
@@ -107,10 +130,10 @@ export type CreateFirewallResponse = z.infer<typeof createFirewallResponseSchema
 export type GetFirewallResponse = z.infer<typeof getFirewallResponseSchema>;
 
 /**
- * Update Firewall parameters
+ * Update Firewall request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls-update-a-firewall
  */
-export type UpdateFirewallParams = z.infer<typeof updateFirewallRequestSchema>;
+export type UpdateFirewallParams = z.input<typeof updateFirewallRequestSchema>;
 
 /**
  * Update Firewall response
@@ -119,68 +142,52 @@ export type UpdateFirewallParams = z.infer<typeof updateFirewallRequestSchema>;
 export type UpdateFirewallResponse = z.infer<typeof updateFirewallResponseSchema>;
 
 /**
- * Delete Firewall response
- * @see https://docs.hetzner.cloud/reference/cloud#firewalls-delete-a-firewall
- */
-export type DeleteFirewallResponse = z.infer<typeof deleteFirewallResponseSchema>;
-
-/**
  * List Firewall Actions query parameters
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls-list-actions-for-a-firewall
  */
-export interface ListFirewallActionsParams {
-  /**
-   * Can be used multiple times. Choices: id, id:asc, id:desc, command, command:asc, command:desc, status, status:asc, status:desc, progress, progress:asc, progress:desc, started, started:asc, started:desc, finished, finished:asc, finished:desc
-   * @see https://docs.hetzner.cloud/reference/cloud#sorting
-   */
-  sort?: string | string[];
-  /**
-   * Can be used to filter Actions by status. The response will only contain Actions matching the status.
-   */
-  status?: string | string[];
-  /**
-   * Page number to return. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  page?: number;
-  /**
-   * Maximum number of entries returned per page. For more information, see [Pagination](https://docs.hetzner.cloud/reference/cloud#pagination).
-   */
-  per_page?: number;
-}
+export type ListFirewallActionsParams = ListActionsParams;
 
 /**
  * List Firewall Actions response
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls-list-actions-for-a-firewall
  */
-export type ListFirewallActionsResponse = z.infer<typeof listFirewallActionsResponseSchema>;
+export type ListFirewallActionsResponse = ListActionsResponse;
 
 /**
  * Get Firewall Action response
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls-get-an-action-for-a-firewall
  */
-export type GetFirewallActionResponse = z.infer<typeof getFirewallActionResponseSchema>;
+export type GetFirewallActionResponse = GetActionResponse;
 
 /**
- * Apply Firewall to Resources parameters
+ * Set Firewall Rules request parameters
+ * @see https://docs.hetzner.cloud/reference/cloud#firewalls-set-rules
+ */
+export type SetFirewallRulesParams = z.input<typeof setFirewallRulesRequestSchema>;
+
+/**
+ * Set Firewall Rules response
+ * @see https://docs.hetzner.cloud/reference/cloud#firewalls-set-rules
+ */
+export type SetFirewallRulesResponse = ActionsResponse;
+
+/**
+ * Apply Firewall to Resources request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls-apply-to-resources
  */
-export type ApplyFirewallToResourcesParams = z.infer<
-  typeof applyFirewallToResourcesRequestSchema
->;
+export type ApplyFirewallToResourcesParams = z.input<typeof applyFirewallToResourcesRequestSchema>;
 
 /**
  * Apply Firewall to Resources response
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls-apply-to-resources
  */
-export type ApplyFirewallToResourcesResponse = z.infer<
-  typeof applyFirewallToResourcesResponseSchema
->;
+export type ApplyFirewallToResourcesResponse = ActionsResponse;
 
 /**
- * Remove Firewall from Resources parameters
+ * Remove Firewall from Resources request parameters
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls-remove-from-resources
  */
-export type RemoveFirewallFromResourcesParams = z.infer<
+export type RemoveFirewallFromResourcesParams = z.input<
   typeof removeFirewallFromResourcesRequestSchema
 >;
 
@@ -188,18 +195,4 @@ export type RemoveFirewallFromResourcesParams = z.infer<
  * Remove Firewall from Resources response
  * @see https://docs.hetzner.cloud/reference/cloud#firewalls-remove-from-resources
  */
-export type RemoveFirewallFromResourcesResponse = z.infer<
-  typeof removeFirewallFromResourcesResponseSchema
->;
-
-/**
- * Set Firewall Rules parameters
- * @see https://docs.hetzner.cloud/reference/cloud#firewalls-set-rules
- */
-export type SetFirewallRulesParams = z.infer<typeof setFirewallRulesRequestSchema>;
-
-/**
- * Set Firewall Rules response
- * @see https://docs.hetzner.cloud/reference/cloud#firewalls-set-rules
- */
-export type SetFirewallRulesResponse = z.infer<typeof setFirewallRulesResponseSchema>;
+export type RemoveFirewallFromResourcesResponse = ActionsResponse;

@@ -1,0 +1,141 @@
+---
+title: Pagination
+description: list(), listAll(), iterate() and friends
+---
+
+List endpoints of the Hetzner API are paginated with at most 50 items per page.
+Every listable resource of the SDK offers the same set of methods.
+
+## One page: `list()`
+
+`list()` maps directly to the API and returns the response envelope including
+pagination metadata:
+
+```typescript
+const { servers, meta } = await client.servers.list({ page: 2, per_page: 25 });
+
+console.log(meta?.pagination);
+// { page: 2, per_page: 25, previous_page: 1, next_page: 3, last_page: 4, total_entries: 87 }
+```
+
+## Everything: `listAll()`
+
+Fetches all pages and returns a flat array:
+
+```typescript
+const servers = await client.servers.listAll({ label_selector: "env=production" });
+```
+
+## Lazily: `iterate()`
+
+An async iterator that fetches pages on demand. Stop early and no further
+requests are made:
+
+```typescript
+for await (const image of client.images.iterate({ type: "snapshot", sort: "created:desc" })) {
+  if (image.description.startsWith("nightly-")) {
+    console.log("Latest nightly snapshot:", image.id);
+    break;
+  }
+}
+```
+
+## Page by page: `iteratePages()`
+
+Like `iterate()`, but yields whole list responses:
+
+```typescript
+for await (const page of client.volumes.iteratePages({ per_page: 50 })) {
+  console.log(`${page.volumes.length} volumes on page ${page.meta?.pagination?.page}`);
+}
+```
+
+## First match: `first()`
+
+Requests a single item and returns it (or `undefined`):
+
+```typescript
+const oldest = await client.servers.first({ sort: "created:asc" });
+```
+
+## By name: `getByName()`
+
+Available on every resource that can be filtered by name:
+
+```typescript
+const network = await client.networks.getByName("internal");
+if (!network) throw new Error("Network not found");
+```
+
+## Parameters
+
+All helpers accept the same filters as `list()`. `per_page` sets the page size
+(default: 50, the maximum), `page` the first page to fetch. Request options go
+last and apply to every page request:
+
+```typescript
+const servers = await client.servers.listAll(
+  { status: ["running"], per_page: 50 },
+  { signal: controller.signal },
+);
+```
+
+## Label selectors
+
+Use `labelSelector()` to build
+[label selectors](https://docs.hetzner.cloud/reference/cloud#label-selector)
+without string concatenation:
+
+```typescript
+import { labelSelector } from "@nilovonjs/hcloud-js";
+
+const servers = await client.servers.listAll({
+  label_selector: labelSelector({
+    env: "production",          // env=production
+    tier: ["web", "api"],       // tier in (web,api)
+    team: { not: "legacy" },    // team!=legacy
+    managed: true,              // managed (label exists)
+    deprecated: false,          // !deprecated (label does not exist)
+  }),
+});
+```
+
+## Sorting
+
+`sort` parameters are typed per resource, so your editor completes the
+supported fields and directions:
+
+```typescript
+await client.servers.list({ sort: ["name:asc", "created:desc"] });
+```
+
+## Nested resources
+
+Resources that live below another resource follow the same pattern with
+explicit names, for example DNS records:
+
+```typescript
+const zones = await client.dns.listAllZones();
+
+for await (const rrset of client.dns.iterateRRSets("example.com", { type: "A" })) {
+  console.log(rrset.name, rrset.records);
+}
+```
+
+## Generic helpers
+
+`paginate()` and `getAllPages()` work with any function returning a paginated
+response, e.g. for endpoints you call through the low-level client:
+
+```typescript
+import { getAllPages, paginate } from "@nilovonjs/hcloud-js";
+
+const actions = await getAllPages(
+  (params) => client.servers.listActions(42, params),
+  "actions",
+);
+
+for await (const page of paginate((params) => client.servers.list(params), "servers", { maxPages: 3 })) {
+  console.log(page.length);
+}
+```

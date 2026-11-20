@@ -1,0 +1,97 @@
+---
+title: Load Balancer Types API
+description: List the available Load Balancer types and their prices
+---
+
+# Load Balancer Types API
+
+`client.loadBalancerTypes` lists the Load Balancer types: the capacity (connections, services,
+targets, certificates) and the price of a Load Balancer. Load Balancer types are read-only.
+
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
+```
+
+Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+
+| Method | Endpoint |
+| --- | --- |
+| `list(params?)` | `GET /load_balancer_types` |
+| `get(id)` | `GET /load_balancer_types/{id}` |
+| `getByName(name)` | `GET /load_balancer_types?name=` |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /load_balancer_types` (all pages) |
+
+## List Load Balancer types
+
+Returns one page of Load Balancer types. Filters: `name`, `page`, `per_page`.
+
+```typescript
+const { load_balancer_types, meta } = await client.loadBalancerTypes.list();
+```
+
+## Get a Load Balancer type
+
+```typescript
+const { load_balancer_type } = await client.loadBalancerTypes.get(1);
+console.log(load_balancer_type.name, load_balancer_type.max_connections);
+```
+
+## Find by name
+
+Returns the Load Balancer type or `undefined`.
+
+```typescript
+const lb11 = await client.loadBalancerTypes.getByName("lb11");
+```
+
+## All Load Balancer types
+
+`iterate()`, `iteratePages()` and `listAll()` follow the pagination for you, `first()` returns the
+first match or `undefined`.
+
+```typescript
+const all = await client.loadBalancerTypes.listAll();
+
+for await (const type of client.loadBalancerTypes.iterate()) {
+  const price = type.prices.find((entry) => entry.location === "fsn1");
+  console.log(type.name, price?.price_monthly.gross);
+}
+```
+
+## Deprecation
+
+`deprecation` is `null` (or missing) for types that are not deprecated. A deprecated type cannot be
+ordered anymore after `unavailable_after`.
+
+```typescript
+const available = (await client.loadBalancerTypes.listAll()).filter((type) => !type.deprecation);
+```
+
+## Types
+
+```typescript
+import type { LoadBalancerType, LoadBalancerTypePrice } from "@nilovonjs/hcloud-js";
+
+interface LoadBalancerType {
+  id: number;
+  name: string;
+  description: string;
+  max_connections: number;
+  max_services: number;
+  max_targets: number;
+  max_assigned_certificates: number;
+  deprecation?: { announced: string; unavailable_after: string } | null;
+  deprecated?: string | null; // legacy timestamp, use `deprecation`
+  prices: LoadBalancerTypePrice[];
+}
+
+interface LoadBalancerTypePrice {
+  location: string;
+  price_hourly: { net: string; gross: string };
+  price_monthly: { net: string; gross: string };
+  included_traffic?: number; // bytes
+  price_per_tb_traffic?: { net: string; gross: string };
+}
+```

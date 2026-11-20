@@ -1,420 +1,218 @@
 ---
-title: Examples
-description: Code examples for common use cases
+title: Recipes
+description: Practical end-to-end examples
 ---
 
-# Examples
+Runnable versions of several recipes live in
+[`apps/example`](https://github.com/Nilovon/hcloud-js/tree/main/apps/example).
 
-This page contains code examples for common use cases.
-
-## Creating a Server
-
-### Basic Example
+All snippets assume:
 
 ```typescript
-import { HCloudClient } from '@nilovonjs/hcloud-js';
+import { HCloudClient } from "@nilovonjs/hcloud-js";
 
-const client = new HCloudClient({
-  token: process.env.HCLOUD_TOKEN!
-});
-
-// Create a new server
-const server = await client.servers.create({
-  name: 'my-server',
-  server_type: 'cpx11',
-  image: 'ubuntu-22.04',
-  location: 'nbg1',
-  ssh_keys: [123],
-  labels: {
-    environment: 'production',
-    team: 'backend'
-  }
-});
-
-console.log(`Server created: ${server.server.name}`);
+const client = new HCloudClient();
 ```
 
-### Using Helper Function
-
-For convenience, use the `createAndWaitForServer` helper to automatically wait for the server to be running:
+## Provision a server
 
 ```typescript
-import { HCloudClient, createAndWaitForServer } from '@nilovonjs/hcloud-js';
+const key =
+  (await client.sshKeys.getByName("deploy")) ??
+  (await client.sshKeys.create({ name: "deploy", public_key: process.env.DEPLOY_PUBLIC_KEY! })).ssh_key;
 
-const client = new HCloudClient({
-  token: process.env.HCLOUD_TOKEN!
+const { server } = await client.servers.createAndWait({
+  name: "web-1",
+  server_type: "cx22",
+  image: "ubuntu-24.04",
+  location: "nbg1",
+  ssh_keys: [key.id],
+  labels: { env: "production", role: "web" },
+  user_data: "#cloud-config\npackages:\n  - nginx\n",
 });
 
-// Create server and wait for it to be ready
-const server = await createAndWaitForServer(client, {
-  name: 'my-server',
-  server_type: 'cpx11',
-  image: 'ubuntu-22.04',
-  location: 'nbg1',
-  ssh_keys: [123]
-});
-
-// Server is now guaranteed to be running
-console.log(`Server ${server.name} is ready!`);
-console.log(`IP: ${server.public_net.ipv4?.ip}`);
+console.log(`ssh root@${server.public_net.ipv4?.ip}`);
 ```
 
-### Manual Waiting with Action Polling
+## Idempotent "ensure" helpers
 
-If you need more control, use action polling:
+`getByName()` returns `undefined` instead of throwing, which makes
+create-if-missing flows short:
 
 ```typescript
-import { HCloudClient, pollAction } from '@nilovonjs/hcloud-js';
+async function ensureNetwork(name: string) {
+  const existing = await client.networks.getByName(name);
+  if (existing) return existing;
 
-const client = new HCloudClient({
-  token: process.env.HCLOUD_TOKEN!
-});
-
-const server = await client.servers.create({
-  name: 'my-server',
-  server_type: 'cpx11',
-  image: 'ubuntu-22.04'
-});
-
-// Wait for creation action to complete
-if (server.action) {
-  await pollAction(client, server.action.id, {
-    interval: 1000,  // Check every second
-    timeout: 300000  // Wait up to 5 minutes
+  const { network } = await client.networks.create({
+    name,
+    ip_range: "10.0.0.0/16",
+    subnets: [{ type: "cloud", ip_range: "10.0.1.0/24", network_zone: "eu-central" }],
   });
-}
-
-console.log(`Server is now running!`);
-```
-
-## Managing Firewalls
-
-```typescript
-// Create a firewall
-const firewall = await client.firewalls.create({
-  name: 'web-firewall',
-  rules: {
-    inbound: [
-      {
-        direction: 'in',
-        protocol: 'tcp',
-        port: '80',
-        source_ips: ['0.0.0.0/0', '::/0'],
-        description: 'Allow HTTP'
-      },
-      {
-        direction: 'in',
-        protocol: 'tcp',
-        port: '443',
-        source_ips: ['0.0.0.0/0', '::/0'],
-        description: 'Allow HTTPS'
-      }
-    ]
-  }
-});
-
-// Apply to a server
-await client.firewalls.applyToResources(firewall.firewall.id, {
-  resources: [
-    { type: 'server', server: { id: 12345 } }
-  ]
-});
-```
-
-## Working with Pagination
-
-### Using `getAllPages()`
-
-Fetch all items from a paginated endpoint:
-
-```typescript
-import { getAllPages } from '@nilovonjs/hcloud-js';
-
-// Get all servers
-const allServers = await getAllPages(
-  (params) => client.servers.list(params),
-  'servers'
-);
-console.log(`Total: ${allServers.length} servers`);
-```
-
-### Using `paginate()`
-
-Iterate through pages using an async generator:
-
-```typescript
-import { paginate } from '@nilovonjs/hcloud-js';
-
-// Process servers page by page (memory efficient for large datasets)
-for await (const servers of paginate(
-  (params) => client.servers.list(params),
-  'servers',
-  { maxPages: 10, delay: 100 }
-)) {
-  console.log(`Processing ${servers.length} servers...`);
-  for (const server of servers) {
-    // Process each server
-  }
+  return network;
 }
 ```
 
-## Server Actions
-
-### Power Management
+## Lock down a server with a firewall
 
 ```typescript
-// Power on server and wait for completion
-import { pollAction } from '@nilovonjs/hcloud-js';
+const { firewall, actions } = await client.firewalls.create({
+  name: "web",
+  rules: [
+    { direction: "in", protocol: "tcp", port: "22", source_ips: ["203.0.113.7/32"], description: "SSH from office" },
+    { direction: "in", protocol: "tcp", port: "80", source_ips: ["0.0.0.0/0", "::/0"] },
+    { direction: "in", protocol: "tcp", port: "443", source_ips: ["0.0.0.0/0", "::/0"] },
+  ],
+  apply_to: [{ type: "label_selector", label_selector: { selector: "role=web" } }],
+});
 
-const action = await client.servers.powerOn(12345);
-await pollAction(client, action.action.id);
-console.log('Server is now running!');
+await client.actions.waitForAll(actions);
 ```
 
-### Multiple Actions
+## Attach and resize a volume
 
 ```typescript
-import { pollActions } from '@nilovonjs/hcloud-js';
+const created = await client.volumes.create({
+  name: "data",
+  size: 50,
+  server: server.id,
+  format: "ext4",
+  automount: true,
+});
+await client.actions.waitForAll(created);
 
-// Start multiple servers in parallel
-const actions = await Promise.all([
-  client.servers.powerOn(1),
-  client.servers.powerOn(2),
-  client.servers.powerOn(3),
-]);
-
-// Wait for all to complete
-const actionIds = actions.map(a => a.action.id);
-await pollActions(client, actionIds);
-console.log('All servers are running!');
+await client.actions.waitFor(await client.volumes.resize(created.volume.id, { size: 100 }));
 ```
 
-### Image Management
+## Snapshot before a risky change
 
 ```typescript
-// Create a snapshot
-const image = await client.servers.createImage(12345, {
-  type: 'snapshot',
-  description: 'Production backup',
-  labels: { environment: 'production' }
+const snapshot = await client.servers.createImage(server.id, {
+  type: "snapshot",
+  description: `pre-upgrade-${new Date().toISOString()}`,
+  labels: { purpose: "pre-upgrade" },
 });
-
-console.log(`Snapshot created: ${image.image.name}`);
-```
-
-### Network Management
-
-```typescript
-// Attach server to network
-await client.servers.attachToNetwork(12345, {
-  network: 67890,
-  ip: '10.0.0.2',
-  alias_ips: ['10.0.0.3']
-});
-
-// Change reverse DNS
-await client.servers.changeReverseDNS(12345, {
-  ip: '1.2.3.4',
-  dns_ptr: 'server.example.com'
-});
-```
-
-## Setting up Load Balancer
-
-```typescript
-// Create a load balancer
-const lb = await client.loadBalancers.create({
-  name: 'my-load-balancer',
-  load_balancer_type: 'lb11',
-  location: 'nbg1',
-  algorithm: { type: 'round_robin' },
-  services: [{
-    protocol: 'http',
-    listen_port: 80,
-    destination_port: 80,
-    health_check: {
-      protocol: 'http',
-      port: 80,
-      interval: 15,
-      timeout: 10,
-      retries: 3
-    }
-  }],
-  targets: [
-    { type: 'server', server: { id: 12345 } },
-    { type: 'server', server: { id: 67890 } }
-  ]
-});
-
-console.log(`Load balancer created: ${lb.load_balancer.name}`);
-console.log(`Public IP: ${lb.load_balancer.public_net.ipv4?.ip}`);
-```
-
-## Managing DNS Records
-
-```typescript
-// Create a zone
-const zone = await client.dns.createZone({
-  name: 'example.com',
-  ttl: 3600
-});
-
-// Add A record
-await client.dns.createRRSet('example.com', {
-  name: 'www',
-  type: 'A',
-  ttl: 3600,
-  records: [
-    { value: '1.2.3.4', comment: 'Web server' }
-  ]
-});
-
-// Add MX record
-await client.dns.createRRSet('example.com', {
-  name: '@',
-  type: 'MX',
-  ttl: 3600,
-  records: [
-    { value: '10 mail.example.com', comment: 'Mail server' }
-  ]
-});
-```
-
-## Managing Volumes
-
-```typescript
-// Create a volume
-const volume = await client.volumes.create({
-  name: 'my-volume',
-  size: 100,
-  location: 'nbg1',
-  format: 'ext4'
-});
-
-// Attach to server
-await client.volumes.attachToServer(volume.volume.id, {
-  server: 12345,
-  automount: true
-});
-
-// Resize volume
-await client.volumes.resize(volume.volume.id, {
-  size: 200
-});
-```
-
-## Working with Networks
-
-```typescript
-// Create a network
-const network = await client.networks.create({
-  name: 'my-network',
-  ip_range: '10.0.0.0/16',
-  subnets: [{
-    type: 'cloud',
-    network_zone: 'eu-central'
-  }]
-});
-
-// Add a route
-await client.networks.addRoute(network.network.id, {
-  destination: '10.0.1.0/24',
-  gateway: '10.0.0.1'
-});
-
-// Attach server to network
-await client.servers.attachToNetwork(12345, {
-  network: network.network.id,
-  ip: '10.0.0.2'
-});
-```
-
-## Error Handling
-
-```typescript
-import { HCloudClient, HCloudError } from '@nilovonjs/hcloud-js';
+await client.actions.waitFor(snapshot);
 
 try {
-  const server = await client.servers.get(999999);
+  await runUpgrade(server);
 } catch (error) {
-  if (error instanceof HCloudError) {
-    switch (error.statusCode) {
-      case 404:
-        console.error('Resource not found');
-        break;
-      case 429:
-        console.error('Rate limit exceeded');
-        break;
-      case 500:
-        console.error('Server error');
-        break;
-      default:
-        console.error(`API Error: ${error.message}`);
-    }
-    console.error('Error code:', error.code);
-    console.error('Error details:', error.details);
-  } else {
-    console.error('Unexpected error:', error);
+  // Roll back
+  await client.actions.waitFor(await client.servers.rebuild(server.id, { image: snapshot.image.id }));
+  throw error;
+}
+```
+
+## Rescale a server
+
+Changing the server type requires the server to be powered off:
+
+```typescript
+await client.actions.waitFor(await client.servers.shutdown(server.id));
+await client.servers.waitForStatus(server.id, "off", { timeout: 120_000 });
+
+await client.actions.waitFor(
+  await client.servers.changeType(server.id, { server_type: "cx32", upgrade_disk: false }),
+);
+await client.actions.waitFor(await client.servers.powerOn(server.id));
+```
+
+## Clean up by label
+
+```typescript
+import { labelSelector } from "@nilovonjs/hcloud-js";
+
+const selector = labelSelector({ "created-by": "ci", keep: false });
+
+const stale = await client.servers.listAll({ label_selector: selector });
+const deletions = await Promise.all(stale.map((s) => client.servers.delete(s.id)));
+
+await client.actions.waitForAll(deletions.map((deletion) => deletion.action));
+console.log(`Deleted ${stale.length} servers`);
+```
+
+## Manage DNS records
+
+```typescript
+// Point www.example.com to a server
+await client.actions.waitFor(
+  await client.dns.setRRSetRecords("example.com", "www", "A", {
+    records: [{ value: server.public_net.ipv4!.ip }],
+  }),
+);
+
+// List every record of a zone
+for await (const rrset of client.dns.iterateRRSets("example.com")) {
+  console.log(rrset.name, rrset.type, rrset.records.map((record) => record.value));
+}
+```
+
+## Monthly cost overview
+
+```typescript
+const servers = await client.servers.listAll();
+
+let total = 0;
+for (const server of servers) {
+  const location = server.location?.name ?? server.datacenter?.location.name;
+  const price = server.server_type.prices.find((p) => p.location === location);
+  total += Number(price?.price_monthly.gross ?? 0);
+}
+
+console.log(`${servers.length} servers, ~${total.toFixed(2)} EUR per month`);
+```
+
+## Server metrics
+
+```typescript
+import { parseTimeSeries } from "@nilovonjs/hcloud-js";
+
+const { metrics } = await client.servers.getMetrics(server.id, {
+  type: ["cpu", "network"],
+  start: new Date(Date.now() - 6 * 60 * 60 * 1000),
+  end: new Date(),
+});
+
+const series = parseTimeSeries(metrics.time_series);
+const cpu = series.cpu ?? [];
+const average = cpu.reduce((sum, point) => sum + point.value, 0) / (cpu.length || 1);
+console.log(`Average CPU over 6h: ${average.toFixed(1)}%`);
+```
+
+## Graceful shutdown of a long task
+
+```typescript
+const controller = new AbortController();
+process.once("SIGINT", () => controller.abort());
+
+try {
+  for await (const image of client.images.iterate({ type: "backup" }, { signal: controller.signal })) {
+    await archive(image);
   }
+} catch (error) {
+  if (error instanceof HCloudAbortError) console.log("Interrupted");
+  else throw error;
 }
 ```
 
-## Using Type Guards
+## Testing your own code
 
-Type guards help you narrow types at runtime:
-
-```typescript
-import {
-  isServerRunning,
-  isActionSuccessful,
-  isImageAvailable
-} from '@nilovonjs/hcloud-js';
-
-// Check server status
-const server = await client.servers.get(12345);
-if (isServerRunning(server.server)) {
-  console.log('Server is running and ready!');
-}
-
-// Check action status
-const action = await client.actions.get(actionId);
-if (isActionSuccessful(action.action)) {
-  console.log('Action completed successfully');
-}
-
-// Check image availability
-const image = await client.images.get(12345);
-if (isImageAvailable(image.image)) {
-  console.log('Image is available for use');
-}
-```
-
-## Finding Resources
-
-Use helper functions to find resources by name or IP:
+Inject a fake `fetch` to test code that uses the SDK without network access:
 
 ```typescript
-import {
-  findServerByName,
-  findImageByName,
-  findFloatingIPByIP
-} from '@nilovonjs/hcloud-js';
+import { expect, test } from "vitest";
+import { HCloudClient } from "@nilovonjs/hcloud-js";
 
-// Find server by name
-const server = await findServerByName(client, 'my-server');
-if (server) {
-  console.log(`Found server: ${server.name} (ID: ${server.id})`);
-}
+test("counts running servers", async () => {
+  const client = new HCloudClient({
+    token: "test",
+    responseValidation: "off",
+    fetch: async (url) => {
+      expect(new URL(url).pathname).toBe("/v1/servers");
+      return Response.json({ servers: [{ id: 1, status: "running" }] });
+    },
+  });
 
-// Find image by name
-const image = await findImageByName(client, 'ubuntu-22.04');
-if (image) {
-  console.log(`Found image: ${image.name}`);
-}
-
-// Find floating IP by IP address
-const floatingIP = await findFloatingIPByIP(client, '1.2.3.4');
-if (floatingIP) {
-  console.log(`Found floating IP: ${floatingIP.ip}`);
-}
+  expect(await countRunningServers(client)).toBe(1);
+});
 ```

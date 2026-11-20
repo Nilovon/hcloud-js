@@ -69,7 +69,7 @@ export function apiError(
 
 /**
  * Create a fake `fetch` answering with the given replies in order. The last
- * reply is repeated once the queue is exhausted.
+ * reply is repeated once the queue is exhausted, until `reply()` queues new ones.
  */
 export function createFetchMock(initial: MockReply[]): {
   fetch: NonNullable<ClientOptions["fetch"]>;
@@ -78,6 +78,8 @@ export function createFetchMock(initial: MockReply[]): {
 } {
   const queue: MockReply[] = [...initial];
   const requests: RecordedRequest[] = [];
+  // Whether the last queued reply has been used already. New replies then replace it.
+  let lastReplyServed = false;
 
   const fetch: NonNullable<ClientOptions["fetch"]> = async (input, init) => {
     const url = new URL(input);
@@ -98,7 +100,13 @@ export function createFetchMock(initial: MockReply[]): {
 
     if (init.signal.aborted) throw init.signal.reason ?? new Error("aborted");
 
-    const next = queue.length > 1 ? queue.shift() : queue[0];
+    let next: MockReply;
+    if (queue.length > 1) {
+      next = queue.shift();
+    } else {
+      next = queue[0];
+      lastReplyServed = true;
+    }
     const resolved = typeof next === "function" ? await next(request) : next;
     if (resolved instanceof Error) throw resolved;
     if (resolved instanceof Response) return resolved;
@@ -106,7 +114,15 @@ export function createFetchMock(initial: MockReply[]): {
     return json(resolved);
   };
 
-  return { fetch, requests, reply: (...replies) => queue.push(...replies) };
+  return {
+    fetch,
+    requests,
+    reply: (...replies) => {
+      if (lastReplyServed) queue.length = 0;
+      lastReplyServed = false;
+      queue.push(...replies);
+    },
+  };
 }
 
 const TEST_DEFAULTS: ClientOptions = {

@@ -1,184 +1,276 @@
 ---
 title: Networks API
-description: Manage private networks
+description: Manage private networks, their subnets, routes and members
 ---
 
 # Networks API
 
-The Networks API allows you to create and manage private networks with routes and subnets.
-
-## List Networks
-
-Returns all Network objects.
+`client.networks` manages private [Networks](https://docs.hetzner.cloud/reference/cloud#networks):
+their subnets and routes, and the servers and load balancers attached to them.
 
 ```typescript
-const networks = await client.networks.list();
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
 ```
 
-### Parameters
+- Every method takes an optional trailing `options` argument (`signal`, `timeout`, `headers`, `retry`).
+- Subnet, route, IP range and protection changes return an `action`. Wait for it with
+  `client.actions.waitFor()`.
+- Servers and load balancers are attached to a network through their own clients
+  (`client.servers.attachToNetwork()`, `client.loadBalancers.attachToNetwork()`).
+
+| Method | Endpoint |
+| --- | --- |
+| `list(params?)` | `GET /networks` |
+| `iterate(params?)` / `iteratePages(params?)` / `listAll(params?)` / `first(params?)` | `GET /networks` (paginated for you) |
+| `getByName(name)` | `GET /networks?name=...` |
+| `get(id)` | `GET /networks/{id}` |
+| `create(params)` | `POST /networks` |
+| `update(id, params)` | `PUT /networks/{id}` |
+| `delete(id)` | `DELETE /networks/{id}` |
+| `listMembers(id, params?)` | `GET /networks/{id}/members` |
+| `iterateMembers(id, params?)` / `listAllMembers(id, params?)` | `GET /networks/{id}/members` (all pages) |
+| `addSubnet(id, params)` | `POST /networks/{id}/actions/add_subnet` |
+| `deleteSubnet(id, params)` | `POST /networks/{id}/actions/delete_subnet` |
+| `addRoute(id, params)` | `POST /networks/{id}/actions/add_route` |
+| `deleteRoute(id, params)` | `POST /networks/{id}/actions/delete_route` |
+| `changeIpRange(id, params)` | `POST /networks/{id}/actions/change_ip_range` |
+| `changeProtection(id, params)` | `POST /networks/{id}/actions/change_protection` |
+| `listActions(id, params?)` | `GET /networks/{id}/actions` |
+| `getAction(id, actionId)` | `GET /networks/{id}/actions/{action_id}` |
+| `actions.list(params?)` / `actions.get(id)` | `GET /networks/actions`, `GET /networks/actions/{id}` |
+
+## Networks
+
+### List networks
+
+Returns one page of networks. Filters: `name`, `label_selector`, `page`, `per_page`.
 
 ```typescript
-interface ListNetworksParams {
-  name?: string;              // Filter by name
-  label_selector?: string;    // Filter by labels
-  sort?: string | string[];   // Sort results
-  page?: number;              // Page number
-  per_page?: number;          // Items per page
-}
-```
-
-## Get Network
-
-Returns a specific Network object.
-
-```typescript
-const network = await client.networks.get(12345);
-```
-
-## Create Network
-
-Creates a new Network.
-
-```typescript
-const network = await client.networks.create({
-  name: 'my-network',
-  ip_range: '10.0.0.0/16',
-  subnets: [{
-    type: 'cloud',
-    network_zone: 'eu-central'
-  }],
-  labels: { environment: 'production' }
+const { networks, meta } = await client.networks.list({
+  label_selector: "environment=production",
 });
 ```
 
-### Parameters
+### All networks
+
+`iterate()`, `iteratePages()`, `listAll()` and `first()` follow the pagination for you and accept
+the same filters as `list()`.
 
 ```typescript
-interface CreateNetworkParams {
-  name: string;                           // Required: Network name
-  ip_range: string;                       // Required: IP range (CIDR notation)
-  subnets?: NetworkSubnet[];              // Optional: Subnets
-  routes?: NetworkRoute[];                // Optional: Routes
-  labels?: Record<string, string>;        // Optional: Labels
-  expose_routes_to_vswitch?: boolean;     // Optional: Expose routes to vSwitch
+for await (const network of client.networks.iterate()) {
+  console.log(network.name, network.ip_range);
 }
+
+const all = await client.networks.listAll({ label_selector: "environment=production" });
+const one = await client.networks.first({ label_selector: "role=backend" }); // Network | undefined
 ```
 
-## Update Network
-
-Updates a Network. You can update a Network's name, labels, and expose_routes_to_vswitch.
+### Get a network
 
 ```typescript
-const updated = await client.networks.update(12345, {
-  name: 'new-name',
-  labels: { environment: 'production' },
-  expose_routes_to_vswitch: true
+const { network } = await client.networks.get(12345);
+console.log(network.subnets, network.routes, network.servers);
+
+// By exact name; resolves to `undefined` if there is none
+const byName = await client.networks.getByName("my-network");
+```
+
+### Create a network
+
+`name` and `ip_range` are required. Subnets and routes can be passed inline or added later.
+
+```typescript
+const { network } = await client.networks.create({
+  name: "my-network",
+  ip_range: "10.0.0.0/16",
+  subnets: [{ type: "cloud", network_zone: "eu-central", ip_range: "10.0.1.0/24" }],
+  routes: [{ destination: "10.100.1.0/24", gateway: "10.0.1.1" }],
+  labels: { environment: "production" },
 });
 ```
 
-## Delete Network
+### Update a network
 
-Deletes a Network.
+Changes the `name`, `labels` and/or `expose_routes_to_vswitch`.
+
+```typescript
+const { network } = await client.networks.update(12345, {
+  name: "new-name",
+  expose_routes_to_vswitch: true,
+});
+```
+
+### Delete a network
+
+Resolves without a value.
 
 ```typescript
 await client.networks.delete(12345);
 ```
 
-## Network Actions
+## Members
 
-### Add Route
+Members are the servers and load balancers attached to a network.
 
-Adds a route to a Network.
+### List members
+
+Returns one page of members. Filters: `type`, `status`, `subnet`, `sort` (`id`, `type`, `status`,
+`ip`), `page`, `per_page`. `type`, `status`, `subnet` and `sort` accept a single value or an array.
 
 ```typescript
-await client.networks.addRoute(12345, {
-  destination: '10.0.1.0/24',
-  gateway: '10.0.0.1'
+const { members, meta } = await client.networks.listMembers(12345, {
+  type: "server",
+  status: ["attaching", "error"],
+  sort: "ip:asc",
 });
+
+for (const member of members) {
+  console.log(member.type, member.id, member.ip, member.alias_ips, member.subnet, member.status);
+}
 ```
 
-### Delete Route
-
-Deletes a route from a Network.
+### All members
 
 ```typescript
-await client.networks.deleteRoute(12345, {
-  destination: '10.0.1.0/24',
-  gateway: '10.0.0.1'
-});
+for await (const member of client.networks.iterateMembers(12345, { subnet: "10.0.1.0/24" })) {
+  console.log(member.id, member.ip);
+}
+
+const loadBalancers = await client.networks.listAllMembers(12345, { type: "load_balancer" });
 ```
 
-### Add Subnet
+## Subnets
 
-Adds a subnet to a Network.
+Subnet types:
+
+- `cloud`: connects cloud servers and load balancers.
+- `vswitch`: connects cloud resources with dedicated servers; requires `vswitch_id`.
+- `server`: deprecated alias of `cloud`.
+
+### Add a subnet
+
+`type` and `network_zone` are required. If `ip_range` is omitted, the API picks a free range.
 
 ```typescript
+const { action } = await client.networks.addSubnet(12345, {
+  type: "cloud",
+  network_zone: "eu-central",
+  ip_range: "10.0.2.0/24",
+});
+await client.actions.waitFor(action);
+
+// vSwitch subnet
 await client.networks.addSubnet(12345, {
-  type: 'cloud',
-  network_zone: 'eu-central',
-  ip_range: '10.0.1.0/24'
+  type: "vswitch",
+  network_zone: "eu-central",
+  ip_range: "10.0.3.0/24",
+  vswitch_id: 1000,
 });
 ```
 
-### Delete Subnet
-
-Deletes a subnet from a Network.
+### Delete a subnet
 
 ```typescript
-await client.networks.deleteSubnet(12345, {
-  ip_range: '10.0.1.0/24'
+const { action } = await client.networks.deleteSubnet(12345, { ip_range: "10.0.2.0/24" });
+```
+
+## Routes
+
+### Add a route
+
+```typescript
+const { action } = await client.networks.addRoute(12345, {
+  destination: "10.100.1.0/24",
+  gateway: "10.0.1.1",
+});
+await client.actions.waitFor(action);
+```
+
+### Delete a route
+
+```typescript
+const { action } = await client.networks.deleteRoute(12345, {
+  destination: "10.100.1.0/24",
+  gateway: "10.0.1.1",
 });
 ```
 
-### Change IP Range
-
-Changes the IP range of a Network.
+## IP range and protection
 
 ```typescript
-await client.networks.changeIpRange(12345, {
-  ip_range: '10.0.0.0/16'
-});
+// The IP range can only be extended
+await client.actions.waitFor(
+  await client.networks.changeIpRange(12345, { ip_range: "10.0.0.0/12" }),
+);
+
+// Prevent the network from being deleted
+await client.networks.changeProtection(12345, { delete: true });
 ```
 
-### Change Protection
-
-Changes the Protection configuration of a Network.
+## Actions
 
 ```typescript
-await client.networks.changeProtection(12345, {
-  delete: true
+// Actions of one network
+const { actions } = await client.networks.listActions(12345, {
+  status: "running",
+  sort: "started:desc",
 });
+const { action } = await client.networks.getAction(12345, 67890);
+
+// Actions of all networks
+const running = await client.networks.actions.list({ status: "running" });
+const single = await client.networks.actions.get(67890);
+```
+
+### Waiting for actions
+
+`waitFor()` accepts an action, an action ID or any response containing an `action`.
+
+```typescript
+const finished = await client.actions.waitFor(
+  await client.networks.addRoute(12345, { destination: "10.100.1.0/24", gateway: "10.0.1.1" }),
+);
+console.log(finished.status); // "success"
 ```
 
 ## Types
 
 ```typescript
-type NetworkSubnetType = 'cloud' | 'server' | 'vswitch';
-
 interface Network {
   id: number;
   name: string;
   ip_range: string;
   subnets: NetworkSubnet[];
   routes: NetworkRoute[];
-  servers: number[];
-  load_balancers?: number[];
-  protection: NetworkProtection;
+  expose_routes_to_vswitch: boolean;
+  servers: number[]; // IDs of attached servers
+  load_balancers?: number[]; // IDs of attached load balancers
+  protection: { delete: boolean };
   labels: Record<string, string>;
   created: string;
-  expose_routes_to_vswitch?: boolean;
 }
 
 interface NetworkSubnet {
-  type: NetworkSubnetType;
-  ip_range: string | null;
+  type: "cloud" | "server" | "vswitch";
+  ip_range: string;
   network_zone: string;
-  gateway: string | null;
-  vswitch_id: number | null;
+  gateway: string;
+  vswitch_id?: number | null;
 }
 
 interface NetworkRoute {
-  destination: { ip: string };
-  gateway: { ip: string };
+  destination: string;
+  gateway: string;
+}
+
+interface NetworkMember {
+  id: number; // ID of the server or load balancer
+  type: "server" | "load_balancer";
+  ip: string;
+  alias_ips: string[];
+  subnet: string; // IP range of the subnet
+  status: "ok" | "attaching" | "detaching" | "updating" | "error";
 }
 ```

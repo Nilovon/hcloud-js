@@ -3,535 +3,444 @@
  * @see https://docs.hetzner.cloud/reference/cloud#load-balancers
  */
 
-import type { HCloudClient } from "../../client/index";
-import type {
-  ListLoadBalancersParams,
-  ListLoadBalancersResponse,
-  CreateLoadBalancerParams,
-  CreateLoadBalancerResponse,
-  GetLoadBalancerResponse,
-  UpdateLoadBalancerParams,
-  UpdateLoadBalancerResponse,
-  DeleteLoadBalancerResponse,
-  ListLoadBalancerActionsParams,
-  ListLoadBalancerActionsResponse,
-  GetLoadBalancerActionResponse,
-  AddLoadBalancerServiceParams,
-  AddLoadBalancerServiceResponse,
-  UpdateLoadBalancerServiceParams,
-  UpdateLoadBalancerServiceResponse,
-  DeleteLoadBalancerServiceResponse,
-  AddLoadBalancerTargetParams,
-  AddLoadBalancerTargetResponse,
-  RemoveLoadBalancerTargetParams,
-  RemoveLoadBalancerTargetResponse,
-  ChangeLoadBalancerAlgorithmParams,
-  ChangeLoadBalancerAlgorithmResponse,
-  ChangeLoadBalancerReverseDNSParams,
-  ChangeLoadBalancerReverseDNSResponse,
-  ChangeLoadBalancerProtectionParams,
-  ChangeLoadBalancerProtectionResponse,
-  ChangeLoadBalancerTypeParams,
-  ChangeLoadBalancerTypeResponse,
-  AttachLoadBalancerToNetworkParams,
-  AttachLoadBalancerToNetworkResponse,
-  DetachLoadBalancerFromNetworkResponse,
-  EnableLoadBalancerPublicInterfaceResponse,
-  DisableLoadBalancerPublicInterfaceResponse,
-  GetLoadBalancerMetricsParams,
-  GetLoadBalancerMetricsResponse,
-} from "../../apis/load-balancers/types";
-import { validate } from "../../validation/index";
+import { NamedResource, path } from "../../core/resource";
+import type { RequestOptions } from "../../core/types";
+import { ResourceActionsClient } from "../actions/index";
 import {
-  listLoadBalancersResponseSchema,
+  actionResponseSchema,
+  getActionResponseSchema,
+  listActionsResponseSchema,
+} from "../actions/schemas";
+import {
+  addLoadBalancerServiceRequestSchema,
+  addLoadBalancerTargetRequestSchema,
+  attachLoadBalancerToNetworkRequestSchema,
+  changeLoadBalancerAlgorithmRequestSchema,
+  changeLoadBalancerProtectionRequestSchema,
+  changeLoadBalancerReverseDNSRequestSchema,
+  changeLoadBalancerTypeRequestSchema,
   createLoadBalancerRequestSchema,
   createLoadBalancerResponseSchema,
+  deleteLoadBalancerServiceRequestSchema,
+  detachLoadBalancerFromNetworkRequestSchema,
+  getLoadBalancerMetricsResponseSchema,
   getLoadBalancerResponseSchema,
+  listLoadBalancersResponseSchema,
+  removeLoadBalancerTargetRequestSchema,
   updateLoadBalancerRequestSchema,
   updateLoadBalancerResponseSchema,
-  deleteLoadBalancerResponseSchema,
-  listLoadBalancerActionsResponseSchema,
-  getLoadBalancerActionResponseSchema,
-  addLoadBalancerServiceRequestSchema,
-  addLoadBalancerServiceResponseSchema,
   updateLoadBalancerServiceRequestSchema,
-  updateLoadBalancerServiceResponseSchema,
-  deleteLoadBalancerServiceRequestSchema,
-  deleteLoadBalancerServiceResponseSchema,
-  addLoadBalancerTargetRequestSchema,
-  addLoadBalancerTargetResponseSchema,
-  removeLoadBalancerTargetRequestSchema,
-  removeLoadBalancerTargetResponseSchema,
-  changeLoadBalancerAlgorithmRequestSchema,
-  changeLoadBalancerAlgorithmResponseSchema,
-  changeLoadBalancerReverseDNSRequestSchema,
-  changeLoadBalancerReverseDNSResponseSchema,
-  changeLoadBalancerProtectionRequestSchema,
-  changeLoadBalancerProtectionResponseSchema,
-  changeLoadBalancerTypeRequestSchema,
-  changeLoadBalancerTypeResponseSchema,
-  attachLoadBalancerToNetworkRequestSchema,
-  attachLoadBalancerToNetworkResponseSchema,
-  detachLoadBalancerFromNetworkRequestSchema,
-  detachLoadBalancerFromNetworkResponseSchema,
-  enableLoadBalancerPublicInterfaceRequestSchema,
-  enableLoadBalancerPublicInterfaceResponseSchema,
-  disableLoadBalancerPublicInterfaceRequestSchema,
-  disableLoadBalancerPublicInterfaceResponseSchema,
-  getLoadBalancerMetricsRequestSchema,
-  getLoadBalancerMetricsResponseSchema,
-} from "../../apis/load-balancers/schemas";
+} from "./schemas";
+import type {
+  AddLoadBalancerServiceParams,
+  AddLoadBalancerServiceResponse,
+  AddLoadBalancerTargetParams,
+  AddLoadBalancerTargetResponse,
+  AttachLoadBalancerToNetworkParams,
+  AttachLoadBalancerToNetworkResponse,
+  ChangeLoadBalancerAlgorithmParams,
+  ChangeLoadBalancerAlgorithmResponse,
+  ChangeLoadBalancerProtectionParams,
+  ChangeLoadBalancerProtectionResponse,
+  ChangeLoadBalancerReverseDNSParams,
+  ChangeLoadBalancerReverseDNSResponse,
+  ChangeLoadBalancerTypeParams,
+  ChangeLoadBalancerTypeResponse,
+  CreateLoadBalancerParams,
+  CreateLoadBalancerResponse,
+  DeleteLoadBalancerResponse,
+  DeleteLoadBalancerServiceResponse,
+  DetachLoadBalancerFromNetworkResponse,
+  DisableLoadBalancerPublicInterfaceResponse,
+  EnableLoadBalancerPublicInterfaceResponse,
+  GetLoadBalancerActionResponse,
+  GetLoadBalancerMetricsParams,
+  GetLoadBalancerMetricsResponse,
+  GetLoadBalancerResponse,
+  ListLoadBalancerActionsParams,
+  ListLoadBalancerActionsResponse,
+  ListLoadBalancersParams,
+  ListLoadBalancersResponse,
+  LoadBalancer,
+  RemoveLoadBalancerTargetParams,
+  RemoveLoadBalancerTargetResponse,
+  UpdateLoadBalancerParams,
+  UpdateLoadBalancerResponse,
+  UpdateLoadBalancerServiceParams,
+  UpdateLoadBalancerServiceResponse,
+} from "./types";
 
 /**
  * Load Balancers API client
+ *
+ * Load Balancers distribute traffic of their services to their targets
+ * (servers, label selectors or IPs).
+ *
+ * In addition to the methods below, the pagination helpers `iterate()`,
+ * `iteratePages()`, `listAll()` and `first()` as well as `getByName()` are
+ * available.
+ *
+ * @see https://docs.hetzner.cloud/reference/cloud#load-balancers
  */
-export class LoadBalancersClient {
-  constructor(private readonly client: HCloudClient) {}
+export class LoadBalancersClient extends NamedResource<
+  LoadBalancer,
+  ListLoadBalancersParams,
+  "load_balancers"
+> {
+  protected readonly itemsKey = "load_balancers";
 
   /**
-   * Returns all Load Balancer objects.
+   * Actions of all Load Balancers: `list()`, `get()`, `waitFor()` and `waitForAll()`.
    *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of load balancers with pagination metadata
+   * @example
+   * ```typescript
+   * const { actions } = await client.loadBalancers.actions.list({ status: "running" });
+   * ```
+   */
+  public readonly actions = new ResourceActionsClient(this.client, "/load_balancers");
+
+  /**
+   * Returns a page of Load Balancers.
+   *
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-list-load-balancers
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all load balancers
-   * const result = await client.loadBalancers.list();
-   *
-   * // List load balancers with filters
-   * const loadBalancers = await client.loadBalancers.list({
-   *   name: 'my-lb',
-   *   label_selector: 'environment=production',
-   *   sort: ['name:asc'],
-   *   page: 1,
-   *   per_page: 50
+   * const { load_balancers } = await client.loadBalancers.list({
+   *   label_selector: "environment=production",
+   *   sort: "name:asc",
    * });
+   *
+   * // All Load Balancers across all pages
+   * const all = await client.loadBalancers.listAll();
    * ```
    */
-  async list(params?: ListLoadBalancersParams): Promise<ListLoadBalancersResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
+  list(
+    params?: ListLoadBalancersParams,
+    options?: RequestOptions,
+  ): Promise<ListLoadBalancersResponse> {
+    return this._get("/load_balancers", listLoadBalancersResponseSchema, params, options);
+  }
 
-    if (params?.name) {
-      queryParams.name = params.name;
-    }
-
-    if (params?.label_selector) {
-      queryParams.label_selector = params.label_selector;
-    }
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>("/load_balancers", queryParams);
-
-    return validate(listLoadBalancersResponseSchema, response, {
-      context: "List load balancers response",
-      detailed: true,
-    });
+  /**
+   * Returns a specific Load Balancer.
+   *
+   * @param id - ID of the Load Balancer
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-get-a-load-balancer
+   *
+   * @example
+   * ```typescript
+   * const { load_balancer } = await client.loadBalancers.get(12345);
+   * console.log(load_balancer.public_net.ipv4.ip);
+   * ```
+   */
+  get(id: number, options?: RequestOptions): Promise<GetLoadBalancerResponse> {
+    return this._get(path`/load_balancers/${id}`, getLoadBalancerResponseSchema, undefined, options);
   }
 
   /**
    * Creates a new Load Balancer.
    *
-   * @param params - Parameters for creating the load balancer
-   * @returns Promise resolving to the created load balancer and action
+   * Either `location` or `network_zone` is required. Existing Primary IPs can
+   * be assigned with `public_net`; for an omitted IP version a new one is allocated.
+   *
+   * @param params - Name, type, location and optional algorithm, services, targets, ...
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-create-a-load-balancer
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Create a load balancer
-   * const lb = await client.loadBalancers.create({
-   *   name: 'my-lb',
-   *   load_balancer_type: 'lb11',
-   *   location: 'nbg1',
-   *   algorithm: { type: 'round_robin' },
-   *   services: [{
-   *     protocol: 'http',
-   *     listen_port: 80,
-   *     destination_port: 80,
-   *     proxyprotocol: false,
-   *     health_check: {
-   *       protocol: 'http',
-   *       port: 80,
-   *       interval: 15,
-   *       timeout: 10,
-   *       retries: 3,
-   *       http: {
-   *         domain: null,
-   *         path: '/',
-   *         response: null,
-   *         status_codes: null
-   *       }
-   *     }
-   *   }]
+   * const { load_balancer, action } = await client.loadBalancers.create({
+   *   name: "my-lb",
+   *   load_balancer_type: "lb11",
+   *   location: "nbg1",
+   *   services: [{ protocol: "http", listen_port: 80, destination_port: 80 }],
+   *   targets: [{ type: "label_selector", label_selector: { selector: "role=web" } }],
    * });
+   * await client.actions.waitFor(action);
    * ```
    */
-  async create(params: CreateLoadBalancerParams): Promise<CreateLoadBalancerResponse> {
-    const validatedParams = validate(createLoadBalancerRequestSchema, params, {
-      context: "Create load balancer request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>("/load_balancers", validatedParams);
-
-    return validate(createLoadBalancerResponseSchema, response, {
-      context: "Create load balancer response",
-      detailed: true,
-    });
+  create(
+    params: CreateLoadBalancerParams,
+    options?: RequestOptions,
+  ): Promise<CreateLoadBalancerResponse> {
+    return this._post(
+      "/load_balancers",
+      createLoadBalancerResponseSchema,
+      params,
+      createLoadBalancerRequestSchema,
+      options,
+    );
   }
 
   /**
-   * Returns a specific Load Balancer object.
+   * Updates the name and/or labels of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @returns Promise resolving to the load balancer
-   * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-get-a-load-balancer
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get a load balancer by ID
-   * const lb = await client.loadBalancers.get(12345);
-   * console.log(lb.load_balancer.name);
-   * ```
-   */
-  async get(id: number): Promise<GetLoadBalancerResponse> {
-    const response = await this.client.get<unknown>(`/load_balancers/${id}`);
-
-    return validate(getLoadBalancerResponseSchema, response, {
-      context: "Get load balancer response",
-      detailed: true,
-    });
-  }
-
-  /**
-   * Updates the Load Balancer.
-   *
-   * You can update a Load Balancer's name and labels.
-   *
-   * @param id - ID of the Load Balancer
-   * @param params - Parameters to update (name and/or labels)
-   * @returns Promise resolving to the updated load balancer
+   * @param params - Fields to update
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-update-a-load-balancer
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Update load balancer name
-   * const updated = await client.loadBalancers.update(12345, {
-   *   name: 'new-lb-name'
-   * });
-   *
-   * // Update labels
-   * const updated = await client.loadBalancers.update(12345, {
-   *   labels: { environment: 'production', team: 'backend' }
+   * const { load_balancer } = await client.loadBalancers.update(12345, {
+   *   name: "new-name",
+   *   labels: { environment: "production" },
    * });
    * ```
    */
-  async update(
+  update(
     id: number,
     params: UpdateLoadBalancerParams,
+    options?: RequestOptions,
   ): Promise<UpdateLoadBalancerResponse> {
-    const validatedParams = validate(updateLoadBalancerRequestSchema, params, {
-      context: "Update load balancer request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(`/load_balancers/${id}`, validatedParams);
-
-    return validate(updateLoadBalancerResponseSchema, response, {
-      context: "Update load balancer response",
-      detailed: true,
-    });
+    return this._put(
+      path`/load_balancers/${id}`,
+      updateLoadBalancerResponseSchema,
+      params,
+      updateLoadBalancerRequestSchema,
+      options,
+    );
   }
 
   /**
    * Deletes a Load Balancer.
    *
+   * The deletion is tracked by the returned action. (Until October 2026 the API
+   * answered with an empty response instead.)
+   *
    * @param id - ID of the Load Balancer
-   * @returns Promise resolving to the delete action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-delete-a-load-balancer
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Delete a load balancer
-   * const result = await client.loadBalancers.delete(12345);
-   * if (result.action) {
-   *   console.log(`Delete action ID: ${result.action.id}`);
-   * }
+   * const { action } = await client.loadBalancers.delete(12345);
+   * await client.actions.waitFor(action);
    * ```
    */
-  async delete(id: number): Promise<DeleteLoadBalancerResponse> {
-    const response = await this.client.delete<unknown>(`/load_balancers/${id}`);
-
-    return validate(deleteLoadBalancerResponseSchema, response, {
-      context: "Delete load balancer response",
-      detailed: true,
-    });
+  delete(id: number, options?: RequestOptions): Promise<DeleteLoadBalancerResponse> {
+    return this._delete(path`/load_balancers/${id}`, actionResponseSchema, options);
   }
 
   /**
-   * Returns all Action objects for a Load Balancer.
+   * Returns metrics of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving to list of actions with pagination metadata
+   * @param params - Metric type(s), period (`Date` or ISO-8601 string) and optional resolution
+   * @param options - Request options
+   * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-get-metrics-for-a-load-balancer
+   *
+   * @example
+   * ```typescript
+   * const { metrics } = await client.loadBalancers.getMetrics(12345, {
+   *   type: ["open_connections", "requests_per_second"],
+   *   start: new Date(Date.now() - 60 * 60 * 1000),
+   *   end: new Date(),
+   * });
+   * console.log(metrics.time_series.open_connections?.values);
+   * ```
+   */
+  getMetrics(
+    id: number,
+    params: GetLoadBalancerMetricsParams,
+    options?: RequestOptions,
+  ): Promise<GetLoadBalancerMetricsResponse> {
+    const types = typeof params.type === "string" ? [params.type] : params.type;
+    const query = {
+      type: types.join(","),
+      start: toISOString(params.start),
+      end: toISOString(params.end),
+      step: params.step,
+    };
+    return this._get(
+      path`/load_balancers/${id}/metrics`,
+      getLoadBalancerMetricsResponseSchema,
+      query,
+      options,
+    );
+  }
+
+  /**
+   * Returns a page of actions of a Load Balancer.
+   *
+   * @param id - ID of the Load Balancer
+   * @param params - Filters, sorting and pagination
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-list-actions-for-a-load-balancer
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // List all actions for a load balancer
-   * const actions = await client.loadBalancers.listActions(12345);
-   *
-   * // List actions with filters
-   * const runningActions = await client.loadBalancers.listActions(12345, {
-   *   status: ['running'],
-   *   sort: ['started:desc']
+   * const { actions } = await client.loadBalancers.listActions(12345, {
+   *   status: "running",
+   *   sort: "started:desc",
    * });
    * ```
    */
-  async listActions(
+  listActions(
     id: number,
     params?: ListLoadBalancerActionsParams,
+    options?: RequestOptions,
   ): Promise<ListLoadBalancerActionsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params?.sort) {
-      queryParams.sort = Array.isArray(params.sort) ? params.sort : [params.sort];
-    }
-
-    if (params?.status) {
-      queryParams.status = Array.isArray(params.status) ? params.status : [params.status];
-    }
-
-    if (params?.page !== undefined) {
-      queryParams.page = params.page;
-    }
-
-    if (params?.per_page !== undefined) {
-      queryParams.per_page = params.per_page;
-    }
-
-    const response = await this.client.get<unknown>(`/load_balancers/${id}/actions`, queryParams);
-
-    return validate(listLoadBalancerActionsResponseSchema, response, {
-      context: "List load balancer actions response",
-      detailed: true,
-    });
+    return this._get(
+      path`/load_balancers/${id}/actions`,
+      listActionsResponseSchema,
+      params,
+      options,
+    );
   }
 
   /**
-   * Returns a specific Action object for a Load Balancer.
+   * Returns a specific action of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @param actionId - ID of the Action
-   * @returns Promise resolving to the action
+   * @param actionId - ID of the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-get-an-action-for-a-load-balancer
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Get an action by ID
-   * const action = await client.loadBalancers.getAction(12345, 67890);
-   * console.log(action.action.command);
+   * const { action } = await client.loadBalancers.getAction(12345, 67890);
+   * console.log(action.status);
    * ```
    */
-  async getAction(id: number, actionId: number): Promise<GetLoadBalancerActionResponse> {
-    const response = await this.client.get<unknown>(`/load_balancers/${id}/actions/${actionId}`);
-
-    return validate(getLoadBalancerActionResponseSchema, response, {
-      context: "Get load balancer action response",
-      detailed: true,
-    });
+  getAction(
+    id: number,
+    actionId: number,
+    options?: RequestOptions,
+  ): Promise<GetLoadBalancerActionResponse> {
+    return this._get(
+      path`/load_balancers/${id}/actions/${actionId}`,
+      getActionResponseSchema,
+      undefined,
+      options,
+    );
   }
 
   /**
    * Adds a service to a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @param params - Service configuration
-   * @returns Promise resolving to the action
+   * @param params - Service configuration. Only defined fields are sent.
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-add-service
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.addService(12345, {
-   *   protocol: 'http',
-   *   listen_port: 80,
+   * const { action } = await client.loadBalancers.addService(12345, {
+   *   protocol: "https",
+   *   listen_port: 443,
    *   destination_port: 80,
-   *   proxyprotocol: false,
-   *   health_check: {
-   *     protocol: 'http',
-   *     port: 80,
-   *     interval: 15,
-   *     timeout: 10,
-   *     retries: 3,
-   *     http: {
-   *       domain: null,
-   *       path: '/',
-   *       response: null,
-   *       status_codes: null
-   *     }
-   *   }
+   *   http: { certificates: [897], redirect_http: true },
+   *   health_check: { protocol: "http", port: 80, http: { path: "/health" } },
    * });
    * ```
    */
-  async addService(
+  addService(
     id: number,
     params: AddLoadBalancerServiceParams,
+    options?: RequestOptions,
   ): Promise<AddLoadBalancerServiceResponse> {
-    const validatedParams = validate(addLoadBalancerServiceRequestSchema, params, {
-      context: "Add load balancer service request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/add_service`,
-      validatedParams,
+    return this._post(
+      path`/load_balancers/${id}/actions/add_service`,
+      actionResponseSchema,
+      params,
+      addLoadBalancerServiceRequestSchema,
+      options,
     );
-
-    return validate(addLoadBalancerServiceResponseSchema, response, {
-      context: "Add load balancer service response",
-      detailed: true,
-    });
   }
 
   /**
-   * Updates a service for a Load Balancer.
+   * Updates a service of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
    * @param listenPort - Listen port of the service to update
-   * @param params - Service configuration updates
-   * @returns Promise resolving to the action
+   * @param params - Fields to update. Only defined fields are sent.
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-update-service
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.updateService(12345, 80, {
+   * const { action } = await client.loadBalancers.updateService(12345, 443, {
    *   destination_port: 8080,
-   *   http: {
-   *     sticky_sessions: true,
-   *     cookie_name: 'session'
-   *   }
+   *   http: { sticky_sessions: true, timeout_idle: 120 },
    * });
    * ```
    */
-  async updateService(
+  updateService(
     id: number,
     listenPort: number,
     params: UpdateLoadBalancerServiceParams,
+    options?: RequestOptions,
   ): Promise<UpdateLoadBalancerServiceResponse> {
-    const validatedParams = validate(updateLoadBalancerServiceRequestSchema, params, {
-      context: "Update load balancer service request",
-      detailed: true,
-    });
-
-    const response = await this.client.put<unknown>(
-      `/load_balancers/${id}/actions/update_service`,
-      { listen_port: listenPort, ...validatedParams },
+    return this._post(
+      path`/load_balancers/${id}/actions/update_service`,
+      actionResponseSchema,
+      { ...params, listen_port: listenPort },
+      updateLoadBalancerServiceRequestSchema,
+      options,
     );
-
-    return validate(updateLoadBalancerServiceResponseSchema, response, {
-      context: "Update load balancer service response",
-      detailed: true,
-    });
   }
 
   /**
-   * Deletes a service from a Load Balancer.
+   * Deletes a service of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
    * @param listenPort - Listen port of the service to delete
-   * @returns Promise resolving to the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-delete-service
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.deleteService(12345, 80);
-   * console.log(`Action ID: ${result.action.id}`);
+   * const { action } = await client.loadBalancers.deleteService(12345, 443);
    * ```
    */
-  async deleteService(
+  deleteService(
     id: number,
     listenPort: number,
+    options?: RequestOptions,
   ): Promise<DeleteLoadBalancerServiceResponse> {
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/delete_service`,
+    return this._post(
+      path`/load_balancers/${id}/actions/delete_service`,
+      actionResponseSchema,
       { listen_port: listenPort },
+      deleteLoadBalancerServiceRequestSchema,
+      options,
     );
-
-    return validate(deleteLoadBalancerServiceResponseSchema, response, {
-      context: "Delete load balancer service response",
-      detailed: true,
-    });
   }
 
   /**
    * Adds a target to a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @param params - Target configuration
-   * @returns Promise resolving to the action
+   * @param params - Target: a server, a label selector or an IP
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-add-target
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * // Add a server target
-   * const result = await client.loadBalancers.addTarget(12345, {
-   *   type: 'server',
-   *   server: { id: 67890 }
+   * const { action } = await client.loadBalancers.addTarget(12345, {
+   *   type: "server",
+   *   server: { id: 67890 },
+   *   use_private_ip: true,
    * });
    * ```
    */
-  async addTarget(
+  addTarget(
     id: number,
     params: AddLoadBalancerTargetParams,
+    options?: RequestOptions,
   ): Promise<AddLoadBalancerTargetResponse> {
-    const validatedParams = validate(addLoadBalancerTargetRequestSchema, params, {
-      context: "Add load balancer target request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/add_target`,
-      validatedParams,
+    return this._post(
+      path`/load_balancers/${id}/actions/add_target`,
+      actionResponseSchema,
+      params,
+      addLoadBalancerTargetRequestSchema,
+      options,
     );
-
-    return validate(addLoadBalancerTargetResponseSchema, response, {
-      context: "Add load balancer target response",
-      detailed: true,
-    });
   }
 
   /**
@@ -539,223 +448,174 @@ export class LoadBalancersClient {
    *
    * @param id - ID of the Load Balancer
    * @param params - Target to remove
-   * @returns Promise resolving to the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-remove-target
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.removeTarget(12345, {
-   *   type: 'server',
-   *   server: { id: 67890 }
+   * const { action } = await client.loadBalancers.removeTarget(12345, {
+   *   type: "server",
+   *   server: { id: 67890 },
    * });
    * ```
    */
-  async removeTarget(
+  removeTarget(
     id: number,
     params: RemoveLoadBalancerTargetParams,
+    options?: RequestOptions,
   ): Promise<RemoveLoadBalancerTargetResponse> {
-    const validatedParams = validate(removeLoadBalancerTargetRequestSchema, params, {
-      context: "Remove load balancer target request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/remove_target`,
-      validatedParams,
+    return this._post(
+      path`/load_balancers/${id}/actions/remove_target`,
+      actionResponseSchema,
+      params,
+      removeLoadBalancerTargetRequestSchema,
+      options,
     );
-
-    return validate(removeLoadBalancerTargetResponseSchema, response, {
-      context: "Remove load balancer target response",
-      detailed: true,
-    });
   }
 
   /**
    * Changes the algorithm of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @param params - Algorithm configuration
-   * @returns Promise resolving to the action
+   * @param params - New algorithm
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-algorithm
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.changeAlgorithm(12345, {
-   *   type: 'least_connections'
+   * const { action } = await client.loadBalancers.changeAlgorithm(12345, {
+   *   type: "least_connections",
    * });
    * ```
    */
-  async changeAlgorithm(
+  changeAlgorithm(
     id: number,
     params: ChangeLoadBalancerAlgorithmParams,
+    options?: RequestOptions,
   ): Promise<ChangeLoadBalancerAlgorithmResponse> {
-    const validatedParams = validate(changeLoadBalancerAlgorithmRequestSchema, params, {
-      context: "Change load balancer algorithm request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/change_algorithm`,
-      validatedParams,
+    return this._post(
+      path`/load_balancers/${id}/actions/change_algorithm`,
+      actionResponseSchema,
+      params,
+      changeLoadBalancerAlgorithmRequestSchema,
+      options,
     );
-
-    return validate(changeLoadBalancerAlgorithmResponseSchema, response, {
-      context: "Change load balancer algorithm response",
-      detailed: true,
-    });
   }
 
   /**
-   * Changes the reverse DNS entry for a Load Balancer.
+   * Changes the reverse DNS entry of a public IP of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @param params - Reverse DNS configuration
-   * @returns Promise resolving to the action
+   * @param params - IP and hostname. `dns_ptr: null` resets the entry to its default.
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-reverse-dns-entry-for-this-load-balancer
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.changeReverseDNS(12345, {
-   *   ip: '1.2.3.4',
-   *   dns_ptr: 'lb.example.com'
+   * const { action } = await client.loadBalancers.changeReverseDNS(12345, {
+   *   ip: "1.2.3.4",
+   *   dns_ptr: "lb1.example.com",
    * });
    * ```
    */
-  async changeReverseDNS(
+  changeReverseDNS(
     id: number,
     params: ChangeLoadBalancerReverseDNSParams,
+    options?: RequestOptions,
   ): Promise<ChangeLoadBalancerReverseDNSResponse> {
-    const validatedParams = validate(changeLoadBalancerReverseDNSRequestSchema, params, {
-      context: "Change load balancer reverse DNS request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/change_dns_ptr`,
-      validatedParams,
+    return this._post(
+      path`/load_balancers/${id}/actions/change_dns_ptr`,
+      actionResponseSchema,
+      params,
+      changeLoadBalancerReverseDNSRequestSchema,
+      options,
     );
-
-    return validate(changeLoadBalancerReverseDNSResponseSchema, response, {
-      context: "Change load balancer reverse DNS response",
-      detailed: true,
-    });
   }
 
   /**
-   * Changes the Protection configuration of a Load Balancer.
+   * Changes the protection configuration of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @param params - Protection configuration
-   * @returns Promise resolving to the action
+   * @param params - `delete: true` prevents the Load Balancer from being deleted
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-load-balancer-protection
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.changeProtection(12345, {
-   *   delete: true
-   * });
+   * const { action } = await client.loadBalancers.changeProtection(12345, { delete: true });
    * ```
    */
-  async changeProtection(
+  changeProtection(
     id: number,
     params: ChangeLoadBalancerProtectionParams,
+    options?: RequestOptions,
   ): Promise<ChangeLoadBalancerProtectionResponse> {
-    const validatedParams = validate(changeLoadBalancerProtectionRequestSchema, params, {
-      context: "Change load balancer protection request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/change_protection`,
-      validatedParams,
+    return this._post(
+      path`/load_balancers/${id}/actions/change_protection`,
+      actionResponseSchema,
+      params,
+      changeLoadBalancerProtectionRequestSchema,
+      options,
     );
-
-    return validate(changeLoadBalancerProtectionResponseSchema, response, {
-      context: "Change load balancer protection response",
-      detailed: true,
-    });
   }
 
   /**
-   * Changes the type of a Load Balancer.
+   * Changes the type (capacity) of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @param params - New load balancer type
-   * @returns Promise resolving to the action
+   * @param params - ID or name of the new Load Balancer Type
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-change-the-type-of-a-load-balancer
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.changeType(12345, {
-   *   load_balancer_type: 'lb21'
+   * const { action } = await client.loadBalancers.changeType(12345, {
+   *   load_balancer_type: "lb21",
    * });
    * ```
    */
-  async changeType(
+  changeType(
     id: number,
     params: ChangeLoadBalancerTypeParams,
+    options?: RequestOptions,
   ): Promise<ChangeLoadBalancerTypeResponse> {
-    const validatedParams = validate(changeLoadBalancerTypeRequestSchema, params, {
-      context: "Change load balancer type request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/change_type`,
-      validatedParams,
+    return this._post(
+      path`/load_balancers/${id}/actions/change_type`,
+      actionResponseSchema,
+      params,
+      changeLoadBalancerTypeRequestSchema,
+      options,
     );
-
-    return validate(changeLoadBalancerTypeResponseSchema, response, {
-      context: "Change load balancer type response",
-      detailed: true,
-    });
   }
 
   /**
    * Attaches a Load Balancer to a Network.
    *
    * @param id - ID of the Load Balancer
-   * @param params - Network configuration
-   * @returns Promise resolving to the action
+   * @param params - Network ID and optionally the IP or the subnet (`ip_range`) to use
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-attach-a-load-balancer-to-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.attachToNetwork(12345, {
-   *   network: 67890
+   * const { action } = await client.loadBalancers.attachToNetwork(12345, {
+   *   network: 4711,
+   *   ip: "10.0.1.1",
    * });
    * ```
    */
-  async attachToNetwork(
+  attachToNetwork(
     id: number,
     params: AttachLoadBalancerToNetworkParams,
+    options?: RequestOptions,
   ): Promise<AttachLoadBalancerToNetworkResponse> {
-    const validatedParams = validate(attachLoadBalancerToNetworkRequestSchema, params, {
-      context: "Attach load balancer to network request",
-      detailed: true,
-    });
-
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/attach_to_network`,
-      validatedParams,
+    return this._post(
+      path`/load_balancers/${id}/actions/attach_to_network`,
+      actionResponseSchema,
+      params,
+      attachLoadBalancerToNetworkRequestSchema,
+      options,
     );
-
-    return validate(attachLoadBalancerToNetworkResponseSchema, response, {
-      context: "Attach load balancer to network response",
-      detailed: true,
-    });
   }
 
   /**
@@ -763,130 +623,79 @@ export class LoadBalancersClient {
    *
    * @param id - ID of the Load Balancer
    * @param networkId - ID of the Network
-   * @returns Promise resolving to the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-detach-a-load-balancer-from-a-network
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.detachFromNetwork(12345, 67890);
+   * const { action } = await client.loadBalancers.detachFromNetwork(12345, 4711);
    * ```
    */
-  async detachFromNetwork(
+  detachFromNetwork(
     id: number,
     networkId: number,
+    options?: RequestOptions,
   ): Promise<DetachLoadBalancerFromNetworkResponse> {
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/detach_from_network`,
+    return this._post(
+      path`/load_balancers/${id}/actions/detach_from_network`,
+      actionResponseSchema,
       { network: networkId },
+      detachLoadBalancerFromNetworkRequestSchema,
+      options,
     );
-
-    return validate(detachLoadBalancerFromNetworkResponseSchema, response, {
-      context: "Detach load balancer from network response",
-      detailed: true,
-    });
   }
 
   /**
    * Enables the public interface of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @returns Promise resolving to the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-enable-the-public-interface-of-a-load-balancer
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.enablePublicInterface(12345);
+   * const { action } = await client.loadBalancers.enablePublicInterface(12345);
    * ```
    */
-  async enablePublicInterface(
+  enablePublicInterface(
     id: number,
+    options?: RequestOptions,
   ): Promise<EnableLoadBalancerPublicInterfaceResponse> {
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/enable_public_interface`,
-      {},
+    return this._post(
+      path`/load_balancers/${id}/actions/enable_public_interface`,
+      actionResponseSchema,
+      undefined,
+      undefined,
+      options,
     );
-
-    return validate(enableLoadBalancerPublicInterfaceResponseSchema, response, {
-      context: "Enable load balancer public interface response",
-      detailed: true,
-    });
   }
 
   /**
    * Disables the public interface of a Load Balancer.
    *
    * @param id - ID of the Load Balancer
-   * @returns Promise resolving to the action
+   * @param options - Request options
    * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-disable-the-public-interface-of-a-load-balancer
    *
    * @example
    * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const result = await client.loadBalancers.disablePublicInterface(12345);
+   * const { action } = await client.loadBalancers.disablePublicInterface(12345);
    * ```
    */
-  async disablePublicInterface(
+  disablePublicInterface(
     id: number,
+    options?: RequestOptions,
   ): Promise<DisableLoadBalancerPublicInterfaceResponse> {
-    const response = await this.client.post<unknown>(
-      `/load_balancers/${id}/actions/disable_public_interface`,
-      {},
+    return this._post(
+      path`/load_balancers/${id}/actions/disable_public_interface`,
+      actionResponseSchema,
+      undefined,
+      undefined,
+      options,
     );
-
-    return validate(disableLoadBalancerPublicInterfaceResponseSchema, response, {
-      context: "Disable load balancer public interface response",
-      detailed: true,
-    });
   }
+}
 
-  /**
-   * Gets metrics for a Load Balancer.
-   *
-   * @param id - ID of the Load Balancer
-   * @param params - Metrics query parameters
-   * @returns Promise resolving to the metrics
-   * @see https://docs.hetzner.cloud/reference/cloud#load-balancers-get-metrics-for-a-load-balancer
-   *
-   * @example
-   * ```typescript
-   * const client = new HCloudClient({ token: 'your-token' });
-   *
-   * const metrics = await client.loadBalancers.getMetrics(12345, {
-   *   type: ['connections_per_second'],
-   *   start: '2024-01-01T00:00:00Z',
-   *   end: '2024-01-01T01:00:00Z',
-   *   step: 60
-   * });
-   * ```
-   */
-  async getMetrics(
-    id: number,
-    params: GetLoadBalancerMetricsParams,
-  ): Promise<GetLoadBalancerMetricsResponse> {
-    const queryParams: Record<string, string | number | string[] | undefined> = {};
-
-    if (params.type) {
-      const types = Array.isArray(params.type) ? params.type : [params.type];
-      queryParams.type = types;
-    }
-
-    queryParams.start = params.start;
-    queryParams.end = params.end;
-
-    if (params.step !== undefined) {
-      queryParams.step = params.step;
-    }
-
-    const response = await this.client.get<unknown>(`/load_balancers/${id}/metrics`, queryParams);
-
-    return validate(getLoadBalancerMetricsResponseSchema, response, {
-      context: "Get load balancer metrics response",
-      detailed: true,
-    });
-  }
+function toISOString(value: string | Date): string {
+  return typeof value === "string" ? value : value.toISOString();
 }

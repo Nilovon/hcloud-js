@@ -5,6 +5,11 @@
   "private": true,
   "scripts": {
     "dev": "bun run src/index.ts",
+    "quickstart": "bun run src/01-quickstart.ts",
+    "pagination": "bun run src/02-pagination.ts",
+    "errors": "bun run src/03-error-handling.ts",
+    "server": "bun run src/04-server-lifecycle.ts",
+    "observability": "bun run src/05-observability.ts",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {

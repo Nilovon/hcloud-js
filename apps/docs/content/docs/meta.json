@@ -1,0 +1,20 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "---Getting started---",
+    "index",
+    "installation",
+    "getting-started",
+    "---Guides---",
+    "configuration",
+    "pagination",
+    "actions",
+    "error-handling",
+    "utils",
+    "examples",
+    "migration",
+    "---Reference---",
+    "api",
+    "API"
+  ]
+}

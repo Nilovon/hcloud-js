@@ -1,58 +1,76 @@
 ---
 title: Introduction
-description: TypeScript SDK for the Hetzner Cloud API
+description: Modern TypeScript SDK for the Hetzner Cloud API
 ---
 
-# hcloud-js
-
-A fully typed, modern TypeScript SDK for managing your Hetzner Cloud infrastructure. Built with type safety, validation, and developer experience in mind.
+`@nilovonjs/hcloud-js` is a fully typed TypeScript SDK for the
+[Hetzner Cloud API](https://docs.hetzner.cloud/reference/cloud). It covers every
+resource of the Cloud API plus Storage Boxes, and takes care of the tedious
+parts: pagination, waiting for actions, retries, rate limits and error handling.
 
 ## Features
 
-- **Fully Typed**: Complete TypeScript types for all API endpoints
-- **Validated**: Built-in validation using Zod schemas
-- **Easy to Use**: Simple, intuitive API
-- **Complete Coverage**: All Hetzner Cloud API endpoints supported
-- **Well Documented**: Comprehensive documentation with examples
+- **Complete** - servers, networks, load balancers, firewalls, volumes, DNS zones, storage boxes and more
+- **Fully typed** - request parameters and responses, inferred from Zod schemas
+- **Auto-pagination** - `listAll()` and `for await ... of iterate()` on every list endpoint
+- **Action waiting** - `client.actions.waitFor(...)` with batched polling and backoff
+- **Resilient** - automatic retries with exponential backoff, `Retry-After` and rate limit awareness
+- **Typed errors** - `HCloudNotFoundError`, `HCloudRateLimitError`, `HCloudActionError`, ...
+- **Cancellable** - `AbortSignal` and per-request timeouts on every call
+- **Observable** - request/response/retry hooks and a debug logger
+- **Runs everywhere** - Node.js 20+, Bun, Deno, browsers and edge runtimes; ESM and CommonJS
 
-## Quick Example
+## Quick example
 
 ```typescript
-import { HCloudClient } from '@nilovonjs/hcloud-js';
+import { HCloudClient } from "@nilovonjs/hcloud-js";
 
-const client = new HCloudClient({
-  token: 'your-api-token'
+// Reads the token from the HCLOUD_TOKEN environment variable
+const client = new HCloudClient();
+
+// Create a server and wait until it is ready
+const { server } = await client.servers.createAndWait({
+  name: "web-1",
+  server_type: "cx22",
+  image: "ubuntu-24.04",
+  location: "nbg1",
 });
+console.log(server.public_net.ipv4?.ip);
 
-// List all servers
-const servers = await client.servers.list();
-console.log(`Found ${servers.servers.length} server(s)`);
+// Iterate over all servers, page by page
+for await (const s of client.servers.iterate({ label_selector: "env=production" })) {
+  console.log(s.name, s.status);
+}
 
-// Get a specific server
-const server = await client.servers.get(12345);
-console.log(server.server.name);
+// Every mutating call returns an action you can wait for
+await client.actions.waitFor(await client.servers.reboot(server.id));
 ```
 
-## Installation
+## Where to go next
 
-<Card title="Installation" href="/docs/installation">
-  Learn how to install and configure hcloud-js
-</Card>
-
-## Getting Started
-
-<Card title="Getting Started" href="/docs/getting-started">
-  Start using the SDK in your project
-</Card>
-
-## Utilities
-
-<Card title="Utilities" href="/docs/utils">
-  Helper functions for pagination, action polling, type guards, and more
-</Card>
-
-## API Reference
-
-<Card title="API Reference" href="/docs/api">
-  Complete API documentation
-</Card>
+<Cards>
+  <Card title="Installation" href="/docs/installation">
+    Install the package and create an API token
+  </Card>
+  <Card title="Getting Started" href="/docs/getting-started">
+    The core concepts in five minutes
+  </Card>
+  <Card title="Configuration" href="/docs/configuration">
+    Retries, timeouts, hooks, validation and more
+  </Card>
+  <Card title="Pagination" href="/docs/pagination">
+    `list()`, `listAll()` and `iterate()`
+  </Card>
+  <Card title="Waiting for Actions" href="/docs/actions">
+    Track asynchronous operations
+  </Card>
+  <Card title="Error Handling" href="/docs/error-handling">
+    Typed errors for every failure
+  </Card>
+  <Card title="API Reference" href="/docs/api">
+    All resources and methods
+  </Card>
+  <Card title="Migrating from v1" href="/docs/migration">
+    What changed in v2 and how to upgrade
+  </Card>
+</Cards>

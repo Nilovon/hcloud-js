@@ -1,93 +1,54 @@
 ---
-title: Locations API
-description: List available locations and datacenters
+title: Locations
+description: List the locations resources can be created in
 ---
 
-# Locations API
-
-The Locations API allows you to list available locations and datacenters.
-
-## List Locations
-
-Returns all Location objects.
-
 ```typescript
-const locations = await client.locations.list();
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient();
 ```
 
-### Parameters
+## `list(params?)`
+
+`GET /locations`
 
 ```typescript
-interface ListLocationsParams {
-  name?: string;              // Filter by name
-  sort?: string | string[];   // Sort results
-  page?: number;              // Page number
-  per_page?: number;          // Items per page
-}
+const { locations, meta } = await client.locations.list({ sort: "name:asc" });
 ```
 
-### Example
+| Parameter | Description |
+| --- | --- |
+| `name` | Exact name |
+| `sort` | `id`, `name`, each with `:asc` / `:desc` |
+| `page`, `per_page` | Pagination |
+
+Pagination helpers: `listAll()`, `iterate()`, `iteratePages()`, `first()`.
 
 ```typescript
-const locations = await client.locations.list({
-  name: 'nbg1',
-  sort: ['name:asc']
-});
+const all = await client.locations.listAll();
+const eu = all.filter((location) => location.network_zone === "eu-central");
 ```
 
-## Get Location
+## `get(id)`
 
-Returns a specific Location object.
+`GET /locations/{id}` - takes the numeric ID. Use `getByName()` to look up a name.
 
 ```typescript
-const location = await client.locations.get(1);
-console.log(location.location.name);
-console.log(location.location.country);
-console.log(location.location.city);
+const { location } = await client.locations.get(1);
+console.log(location.name, location.city, location.country, location.network_zone);
 ```
 
-## List Datacenters
+## `getByName(name)`
 
-Returns all Datacenter objects.
+Returns the location or `undefined`.
 
 ```typescript
-const datacenters = await client.locations.listDataCenters();
+const location = await client.locations.getByName("fsn1");
 ```
 
-## Get Datacenter
+## Datacenters (deprecated)
 
-Returns a specific Datacenter object.
-
-```typescript
-const datacenter = await client.locations.getDataCenter(1);
-console.log(datacenter.datacenter.name);
-console.log(datacenter.datacenter.location.name);
-console.log(datacenter.datacenter.server_types.available);
-```
-
-## Types
-
-```typescript
-interface Location {
-  id: number;
-  name: string;
-  description: string;
-  country: string;
-  city: string;
-  latitude: number;
-  longitude: number;
-  network_zone: string;
-}
-
-interface Datacenter {
-  id: number;
-  name: string;
-  description: string;
-  location: Location;
-  server_types: {
-    supported: number[];
-    available: number[];
-    available_for_migration: number[];
-  };
-}
-```
+`listDataCenters(params?)` and `getDataCenter(id)` are deprecated delegates to
+[`client.datacenters`](/docs/API/datacenters). Hetzner removes the Datacenters API after
+2026-10-01.

@@ -1,0 +1,240 @@
+---
+title: Configuration
+description: Client options - retries, timeouts, hooks, validation and more
+---
+
+## Client options
+
+```typescript
+import { HCloudClient } from "@nilovonjs/hcloud-js";
+
+const client = new HCloudClient({
+  token: process.env.HCLOUD_TOKEN,
+  timeout: 30_000,
+  retry: { maxRetries: 5 },
+  userAgent: "my-app/1.2.3",
+});
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `token` | `HCLOUD_TOKEN` env var | API token, or a (sync/async) function returning one |
+| `baseUrl` | `https://api.hetzner.cloud/v1` | Base URL of the Cloud API |
+| `hetznerBaseUrl` | `https://api.hetzner.com/v1` | Base URL of the Hetzner API (Storage Boxes) |
+| `timeout` | `30000` | Request timeout in milliseconds |
+| `retry` | see below | Retry behaviour, `false` to disable |
+| `fetch` | `globalThis.fetch` | Custom fetch implementation |
+| `headers` | `{}` | Headers sent with every request |
+| `userAgent` | - | Prepended to the `User-Agent` header (`my-app/1.2.3 hcloud-js/2.0.0`) |
+| `requestValidation` | `true` | Validate request parameters before sending |
+| `responseValidation` | `"warn"` | `"warn"`, `"throw"` or `"off"`, see below |
+| `actions` | backoff 0.5s to 5s, 5 min timeout | Defaults for [waiting on actions](/docs/actions) |
+| `hooks` | - | Lifecycle hooks, see below |
+| `debug` | `false` | `true` or a logger function |
+| `onWarning` | `console.warn` | Receives SDK warnings |
+
+The resolved configuration is available as `client.config`.
+
+## Request options
+
+Every API method accepts request options as its **last argument**. They override
+the client defaults for that call:
+
+```typescript
+await client.servers.get(42, {
+  timeout: 5_000,
+  signal: AbortSignal.timeout(10_000),
+  retry: false,
+  headers: { "X-Trace-Id": "abc" },
+});
+```
+
+| Option | Description |
+| --- | --- |
+| `signal` | `AbortSignal` to cancel the request and pending retries |
+| `timeout` | Timeout for each attempt in milliseconds |
+| `retry` | `false`, a maximum number of retries, or retry options |
+| `headers` | Additional headers |
+
+## Retries
+
+Failed requests are retried with exponential backoff and jitter. By default a
+request is retried up to **5 times** when
+
+- the API answers with HTTP `429`, `502` or `504`,
+- the API answers with the error code `rate_limit_exceeded`, `conflict`,
+  `bad_gateway` or `timeout`,
+- an idempotent request (`GET`, `PUT`, `DELETE`) fails with a network error or
+  times out.
+
+`Retry-After` headers are honored. `POST` requests are never retried after
+network errors, because the server may already have processed them.
+
+```typescript
+const client = new HCloudClient({
+  retry: {
+    maxRetries: 3,     // default 5
+    baseDelay: 500,    // default 1000 ms
+    maxDelay: 30_000,  // default 60000 ms
+    factor: 2,
+    jitter: true,
+    // Also retry when a resource is locked by another action
+    shouldRetry: ({ error }) => (error.code === "locked" ? true : undefined),
+  },
+});
+
+// Disable retries entirely...
+new HCloudClient({ retry: false });
+
+// ...or for a single call
+await client.servers.list({}, { retry: false });
+```
+
+Returning `undefined` from `shouldRetry` falls back to the default policy.
+
+## Rate limits
+
+The Hetzner API allows 3600 requests per hour per project. The state reported by
+the most recent response is available on the client:
+
+```typescript
+await client.servers.list();
+
+console.log(client.rateLimit);
+// { limit: 3600, remaining: 3598, reset: 2026-01-01T12:00:00.000Z }
+```
+
+When the limit is exceeded, the request is retried automatically. If retries
+are exhausted, a [`HCloudRateLimitError`](/docs/error-handling) is thrown.
+
+## Hooks
+
+Hooks let you add logging, metrics or tracing without wrapping the client:
+
+```typescript
+const client = new HCloudClient({
+  hooks: {
+    onRequest: ({ method, path, headers, attempt }) => {
+      headers.set("X-Trace-Id", crypto.randomUUID());
+    },
+    onResponse: ({ request, response, durationMs }) => {
+      metrics.timing("hcloud.request", durationMs, { path: request.path, status: response.status });
+    },
+    onRetry: ({ request, error, delayMs, nextAttempt }) => {
+      console.warn(`Retry #${nextAttempt} of ${request.path} in ${delayMs}ms: ${error.code}`);
+    },
+    onError: ({ request, error }) => {
+      console.error(`${request.method} ${request.path} failed: ${error.message}`);
+    },
+  },
+});
+```
+
+| Hook | Called |
+| --- | --- |
+| `onRequest` | Before every attempt. May modify `headers`. |
+| `onResponse` | After every successful response |
+| `onRetry` | Before a failed request is retried |
+| `onError` | When a request finally failed |
+
+## Debug logging
+
+```typescript
+// Log to console.debug
+new HCloudClient({ debug: true });
+
+// Or bring your own logger
+new HCloudClient({ debug: (message, data) => logger.debug(data, message) });
+```
+
+Requests, responses, failures and retries are logged. The token never is.
+
+## Validation
+
+Request parameters are validated with [Zod](https://zod.dev) before a request is
+sent, so typos and missing fields fail fast with a
+[`HCloudValidationError`](/docs/error-handling) instead of a round trip.
+
+Responses are checked against the SDK's schemas as well. Because the Hetzner API
+evolves (new enum values, removed deprecated fields), a mismatch does **not**
+break your application by default:
+
+| `responseValidation` | Behaviour on mismatch |
+| --- | --- |
+| `"warn"` (default) | Log a warning through `onWarning`, return the response as-is |
+| `"throw"` | Throw a `HCloudValidationError` |
+| `"off"` | Skip response validation |
+
+Responses are always returned unchanged, so fields added to the API after your
+SDK version was released are still there at runtime.
+
+```typescript
+new HCloudClient({
+  responseValidation: "throw",
+  onWarning: (message, data) => logger.warn(data, message),
+});
+```
+
+## Rotating tokens
+
+Pass a function to resolve the token for every request:
+
+```typescript
+const client = new HCloudClient({
+  token: async () => (await secrets.get("hcloud-token")).value,
+});
+```
+
+## Custom fetch
+
+Use a custom `fetch` for proxies, instrumentation or tests:
+
+```typescript
+import { ProxyAgent, fetch as undiciFetch } from "undici";
+
+const dispatcher = new ProxyAgent("http://proxy.internal:3128");
+
+const client = new HCloudClient({
+  fetch: (url, init) => undiciFetch(url, { ...init, dispatcher }) as unknown as Promise<Response>,
+});
+```
+
+In tests, a fake `fetch` gives you full control without network access:
+
+```typescript
+const client = new HCloudClient({
+  token: "test",
+  fetch: async () => Response.json({ servers: [] }),
+});
+```
+
+## Low-level requests
+
+Endpoints that are not covered by the SDK (yet) can be called directly.
+Authentication, retries and error handling still apply:
+
+```typescript
+const data = await client.get<{ servers: unknown[] }>("/servers", { query: { per_page: 5 } });
+await client.post("/servers/42/actions/poweron");
+
+// Including response metadata
+const { data, status, headers, requestId, rateLimit } = await client.requestWithResponse({
+  method: "GET",
+  path: "/locations",
+});
+```
+
+## Smaller bundles
+
+`HCloudClient` wires up every resource. If bundle size matters (edge functions,
+browsers), construct only the resource clients you need on top of a
+`BaseClient` and let your bundler drop the rest:
+
+```typescript
+import { BaseClient, ServersClient } from "@nilovonjs/hcloud-js";
+
+const base = new BaseClient({ token: "your-api-token" });
+const servers = new ServersClient(base);
+
+await servers.list();
+```
